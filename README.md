@@ -1,6 +1,6 @@
-# 🚀 Scalable Micro-Platform (Game Jams, CVs, & Game API)
+# 🚀 Scalable Micro-Platform
 
-A highly optimized, resource-efficient web platform and API backend built to run on constrained hardware. This project hosts developer portfolios, manages Game Jam events, serves as a backend for Godot WebGL games, and acts as a bridge to a live C# multiplayer game server (RimWorld Together).
+A highly optimized, resource-efficient web platform and API backend built to run on constrained hardware. This project hosts developer portfolios(users will be able to togle if they looking for job), manages Game Jam events or similar for sofware devs, serves as a backend for Godot WebGL games, and acts as a bridge to a live C# multiplayer game server (RimWorld Together).
 
 Designed from the ground up to operate on an 8GB RAM headless Debian server, behind a strict ISP CGNAT, with a 22 Mbps upload limit.
 
