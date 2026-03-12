@@ -1,58 +1,80 @@
-# 🎓 berkant.app - Student CV & Portfolio Catalog
+# 🚀 Scalable Micro-Platform (Game Jams, CVs, & Game API)
 
-[![Deploy Status](https://img.shields.io/badge/build-passing-brightgreen)](#)
-[![License: CC BY--NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
-[![Hosting: Firebase](https://img.shields.io/badge/Hosting-Firebase-FFCA28?logo=firebase&logoColor=black)](#)
+A highly optimized, resource-efficient web platform and API backend built to run on constrained hardware. This project hosts developer portfolios, manages Game Jam events, serves as a backend for Godot WebGL games, and acts as a bridge to a live C# multiplayer game server (RimWorld Together).
 
-**Live Domain:** [berkant.app](https://berkant.app) *(Active upon production deployment)*
-**Project Timeline:** March 01, 2026 – March 30, 2026
+Designed from the ground up to operate on an 8GB RAM headless Debian server, behind a strict ISP CGNAT, with a 22 Mbps upload limit.
 
-## 📖 Project Overview
-`berkant.app` is a highly optimized, responsive static web platform designed to showcase software development student resumes, technical roles, and interactive runnable projects (including Godot WASM games). 
+---
 
-To ensure 100% uptime, zero infrastructure costs, and strict adherence to the one-month project deadline, the architecture utilizes a serverless static approach. Student submissions are collected via Google Workspace and manually integrated into the codebase. This mitigates the risk of dynamic database failures while demonstrating a clean, maintainable, and secure front-end architecture.
+## ✨ Core Features
+* **CV Catalog & Game Jam Dashboard:** Ultra-lightweight web UI for users to view portfolios and register for events.
+* **Godot Game API:** Fast, secure JSON endpoints for Godot WebGL clients to read/write game data.
+* **Multiplayer Server Bridge:** Secure reading and writing to a local RimWorld Together C# server configuration to display live server stats.
+* **Local AI Integration:** A local LFM 2.5-Thinking 1.2B LLM that assists users, wrapped in a strict concurrency queue to prevent server RAM overload.
+* **Bandwidth Saver Uploads:** Bypasses the 22 Mbps server upload limit by generating pre-signed cloud URLs (S3/R2) for massive Game Jam file submissions.
+* **CGNAT Bypass:** The entire platform is tunneled securely to the public internet without port forwarding.
 
-## 👥 Team & Roles (2-Person Agile Team)
-This project is developed and maintained by a cross-functional Full Stack/DevOps team:
+---
 
-* **Berkant (Lead DevOps & Full Stack):** Manages cloud infrastructure (Firebase Hosting), DNS routing via Cloudflare, GitHub repository version control, CI/CD pipelines, and core static site architecture.
-* **[Classmate's Name] (Project Manager & UI/Content Lead):** Manages Jira task tracking, develops the frontend UI and vanilla JavaScript filtering logic, and handles the manual integration and formatting of student assets.
+## 🛠️ Tech Stack & Architecture
+* **OS:** Headless Debian Linux
+* **Backend:** Python 3.11+, Flask, Gunicorn
+* **Database:** SQLite (Configured with `WAL` mode & `JSON1` for high concurrency and dynamic data)
+* **Frontend:** HTMX + Pico.css (Zero-build, under 20KB total payload for instant loading)
+* **Networking:** Nginx Reverse Proxy, Cloudflare Tunnels (`cloudflared` for web), Playit.gg (TCP/UDP Game Tunnel)
+* **CI/CD & DevOps:** GitHub Actions (pytest, bandit) + Gemini AI API for Automated Pull Request Code Reviews.
 
-## 🛠️ Technology & DevOps Stack
-* **Frontend:** HTML5, CSS3 (Tailwind via CDN), Vanilla JavaScript.
-* **Hosting:** Firebase Hosting (Spark Free Tier).
-* **DNS & Security:** Cloudflare (pointing to Firebase via custom domain).
-* **CI/CD (Shift-Left):** GitHub Actions integrated with Google Gemini AI for automated Pull Request code reviews and linting before merging to the `main` branch.
-* **Asset Management:** Google Drive / Google Forms for ingesting heavy media files and student submissions.
+---
 
-## ✨ Key Technical Features
-* **Zero-Cost Architecture:** Fully utilizes free-tier enterprise tools while maintaining a custom top-level domain (`.app`).
-* **Client-Side Filtering:** Instantaneous category filtering (Artists, Coders, Designers) using HTML `data-attributes` and vanilla JavaScript, requiring zero database queries or server-side rendering.
-* **Optimized WASM Hosting:** Godot game projects are lazy-loaded via interactive thumbnails to drastically reduce initial page load times and preserve Firebase bandwidth limits.
-* **Fully Responsive:** Accessible and optimized for Mobile, Tablet, and Desktop environments.
+## 🧠 Engineering Solutions to Hardware Constraints
 
-## 🚀 Local Development Setup
-Since this relies on a static architecture without a complex local backend, onboarding is instantaneous:
+### 1. The RAM Bottleneck (8GB Limit)
+Running a web server, a C# game server, and an AI model simultaneously risks Out-Of-Memory (OOM) crashes. 
+* **Solution:** Implemented `asyncio.Semaphore(1)` around the LLM inference. Only one AI request processes at a time, returning an HTTP 202 "Thinking" status to concurrent users, keeping RAM usage strictly capped.
 
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/YOUR_USERNAME/berkant.app.git](https://github.com/YOUR_USERNAME/berkant.app.git)
-    ```
-2.  **Navigate to the project directory:**
-    ```bash
-    cd berkant.app
-    ```
-3.  **Run the project:**
-    Open the folder in VS Code and use the **Live Server** extension for hot-reloading, or simply open `index.html` in any modern web browser.
+### 2. The Bandwidth Bottleneck (22 Mbps Upload)
+Hosting 500MB Game Jam ZIPs locally would choke the network and disconnect multiplayer game users. 
+* **Solution:** The Flask API generates Cloudflare R2/S3 Pre-signed POST URLs. Users upload files directly from their browser to the cloud bucket, bypassing the local server network entirely.
 
-## 📄 Licensing & Permissions
-This entire repository and its contents are protected under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) License**.
+### 3. The ISP CGNAT Problem
+The local ISP blocks incoming web traffic, making traditional port forwarding impossible. 
+* **Solution:** `cloudflared` handles HTTP/HTTPS web traffic via outbound tunneling, and `playit.gg` handles raw TCP/UDP game traffic, making the server publicly accessible without router configuration.
 
-* You are free to view and learn from the source code for educational purposes.
-* You **may not** use this codebase, the website design, or any hosted student content (CVs, images, games) for commercial purposes. 
-* Direct permission is required from the original authors to reuse any personal student data or project assets hosted on this platform.
+---
 
-## 🗺️ Project Management & Architecture 
-*(Administrative notes for grading)*
-* **Task Tracking:** Managed via Jira (Kanban methodology).
-* **Documentation:** The complete Excel project plan (Budget, Risk Management, Timeline) and the UML Deployment Diagram are located in the repository files or on the associated project management board.
+## ⚙️ Local Development Setup
+
+**Clone the repository:**
+   git clone [https://github.com/your-username/scalable-micro-platform.git](https://github.com/your-username/scalable-micro-platform.git)
+   cd scalable-micro-platform
+   Create and activate a virtual environment:
+
+    python3 -m venv venv
+    source venv/bin/activate
+
+    Install dependencies:
+
+    pip install -r requirements.txt
+
+    Set up Environment Variables:
+    Create a .env file in the root directory and add your secret keys (e.g., Cloudflare R2 credentials, Gemini API key).
+
+    Run the Flask development server:
+
+    flask run --debug
+
+🧪 Testing & CI/CD (Shift-Left)
+
+This project utilizes a "Shift-Left" testing approach integrated with Jira. On every push and Pull Request, GitHub Actions will automatically run:
+
+    flake8 for Python linting.
+
+    pytest for unit testing the API and database logic.
+
+    bandit for security and SQL injection scanning.
+
+    Gemini AI Code Review: An automated agent that analyzes the git diff of Pull Requests for bugs, security flaws, and best practices.
+
+📄 License
+
+This project is licensed under the Creative Commons Zero v1.0 Universal (CC0 1.0) license. You are free to copy, modify, distribute, and perform the work, even for commercial purposes, all without asking permission.
