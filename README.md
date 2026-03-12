@@ -45,7 +45,7 @@ The local ISP blocks incoming web traffic, making traditional port forwarding im
 ## ⚙️ Local Development Setup
 
 **Clone the repository:**
-   git clone [https://github.com/your-username/scalable-micro-platform.git](https://github.com/your-username/scalable-micro-platform.git)
+   git clone [https://github.com/berkantxaydin/berkant.app](https://github.com/berkantxaydin/berkant.app)
    cd scalable-micro-platform
    Create and activate a virtual environment:
 
