@@ -21,3 +21,4 @@
 ## ⚙️ DevOps & CI/CD
 - Use GitHub Actions for all workflows.
 - Testing: `pytest` (unit) and `bandit` (security/SQLi).
+- **Git Flow:** NEVER push directly to `main`. Always create a new `feature/` branch from `dev`, and submit a Pull Request to merge back into `dev`.

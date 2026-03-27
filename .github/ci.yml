@@ -2,9 +2,9 @@ name: proglem CI/CD & AI Review
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 # Grant permission to the Action to leave comments on Pull Requests
 permissions:

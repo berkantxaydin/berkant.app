@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}proglem - Unified Platform{% endblock %}</title>
+  
+  <!-- SEO & Meta Tags -->
+  <meta name="description" content="{% block meta_description %}A scalable unified platform serving Game Jam Godot WebGL portfolios, native interactive CV talent pools, and RimWorld community matchmaking.{% endblock %}">
+  <meta name="keywords" content="Godot, Game Jam, CV Portfolio, Developer Resumes, HTMX, SQLite, RimWorld Server">
+  <meta name="author" content="proglem Community">
+  <meta property="og:title" content="proglem - The Developer Ecosystem">
+  <meta property="og:description" content="Explore developer CVs, interactive resumes, and Godot WebGL game binaries all from one unified hub.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  
+  <!-- Localized Pico.css Framework (Zero-build) -->
+  <link rel="stylesheet" href="/static/css/pico.min.css">
+  
+  <!-- Premium Custom Theme -->
+  <link rel="stylesheet" href="/static/css/custom.css">
+  
+  <!-- HTMX for SPA interactions -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+
+  <nav class="container-fluid">
+    <ul>
+      <li><a href="/" style="text-decoration: none; border-bottom: none;"><strong class="logo">proglem</strong></a></li>
+    </ul>
+    <ul>
+      <li><a href="/dashboard" class="contrast">Metrics</a></li>
+      <li><a href="/cv" class="contrast">CV Pool</a></li>
+      <li><a href="/games" class="contrast">Gaming Hub</a></li>
+      <li><a href="/jam" class="contrast" style="color: var(--pico-primary); font-weight: bold;">Game Jam</a></li>
+      <li><a href="/chat" class="contrast">Chat Room</a></li>
+      
+      {% if session.get('user_id') %}
+        <li><a href="/account" role="button" class="outline">My Account</a></li>
+        {% if session.get('is_admin') %}
+          <li><a href="/admin" role="button" class="contrast">Admin</a></li>
+        {% endif %}
+        <li><a href="/logout" class="secondary">Logout</a></li>
+      {% else %}
+        <li><a href="/login" role="button" class="outline">Login</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="container">
+    <small><a href="#">proglem</a> platform. Constrained Hardware, Infinite Scale.</small>
+  </footer>
+
+</body>
+</html>

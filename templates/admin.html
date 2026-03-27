@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}System Database Admin - proglem{% endblock %}
+
+{% block content %}
+<section>
+  <hgroup>
+    <h2 style="color: var(--pico-ins-color);">Site Administration</h2>
+    <p>Complete overrides over the ecosystem. HTMX native sweeps across all database components directly mapping back to raw SQLite tables.</p>
+  </hgroup>
+  
+  <article class="glass-panel" style="border: 1px solid var(--pico-ins-color);">
+    <h3>Master CV Controls</h3>
+    <table>
+        <tr><th>User</th><th>Title</th><th>Actions</th></tr>
+        {% for cv in all_cvs %}
+        <tr>
+            <td>{{ cv.username }}</td>
+            <td>{{ cv.title }}</td>
+            <td><button class="outline" hx-delete="/api/cv/{{ cv.id }}" hx-target="closest tr" hx-swap="outerHTML">Delete</button></td>
+        </tr>
+        {% endfor %}
+    </table>
+    
+    <h3 style="margin-top: 3rem;">Master Game Binary Overrides</h3>
+    <table>
+        <tr><th>User</th><th>Title</th><th>Actions</th></tr>
+        {% for game in all_games %}
+        <tr>
+            <td>{{ game.username }}</td>
+            <td>{{ game.title }}</td>
+            <td><button class="outline" hx-delete="/api/jam/{{ game.id }}" hx-target="closest tr" hx-swap="outerHTML">Drop Payload</button></td>
+        </tr>
+        {% endfor %}
+    </table>
+  </article>
+</section>
+{% endblock %}
