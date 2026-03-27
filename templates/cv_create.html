@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Create Standardized CV - proglem{% endblock %}
+{% block meta_description %}Build and publish your professional skills to the standard proglem talent pool, or inject your interactive raw HTMX resume.{% endblock %}
+
+{% block content %}
+<section>
+  <hgroup>
+    <h2 class="accent-text">Standardized CV Builder</h2>
+    <p>Fill out the e-commerce style fields. You may optionally attach a custom `.htmx` interactive resume.</p>
+  </hgroup>
+  
+  <article class="glass-panel">
+    <form action="/api/cv/create" method="POST" enctype="multipart/form-data">
+      <div class="grid">
+          <label>Professional Title
+            <input type="text" name="title" placeholder="Senior Backend Engineer" required>
+          </label>
+          <label>Core Skills (comma separated)
+            <input type="text" name="skills" placeholder="Python, SQLite, HTMX, Pico.css" required>
+          </label>
+      </div>
+      
+      <label>Professional Summary
+        <textarea name="summary" rows="3" required></textarea>
+      </label>
+
+      <label>Recent Experience Role
+          <input type="text" name="exp_role" placeholder="Lead Developer at TechCorp" required>
+      </label>
+
+      <!-- Advanced Feature: HTMX file injection -->
+      <label>
+        Optional: Upload Raw Custom HTMX / HTML Resume
+        <input type="file" name="custom_htmx" accept=".html,.htmx">
+        <small>Allows bypassing standard formats with your own interactive design!</small>
+      </label>
+      
+      <!-- hidden user for demo -->
+      <input type="hidden" name="user_id" value="1">
+      
+      <button type="submit">Publish to Talent Pool</button>
+    </form>
+  </article>
+</section>
+{% endblock %}

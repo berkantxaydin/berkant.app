@@ -1,0 +1,107 @@
+/* Premium Custom Overrides for Pico.css */
+:root {
+  --pico-primary: #a855f7;
+  --pico-primary-background: #a855f7;
+  --pico-primary-border: #a855f7;
+  --pico-primary-hover: #d946ef;
+  --pico-primary-hover-background: #d946ef;
+  --pico-primary-hover-border: #d946ef;
+  --pico-background-color: #0f172a;
+  --pico-card-background-color: rgba(30, 41, 59, 0.6);
+  --pico-color: #cbd5e1;
+  --pico-h1-color: #f8fafc;
+  --pico-h2-color: #f1f5f9;
+  --pico-font-family: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+  background: radial-gradient(circle at top, #1e1b4b 0%, var(--pico-background-color) 80%);
+  min-height: 100vh;
+  margin: 0;
+  background-attachment: fixed;
+}
+
+nav.container-fluid {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+nav strong.logo {
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #a855f7, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glass-panel {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.glass-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.accent-text {
+  color: var(--pico-primary);
+}
+
+/* Upload Progress Bar Customization */
+progress {
+  border-radius: 8px;
+}
+progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #a855f7, #ec4899);
+}
+
+/* HTMX Transition fades */
+.htmx-indicator {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+.htmx-request .htmx-indicator {
+    opacity: 1;
+}
+.htmx-request.htmx-indicator {
+    opacity: 1;
+}
+
+/* Enhanced Button Micro-Animations */
+button, [role="button"] {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:hover, [role="button"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+}
+
+button.outline:hover, [role="button"].outline:hover {
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+}
+
+/* Typography WOW factor */
+.hero-gradient {
+  background: linear-gradient(135deg, #a855f7 -20%, #ec4899 120%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: clamp(3rem, 8vw, 5rem);
+  letter-spacing: -2px;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.full-width {
+  width: 100%;
+}

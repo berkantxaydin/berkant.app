@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Account Hub - proglem{% endblock %}
+
+{% block content %}
+<section>
+  <hgroup>
+    <h2 class="accent-text">Developer Dashboard</h2>
+    <p>Manage your CV portfolio and published Godot games effortlessly natively integrating HTMX logic.</p>
+  </hgroup>
+  
+  <div class="grid">
+    <div>
+        <h3>My Standardized CVs</h3>
+        {% for cv in my_cvs %}
+        <article class="glass-panel">
+            <header>
+                <strong>{{ cv.title }}</strong>
+                <a href="#" hx-get="/api/cv/{{ cv.id }}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">Edit</a>
+                <a href="#" hx-delete="/api/cv/{{ cv.id }}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">Delete</a>
+            </header>
+            <p>{{ cv.summary }}</p>
+        </article>
+        {% else %}
+        <p>You haven't built a CV yet. <a href="/cv/create">Create CV</a></p>
+        {% endfor %}
+    </div>
+    
+    <div>
+        <h3>My Godot Game Binaries</h3>
+        {% for game in my_games %}
+        <article class="glass-panel">
+            <header>
+                <strong>{{ game.title }}</strong>
+                {% if game.validation_status == 'Approved' %}
+                    <span style="color: var(--pico-ins-color); font-size: 0.8em; margin-left: 1rem;">&#10003; Approved WebGL</span>
+                {% elif game.validation_status == 'Rejected' %}
+                    <span style="color: var(--pico-del-color); font-size: 0.8em; margin-left: 1rem;">&#10007; Exploit Detected</span>
+                {% else %}
+                    <span style="color: var(--pico-muted-color); font-size: 0.8em; margin-left: 1rem;">&#8987; Scanning File Headers...</span>
+                {% endif %}
+                <a href="#" hx-delete="/api/jam/{{ game.id }}" hx-target="closest article" hx-swap="outerHTML" style="float:right; color: var(--pico-del-color);">Delete</a>
+            </header>
+            <p>{{ game.description }}</p>
+        </article>
+        {% else %}
+        <p>You haven't safely tracked any Godot payloads. <a href="/upload">Submit Game</a></p>
+        {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

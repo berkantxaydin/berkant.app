@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <hgroup>
+        <h2 class="accent-text">Explore Community Works</h2>
+        <p>A random selection of WebGL games from our developers.</p>
+    </hgroup>
+
+    <div class="grid">
+        {% for game in games %}
+        <article class="glass-panel text-center">
+            <header>
+                <strong>{{ game.title }}</strong>
+            </header>
+            <p style="min-height: 3rem;">{{ game.description[:100] }}{% if game.description|length > 100 %}...{% endif %}</p>
+            <footer>
+                <a href="/games/{{ game.id }}" role="button" class="outline">Open Game Page</a>
+            </footer>
+        </article>
+        {% else %}
+        <article class="glass-panel">
+            <p>No games have been submitted yet. Be the first!</p>
+            <a href="/upload" role="button">Submit Game</a>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

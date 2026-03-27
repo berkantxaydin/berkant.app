@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Dynamically import JSZip to run Extraction on the Client Browser instead of the Server -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<section>
+  <hgroup>
+    <h2 class="accent-text">Submit Game Jam Entry</h2>
+    <p>Upload your <strong>Godot WebGL `.zip`</strong> file safely. The browser will natively extract and optimize it for S3 without touching local bandwidth.</p>
+  </hgroup>
+
+  <article class="glass-panel">
+    <form id="uploadForm" onsubmit="event.preventDefault(); handleUpload();">
+      {% if jam_id %}
+      <input type="hidden" id="jamId" value="{{ jam_id }}">
+      <div class="glass-panel text-center" style="padding: 1rem; margin-bottom: 2rem; background: rgba(168, 85, 247, 0.1); border-color: var(--pico-primary);">
+        <strong style="color: var(--pico-primary);">🏆 Submitting Official Entry to Active Game Jam</strong>
+      </div>
+      {% endif %}
+      <label>Game Title
+        <input type="text" id="gameTitle" name="title" required>
+      </label>
+      
+      <label>Description (Optional)
+        <textarea id="gameDesc" name="description"></textarea>
+      </label>
+
+      <label>WebGL Binary (.zip)
+        <input type="file" id="gameFiles" accept=".zip" required>
+        <small>Just like Itch.io, upload the compressed zip and we will auto-map it for the Cloud.</small>
+      </label>
+      
+      <progress id="uploadProgress" value="0" max="100" hidden></progress>
+      <small id="uploadStatus"></small>
+
+      <button type="submit" id="submitBtn" style="margin-top: 1rem;">Extract & Upload to Cloud</button>
+    </form>
+  </article>
+</section>
+
+<script>
+async function handleUpload() {
+    const fileInput = document.getElementById('gameFiles');
+    const title = document.getElementById('gameTitle').value;
+    const desc = document.getElementById('gameDesc').value;
+    const btn = document.getElementById('submitBtn');
+    const progress = document.getElementById('uploadProgress');
+    const status = document.getElementById('uploadStatus');
+
+    if (fileInput.files.length === 0) return;
+    const zipFile = fileInput.files[0];
+
+    btn.disabled = true;
+    btn.setAttribute("aria-busy", "true");
+    progress.hidden = false;
+    
+    const uiError = (msg) => {
+        status.innerHTML = `<mark>Error: ${msg}</mark>`;
+        btn.disabled = false;
+        btn.setAttribute("aria-busy", "false");
+    };
+
+    if (!zipFile.name.endsWith('.zip')) {
+        uiError("You must provide a valid .zip export.");
+        return;
+    }
+
+    try {
+        status.innerText = "Extracting ZIP payload locally in Browser memory...";
+        const zip = await JSZip.loadAsync(zipFile);
+        
+        // Filter out folders and gather flat files
+        const extractedFiles = [];
+        zip.forEach((relativePath, zipEntry) => {
+            if (!zipEntry.dir && !relativePath.includes("__MACOSX")) {
+                extractedFiles.push(zipEntry);
+            }
+        });
+
+        if (extractedFiles.length === 0) throw new Error("The .zip archive is completely empty.");
+
+        const clusterId = crypto.randomUUID();
+        let rootHtmlUrlContext = null;
+        let mockFinalUrl = null;
+        let completedUploads = 0;
+
+        for (const entry of extractedFiles) {
+            // Strip out wrapping folders if the Godot user zipped the folder itself
+            const pureFileName = entry.name.split('/').pop();
+            
+            status.innerText = `Decompressing & Streaming ${pureFileName} to Cloud Node...`;
+            
+            // Generate Native Blob into RAM natively inside Chrome
+            const fileBlob = await entry.async('blob');
+            const rawFile = new File([fileBlob], pureFileName, { type: "application/octet-stream" });
+
+            let cType = "application/octet-stream";
+            if (pureFileName.endsWith('.wasm')) cType = "application/wasm";
+            else if (pureFileName.endsWith('.js')) cType = "application/javascript";
+            else if (pureFileName.endsWith('.html')) cType = "text/html";
+
+            const resp = await fetch(`/api/jam/get_upload_url?filename=${clusterId}/${encodeURIComponent(pureFileName)}&content_type=${encodeURIComponent(cType)}`, {
+                headers: {'unique_upload_key': 'my-secret-jam-key'}
+            });
+            
+            if (!resp.ok) throw new Error("AWS Pre-sign fault tracking: " + pureFileName);
+            const s3Data = await resp.json();
+
+            // Handle Mock Dev Environment
+            let targetUrl = s3Data.url;
+            let isMock = false;
+            if (targetUrl.includes("mock-endpoint")) {
+                targetUrl = "/api/jam/mock_upload";
+                isMock = true;
+            }
+
+            // Execute Live S3 Partitions targeting the pureFileName to group them all in one flat folder
+            const formData = new FormData();
+            Object.entries(s3Data.fields).forEach(([k, v]) => formData.append(k, v));
+            formData.append('file', rawFile);
+
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', targetUrl, true);
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        if (pureFileName.endsWith('.html') && !rootHtmlUrlContext) {
+                            rootHtmlUrlContext = true;
+                            // If running locally, route through the COOP/COEP proxy. Otherwise direct S3 path.
+                            mockFinalUrl = isMock ? `/play_mock/${s3Data.fields.key}` : `${s3Data.url}/${s3Data.fields.key}`;
+                        }
+                        resolve();
+                    } else reject(new Error("Upload fault on " + pureFileName));
+                };
+                xhr.onerror = () => reject(new Error("CORS/DNS breakdown on " + pureFileName));
+                xhr.send(formData);
+            });
+
+            completedUploads++;
+            progress.value = Math.round((completedUploads / extractedFiles.length) * 100);
+        }
+
+        if (!rootHtmlUrlContext) throw new Error("Failed to detect an index.html file inside your ZIP! Godot WebGL exports MUST contain an HTML document.");
+
+        status.innerText = "All binaries securely extracted and deployed. Synchronizing Database Arrays...";
+        
+        const saveResp = await fetch('/api/jam/submit', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                title: title,
+                description: desc,
+                game_url: mockFinalUrl,
+                jam_id: document.getElementById('jamId') ? document.getElementById('jamId').value : null
+            })
+        });
+
+        if (saveResp.ok) {
+            status.innerHTML = `<strong class="accent-text">Game Infrastructure Compiled Successfully! Validation queued.</strong>`;
+            btn.setAttribute("aria-busy", "false");
+            btn.innerText = "Deployment Verified";
+        } else throw new Error("Server rejected routing bindings.");
+
+    } catch (e) {
+        uiError(e.message);
+    }
+}
+</script>
+{% endblock %}

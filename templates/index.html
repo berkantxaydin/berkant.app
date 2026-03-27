@@ -1,145 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>proglem | Scalable Micro-Platform</title>
+{% block content %}
+<section>
+  <hgroup>
+    <h1 class="accent-text">System Dashboard</h1>
+    <p>Real-time RimWorld multiplayer analytics and Local AI monitor</p>
+  </hgroup>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <div class="grid">
+    <!-- RIMWORLD POLLING DASHBOARD -->
+    <article class="glass-panel">
+      <header>RimWorld Server Status</header>
+      
+      <!-- HTMX automatically polls /api/server_status every 10 seconds -->
+      <div id="rimworld-stats" hx-get="/api/server_status" hx-trigger="load, every 10s" hx-swap="innerHTML">
+        <p aria-busy="true">Connecting to Game Server...</p>
+      </div>
+      
+    </article>
 
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-</head>
-
-<body>
-
-    <nav class="container-fluid">
-        <ul>
-            <li><strong>proglem.app</strong></li>
-        </ul>
-        <ul>
-            <li><a href="#cv-catalog" role="button" class="outline">CV Catalog</a></li>
-            <li><a href="#game-jams" role="button">Game Jams</a></li>
-        </ul>
-    </nav>
-
-    <main class="container">
-
-        <header>
-            <hgroup>
-                <h1>Welcome to proglem</h1>
-                <h2>The ultra-lightweight portfolio & game server platform.</h2>
-            </hgroup>
-        </header>
-
-        <div class="grid">
-            <section id="server-status">
-                <h3>Live Server Status</h3>
-                <article hx-get="/api/server_status" hx-trigger="every 10s" hx-swap="innerHTML">
-                    <span aria-busy="true">Connecting to RimWorld Together server...</span>
-                </article>
-            </section>
-
-            <section id="game-jams">
-                <h3>Active Game Jams</h3>
-                <article>
-                    <header><strong>Constrained Hardware Jam 2026</strong></header>
-                    <p>Build a WebGL game under 5MB. Submissions are open!</p>
-                    <footer>
-                        <a href="#" role="button" class="outline">Register Now</a>
-                        <a href="#" role="button">Submit Game (.zip)</a>
-                    </footer>
-                </article>
-            </section>
+    <!-- LOCAL RAM-SAFE AI -->
+    <article class="glass-panel">
+      <header>LFM 2.5-Thinking (1.2B)</header>
+      <form hx-post="/ai/ask" hx-target="#chat-result-container" hx-swap="innerHTML">
+        <fieldset role="group">
+          <input type="text" name="prompt" placeholder="Ask the local Assistant..." required>
+          <button type="submit" class="outline">Send</button>
+        </fieldset>
+      </form>
+      <div id="chat-result-container" style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; min-height: 80px;">
+        <div id="chat-result">
+            <em>AI is idle...</em>
         </div>
+      </div>
+    </article>
+  </div>
+</section>
 
-        <hr>
-
-        <section id="cv-catalog">
-            <h3>Developer CV Catalog</h3>
-            <p>Browse developers looking for work. Godot WebGL portfolios included.</p>
-
-            <div class="grid">
-                <article>
-                    <header><strong>Berkant</strong></header>
-                    <p><em>Backend Dev & Godot Enthusiast</em></p>
-                    <p><mark>Looking for work</mark></p>
-                    <footer>
-                        <a href="#" role="button" class="secondary">View Portfolio</a>
-                    </footer>
-                    <form id="jam-upload-form">
-                        <label for="game-file">Upload Game (.zip)</label>
-                        <input type="file" id="game-file" accept=".zip" required>
-                        <button type="submit">Submit (Direct to Cloud)</button>
-                    </form>
-
-                    <script>
-                        document.getElementById('jam-upload-form').addEventListener('submit', async (e) => {
-                            e.preventDefault();
-                            const fileInput = document.getElementById('game-file');
-                            const file = fileInput.files[0];
-                            if (!file) return;
-
-                            // Step 1: Ask Flask for permission and the Cloud URL
-                            const response = await fetch(`/api/jam/get_upload_url?filename=${file.name}`, {
-                                headers: { 'unique_upload_key': 'my-secret-jam-key' }
-                            });
-                            const presignedData = await response.json();
-
-                            if (presignedData.error) {
-                                alert("Upload denied: " + presignedData.error);
-                                return;
-                            }
-
-                            // Step 2: Build the payload for the Cloud bucket
-                            const formData = new FormData();
-
-                            // Cloudflare/S3 requires all security fields to be appended BEFORE the actual file
-                            Object.keys(presignedData.fields).forEach(key => {
-                                formData.append(key, presignedData.fields[key]);
-                            });
-                            formData.append('file', file);
-
-                            // Step 3: Send directly to the Cloud (0 bytes use your 22 Mbps connection!)
-                            const uploadBtn = e.target.querySelector('button');
-                            uploadBtn.setAttribute('aria-busy', 'true');
-                            uploadBtn.textContent = "Uploading to Cloud...";
-
-                            const uploadResponse = await fetch(presignedData.url, {
-                                method: 'POST',
-                                body: formData
-                            });
-
-                            uploadBtn.removeAttribute('aria-busy');
-                            uploadBtn.textContent = "Submit (Direct to Cloud)";
-
-                            if (uploadResponse.ok) {
-                                alert("Success! Your game was uploaded without touching the local server.");
-                            } else {
-                                alert("Cloud upload failed.");
-                            }
-                        });
-                    </script>
-                </article>
-
-                <article>
-                    <header><strong>Alex (Demo)</strong></header>
-                    <p><em>Frontend & UI/UX</em></p>
-                    <p>Not currently looking.</p>
-                    <footer>
-                        <a href="#" role="button" class="secondary outline">View Portfolio</a>
-                    </footer>
-                </article>
-            </div>
-        </section>
-
-    </main>
-
-    <footer class="container">
-        <small><a href="https://github.com/berkantxaydin/berkant.app">View on GitHub</a> • Built for strict hardware
-            constraints.</small>
-    </footer>
-
-</body>
-
-</html>
+{% endblock %}

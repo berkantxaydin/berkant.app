@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Chat Room - proglem{% endblock %}
+
+{% block content %}
+<section>
+  <hgroup class="text-center" style="margin-bottom: 2rem;">
+    <h2 class="accent-text">Community Chat</h2>
+    <p>Live discussions with zero bloated JS payloads. Powered by HTMX.</p>
+  </hgroup>
+
+  <article class="glass-panel" style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; height: 60vh;">
+    <!-- Chat Messages Container -->
+    <div id="chat-messages" 
+         hx-get="/api/chat/messages" 
+         hx-trigger="load, every 3s" 
+         style="flex-grow: 1; overflow-y: auto; padding: 1rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 1rem; display: flex; flex-direction: column-reverse; gap: 0.5rem;">
+      <!-- Messages load here -->
+      <p class="text-center" style="color: grey;"><small>Loading messages...</small></p>
+    </div>
+
+    <!-- Chat Input Form -->
+    {% if session.get('user_id') %}
+    <form hx-post="/api/chat/messages" hx-target="#chat-messages" hx-swap="innerHTML" hx-on::after-request="this.reset()" style="margin: 0;">
+      <fieldset role="group" style="margin: 0;">
+        <input type="text" name="content" placeholder="Type your message..." required autocomplete="off" maxlength="500">
+        <button type="submit" class="contrast" style="width: 120px;">Send</button>
+      </fieldset>
+    </form>
+    {% else %}
+    <footer class="text-center">
+      <small><a href="/login">Sign in</a> to participate in the chat.</small>
+    </footer>
+    {% endif %}
+  </article>
+</section>
+
+<script>
+  function formatTimes() {
+    document.querySelectorAll('.chat-time').forEach(el => {
+      if(!el.dataset.formatted) {
+        const d = new Date(el.getAttribute('datetime'));
+        el.innerText = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+        el.dataset.formatted = "true";
+      }
+    });
+  }
+  
+  formatTimes();
+  document.body.addEventListener("htmx:afterSettle", formatTimes);
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Game Jam - proglem{% endblock %}
+
+{% block content %}
+{% if jam %}
+<section class="text-center" style="margin-top: 4vh; margin-bottom: 4vh; animation: fadeIn 1s ease-out;">
+  <hgroup>
+    <h1 class="accent-text" style="font-size: 3.5rem; margin-bottom: 0.5rem; filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.5));">{{ jam.title }}</h1>
+    <h2 style="color: var(--pico-color);">Theme: <strong>{{ jam.theme }}</strong></h2>
+  </hgroup>
+  
+  <div class="glass-panel" style="display: inline-block; padding: 1rem 3rem; margin-bottom: 2rem; border-color: var(--pico-primary);">
+    <h4 id="jam-timer" style="margin: 0; font-family: monospace; font-size: 2rem; color: #f8fafc;">Calculating...</h4>
+    <small id="jam-timer-label" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">Time Remaining</small>
+  </div>
+
+  {% if jam.youtube_url %}
+  <div style="margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto; position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <iframe src="{{ jam.youtube_url }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
+  </div>
+  {% endif %}
+
+  <div style="margin-top: 2rem;">
+    <a href="/upload?jam_id={{ jam.id }}" role="button" class="contrast" style="font-size: 1.2rem; padding: 1rem 3rem; border-radius: 50px; box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);">Participate & Upload Game</a>
+  </div>
+</section>
+
+<section>
+  <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Jam Submissions</h3>
+  <div class="grid" style="gap: 1.5rem;">
+    {% for game in games %}
+    <article class="glass-panel text-center" style="padding: 1.5rem;">
+      <h4 class="accent-text" style="margin-bottom: 0.5rem;">{{ game.title }}</h4>
+      <p style="color: #94a3b8; font-size: 0.9rem;">By <strong>@{{ game.username }}</strong></p>
+      <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">Play Entry</a>
+    </article>
+    {% else %}
+    <p class="text-center full-width" style="color: grey;">No submissions yet. Be the first to enter!</p>
+    {% endfor %}
+  </div>
+</section>
+
+<script>
+  const startTime = new Date("{{ jam.start_time }}Z").getTime();
+  const endTime = new Date("{{ jam.end_time }}Z").getTime();
+  
+  function updateTimer() {
+    const now = new Date().getTime();
+    const timerEl = document.getElementById("jam-timer");
+    const labelEl = document.getElementById("jam-timer-label");
+    
+    if (now < startTime) {
+      labelEl.innerText = "Starts In";
+      const distance = startTime - now;
+      renderTime(distance, timerEl);
+    } else if (now >= startTime && now <= endTime) {
+      labelEl.innerText = "Ends In";
+      const distance = endTime - now;
+      renderTime(distance, timerEl);
+    } else {
+      labelEl.innerText = "Jam Ended";
+      timerEl.innerText = "00:00:00:00";
+    }
+  }
+
+  function renderTime(distance, el) {
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    el.innerText = `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+  }
+
+  setInterval(updateTimer, 1000);
+  updateTimer();
+</script>
+{% else %}
+<section class="text-center" style="margin-top: 10vh;">
+  <h2>No Active Game Jams</h2>
+  <p>Check back later for upcoming events!</p>
+</section>
+{% endif %}
+{% endblock %}

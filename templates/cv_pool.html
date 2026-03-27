@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Developer Talent Pool - proglem{% endblock %}
+{% block meta_description %}Live filter through developer candidates and Godot engineers using our lightning-fast native HTMX SQLite integration.{% endblock %}
+
+{% block content %}
+<section>
+  <hgroup>
+    <h2 class="accent-text">CV Talent Pool</h2>
+    <p>Live filter through candidates via purely HTMX (No JavaScript Required)</p>
+  </hgroup>
+  
+  <input type="search" 
+         name="search" 
+         placeholder="Search by skills, title, or summary (e.g. Python, Godot, React)"
+         hx-get="/api/cv"
+         hx-trigger="keyup changed delay:500ms, search"
+         hx-target="#search-results"
+         class="glass-panel"
+         aria-label="Search CV Catalog"
+         style="margin-bottom: 2rem;">
+         
+  <div id="search-results" class="grid" hx-get="/api/cv" hx-trigger="load">
+     <p aria-busy="true">Loading CVs from Database...</p>
+  </div>
+</section>
+{% endblock %}

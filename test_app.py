@@ -1,10 +1,11 @@
 import pytest
-from app import app
-import database
+from app import create_app
+from app import database
 
 @pytest.fixture
 def client():
     """Sets up a test client for the Flask application."""
+    app = create_app()
     app.config['TESTING'] = True
     
     with app.test_client() as client:
@@ -21,14 +22,17 @@ def test_homepage_loads(client):
     assert b"proglem" in response.data
 
 def test_server_status_endpoint(client):
-    """Verifies the HTMX endpoint returns the expected HTML snippet."""
-    response = client.get('/api/server_status')
+    """Verifies the healthcheck endpoint."""
+    response = client.get('/health')
     assert response.status_code == 200
-    assert b"RimWorld Server" in response.data
+    assert b"OK" in response.data
 
 def test_cv_catalog_api(client):
-    """Verifies the JSON API for Godot/WebGL clients returns a list."""
+    """Verifies the JSON API returns a structure."""
     response = client.get('/api/cv')
     assert response.status_code == 200
-    # Even if the database is empty, it should return an empty JSON array []
-    assert isinstance(response.json, list)
+    # The API returns a dict: {"status": "success", "count": ..., "data": []}
+    assert isinstance(response.json, dict)
+    assert response.json.get("status") == "success"
+    assert "data" in response.json
+    assert isinstance(response.json["data"], list)
