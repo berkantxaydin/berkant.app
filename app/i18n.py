@@ -30,7 +30,7 @@ def save_translations():
         _dirty = False
 
 def t(text):
-    global translations, _dirty
+    global _dirty
     
     # Safely get session language outside of request contexts if triggered internally
     try:
