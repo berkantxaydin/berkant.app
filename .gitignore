@@ -1,36 +1,20 @@
-# OS Generated Files (Windows/Mac)
+# OS Generated Files
 Thumbs.db
 desktop.ini
 .DS_Store
 
-# Firebase build and deployment files
-/firebase-debug.log
-/firebase-debug.*.log
-.firebase/
+# IDE / Editor Files
+.vscode/
+.idea/
 
-# Firebase Emulators & Cache
-/firebase-*.zip
-/emulator-ui/
-*.cache
-hosting/.cache
-
-# Node & Functions (Future-proofing)
-/functions/node_modules/
-/functions/.env
-node_modules/
+# Environment files (secrets)
+.env
+.env.*
 
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
-
-# IDE / Editor Files (VS Code, etc.)
-.vscode/
-.idea/
-
-# Environment files (local configs)
-.env
-.env.*
 
 # AI Models & Large Binaries
 models/
@@ -42,8 +26,24 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+*.pycache
 
 # Database
 *.db
 *.db-journal
 *.db-wal
+
+# Generated images & large assets
+generated*.png
+*.xlsx
+uml_*.png
+
+# Local game file uploads (dev only — use S3/R2 in production)
+app/static/mock_s3/submissions/
+app/static/mock_s3/test/
+
+# Pico.css source (only the compiled pico.min.css is needed)
+pico-main/
+
+# Node (future-proofing)
+node_modules/
