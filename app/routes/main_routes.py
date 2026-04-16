@@ -10,6 +10,11 @@ main_bp = Blueprint('main', __name__)
 def landing_page():
     return render_template('landing.html')
 
+@main_bp.route('/health')
+def health_check():
+    """Simple healthcheck for CI/CD and deployment monitoring."""
+    return "OK"
+
 @main_bp.route('/dashboard')
 def dashboard():
     return render_template('index.html')

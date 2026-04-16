@@ -31,11 +31,14 @@ def test_mock_upload_logic(client):
     """
     Verifies the mock upload endpoint logic used for local development.
     """
+    import io
     # Simulate the multipart/form-data upload expected by our JS client
+    # data={} captures form fields, including the 'key'
+    # 'file': (stream, filename) captures the actual file upload
     form_data = {
         'key': 'test/index.html',
         'content-type': 'text/html',
-        'file': (b'<h1>Hello Game</h1>', 'index.html')
+        'file': (io.BytesIO(b'<h1>Hello Game</h1>'), 'index.html')
     }
     
     resp = client.post('/api/jam/mock_upload', data=form_data, content_type='multipart/form-data')
