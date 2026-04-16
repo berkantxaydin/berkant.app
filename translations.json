@@ -177,7 +177,20 @@
     "Server rejected routing bindings.": "Server rejected routing bindings.",
     "Create Standardized CV - proglem": "Create Standardized CV - proglem",
     "Build and publish your professional skills to the standard proglem talent pool, or inject your interactive raw HTMX resume.": "Build and publish your professional skills to the standard proglem talent pool, or inject your interactive raw HTMX resume.",
-    "This developer hasn't uploaded any Godot WebGL games yet.": "This developer hasn't uploaded any Godot WebGL games yet."
+    "This developer hasn't uploaded any Godot WebGL games yet.": "This developer hasn't uploaded any Godot WebGL games yet.",
+    "AI Assistant": "AI Assistant",
+    "AI is warming up (loading 5GB Gemma model)...": "AI is warming up (loading 5GB Gemma model)...",
+    "The site is ready, but the AI engine is still loading into VRAM. Please wait.": "The site is ready, but the AI engine is still loading into VRAM. Please wait.",
+    "No messages yet. Start the conversation!": "No messages yet. Start the conversation!",
+    "Likes": "Likes",
+    "Views": "Views",
+    "Submit Game Jam Entry - proglem": "Submit Game Jam Entry - proglem",
+    "Upload your Godot WebGL zip export safely to the proglem Game Jam. The browser extracts and deploys it directly to cloud storage.": "Upload your Godot WebGL zip export safely to the proglem Game Jam. The browser extracts and deploys it directly to cloud storage.",
+    "Submitting Official Entry to Active Game Jam": "Submitting Official Entry to Active Game Jam",
+    "Login to like this game": "Login to like this game",
+    "Login to like": "Login to like",
+    "Invalid username or password.": "Invalid username or password.",
+    "Play Entry": "Play Entry"
   },
   "tr": {
     "Metrics": "Metrikler",

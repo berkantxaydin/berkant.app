@@ -94,10 +94,21 @@ def get_upload_url():
     filename = request.args.get('filename', 'default.bin')
     mime_type = request.args.get('content_type', 'application/octet-stream')
     
+    # Smart Mock Detection: If R2 endpoint contains placeholders or common defaults, force Mock Mode
+    r2_endpoint = os.environ.get('R2_ENDPOINT_URL', "https://mock-endpoint.com")
+    r2_key_id = os.environ.get('R2_ACCESS_KEY_ID', 'test')
+    
+    placeholders = ["your-r2-id", "your_id", "placeholder", "test", "your-bucket"]
+    is_mock_needed = any(p in r2_endpoint.lower() or p in r2_key_id.lower() for p in placeholders)
+    
+    if is_mock_needed:
+        r2_endpoint = "https://mock-endpoint.com"
+        current_app.logger.info("R2 Placeholders detected. Falling back to Mock S3 Mode.")
+
     s3_client = boto3.client(
         's3',
-        endpoint_url=os.environ.get('R2_ENDPOINT_URL', "https://mock-endpoint.com"),
-        aws_access_key_id=os.environ.get('R2_ACCESS_KEY_ID', 'test'),
+        endpoint_url=r2_endpoint,
+        aws_access_key_id=r2_key_id,
         aws_secret_access_key=os.environ.get('R2_SECRET_ACCESS_KEY', 'test'),
         region_name='auto' 
     )
@@ -150,6 +161,14 @@ def submit_game():
     except Exception as e:
         current_app.logger.error(f"Game pipeline failure: {e}")
         return jsonify({"error": "Failed to track game"}), 500
+
+@api_bp.route('/games/<int:game_id>/view', methods=['POST'])
+def increment_game_view(game_id):
+    """Increments the view count for a game via HTMX load trigger."""
+    success = GameRepository.increment_view(game_id)
+    if success:
+        return jsonify({"status": "success"}), 200
+    return jsonify({"status": "error"}), 500
 
 
 # --- ACCOUNT CRUD (HTMX NATIVE PORTALS) ---
@@ -761,7 +780,7 @@ def get_system_resources():
             </div>
             <div class="metric-bar-container" style="display: flex;">
                 <div class="metric-bar-fill ai-bar" style="width: {ai_ram_percent}%; border-radius: 0;"></div>
-                <div class="metric-bar-fill ram-bar" style="width: {max(0, global_ram_percent - ai_ram_percent)}%; border-radius: 0;"></div>
+                <div class="metric-bar-fill ram-bar" style="width: {max(0, sys_ram.percent - ai_ram_percent)}%; border-radius: 0;"></div>
             </div>
             <div style="display:flex; justify-content: space-between; font-size: 0.75rem; margin-top: 0.4rem; color: #94a3b8; font-weight: 500;">
                 <span>{t("System")}: {max(0, (sys_ram.used/1024**3) - (ai_ram_mb/1024)):.1f} GB</span>
@@ -819,19 +838,19 @@ def get_core_analytics():
         <div style="text-align: center;">
             <div class="grid">
                 <article style="padding: 1rem;">
-                    <h2 style="margin-bottom: 0; color: var(--pico-primary);">{total}</h2>
+                    <h2 style="margin-bottom: 0; color: var(--pico-primary); font-family: var(--font-mono);">{total}</h2>
                     <small>{t("Total Requests")}</small>
                 </article>
                 <article style="padding: 1rem;">
-                    <h2 style="margin-bottom: 0; color: {'var(--pico-del-color)' if errors > 0 else 'var(--pico-primary)'};">{error_rate:.1f}%</h2>
+                    <h2 style="margin-bottom: 0; color: {'var(--pico-del-color)' if errors > 0 else 'var(--pico-primary)'}; font-family: var(--font-mono);">{error_rate:.1f}%</h2>
                     <small>{t("Error Rate")}</small>
                 </article>
                 <article style="padding: 1rem;">
-                    <h2 style="margin-bottom: 0; color: var(--pico-primary);">{unique_ips}</h2>
+                    <h2 style="margin-bottom: 0; color: var(--pico-primary); font-family: var(--font-mono);">{unique_ips}</h2>
                     <small>{t("Unique IPs")}</small>
                 </article>
             </div>
-            <p style="margin-top: 0.5rem;"><small>{t("Average Latency")}: <strong>{avg_ms}ms</strong></small></p>
+            <p style="margin-top: 0.5rem;"><small>{t("Average Latency")}: <strong style="font-family: var(--font-mono);">{avg_ms}ms</strong></small></p>
             {admin_controls}
         </div>
         """
@@ -878,7 +897,7 @@ def get_recent_errors():
             if not tail:
                 return f"<p><em>{t('Session log empty.')}</em></p>"
             
-            html = "<div style='font-family: monospace; font-size: 0.8rem; overflow-x: auto; white-space: pre;'>"
+            html = "<div style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; white-space: pre;'>"
             for line in reversed(tail):
                 # Strip year (assuming 20XX-MM-DD format)
                 clean_line = line.strip()

@@ -7,7 +7,7 @@ import urllib.request
 import json
 import atexit
 import queue
-import psutil 
+import psutil
 import sqlite3
 from datetime import datetime, timedelta
 from app.database import get_db_connection
@@ -20,7 +20,7 @@ server_exe = os.path.join(BASE_DIR, 'bin', 'llama-server.exe')
 AI_CONFIG = {
     "file": "gemma-4-E4B-it-Q4_K_M.gguf",
     "port": 8082,
-    "context": 8192 # Expanded context for single-model setup
+    "context": 8192
 }
 
 
