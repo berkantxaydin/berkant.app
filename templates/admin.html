@@ -1,38 +1,148 @@
 {% extends "base.html" %}
 
-{% block title %}System Database Admin - proglem{% endblock %}
+{% block title %}Site Administration - proglem{% endblock %}
 
 {% block content %}
 <section>
   <hgroup>
-    <h2 style="color: var(--pico-ins-color);">Site Administration</h2>
-    <p>Complete overrides over the ecosystem. HTMX native sweeps across all database components directly mapping back to raw SQLite tables.</p>
+    <h2 style="color: var(--pico-ins-color);">⚙️ Site Administration</h2>
+    <p>Full control over the proglem ecosystem. All mutations are reflected instantly via HTMX — no page reloads.</p>
   </hgroup>
-  
-  <article class="glass-panel" style="border: 1px solid var(--pico-ins-color);">
-    <h3>Master CV Controls</h3>
-    <table>
-        <tr><th>User</th><th>Title</th><th>Actions</th></tr>
-        {% for cv in all_cvs %}
-        <tr>
-            <td>{{ cv.username }}</td>
+
+  <!-- ===== CHAT ROOM MANAGEMENT ===== -->
+  <article class="glass-panel" style="border: 1px solid #a855f7; margin-bottom: 2rem;">
+    <h3 class="accent-text">💬 Chat Room Management</h3>
+    <p style="color: #94a3b8; font-size: 0.9rem;">Toggle rooms on/off for users. The General room cannot be deleted. Each new Jam auto-creates its own room.</p>
+
+    <div id="chat-room-admin-table-wrapper" hx-get="/api/chat/rooms/admin" hx-trigger="load" hx-swap="innerHTML">
+      <p aria-busy="true">Loading rooms...</p>
+    </div>
+
+    <details style="margin-top: 1.5rem;">
+      <summary style="cursor: pointer; font-weight: 600; color: var(--pico-primary);">➕ Create Custom Room</summary>
+      <article style="margin-top: 1rem; padding: 1.2rem; background: rgba(168,85,247,0.05); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px;">
+        <form hx-post="/api/chat/rooms"
+              hx-target="#chat-room-admin-table-wrapper"
+              hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful){ this.reset(); }">
+          <div class="grid">
+            <label>Room Name
+              <input type="text" name="name" placeholder="e.g. 🔥 Off-Topic" required>
+            </label>
+            <div style="display: flex; align-items: flex-end;">
+              <button type="submit" style="width: 100%;">Create Room</button>
+            </div>
+          </div>
+        </form>
+      </article>
+    </details>
+  </article>
+
+  <!-- ===== GAME JAM MANAGEMENT ===== -->
+  <article class="glass-panel" style="border: 1px solid var(--pico-primary); margin-bottom: 2rem;">
+    <h3 class="accent-text">🏆 Game Jam Management</h3>
+    <p style="color: #94a3b8; font-size: 0.9rem;">Create, edit, and delete jams. Deleting a jam does NOT delete the submitted games — it just detaches them.</p>
+
+    <!-- Jam Table (HTMX-driven) -->
+    <div id="jam-admin-table-wrapper" hx-get="/api/jams" hx-trigger="load" hx-swap="innerHTML">
+      <p aria-busy="true">Loading jams...</p>
+    </div>
+
+    <!-- Create Jam Form -->
+    <details style="margin-top: 2rem;" id="create-jam-details">
+      <summary style="cursor: pointer; font-weight: 600; color: var(--pico-primary);">➕ Create New Jam</summary>
+      <article style="margin-top: 1rem; padding: 1.5rem; background: rgba(168,85,247,0.05); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px;">
+        <form hx-post="/api/jams"
+              hx-target="#jam-admin-table-wrapper"
+              hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful){ this.reset(); document.getElementById('create-jam-details').removeAttribute('open'); }">
+          <div class="grid">
+            <label>Title
+              <input type="text" name="title" placeholder="e.g. Spring Game Jam 2026" required>
+            </label>
+            <label>Theme
+              <input type="text" name="theme" placeholder="e.g. Time Paradox" required>
+            </label>
+          </div>
+          <div class="grid">
+            <label>Start Time (UTC)
+              <input type="datetime-local" name="start_time" required>
+            </label>
+            <label>End Time (UTC)
+              <input type="datetime-local" name="end_time" required>
+            </label>
+          </div>
+          <label>YouTube Embed URL <small style="color:#64748b;">(optional — paste the /embed/ URL)</small>
+            <input type="url" name="youtube_url" placeholder="https://www.youtube.com/embed/VIDEO_ID">
+          </label>
+          <button type="submit">Create Jam</button>
+        </form>
+      </article>
+    </details>
+  </article>
+
+  <!-- ===== MASTER CV CONTROLS ===== -->
+  <article class="glass-panel" style="border: 1px solid var(--pico-ins-color); margin-bottom: 2rem;">
+    <h3 style="color: var(--pico-ins-color);">💼 Master CV Controls</h3>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead><tr><th>User</th><th>Title</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for cv in all_cvs %}
+          <tr>
+            <td>@{{ cv.username }}</td>
             <td>{{ cv.title }}</td>
-            <td><button class="outline" hx-delete="/api/cv/{{ cv.id }}" hx-target="closest tr" hx-swap="outerHTML">Delete</button></td>
-        </tr>
-        {% endfor %}
-    </table>
-    
-    <h3 style="margin-top: 3rem;">Master Game Binary Overrides</h3>
-    <table>
-        <tr><th>User</th><th>Title</th><th>Actions</th></tr>
-        {% for game in all_games %}
-        <tr>
-            <td>{{ game.username }}</td>
+            <td>
+              <button class="outline contrast" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
+                      hx-delete="/api/cv/{{ cv.id }}"
+                      hx-target="closest tr"
+                      hx-swap="outerHTML"
+                      hx-confirm="Delete '{{ cv.title }}' by @{{ cv.username }}?">Delete</button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="text-align:center; color:grey;">No CVs in the system.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <!-- ===== MASTER GAME CONTROLS ===== -->
+  <article class="glass-panel" style="border: 1px solid var(--pico-ins-color);">
+    <h3 style="color: var(--pico-ins-color);">🎮 Master Game Controls</h3>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead><tr><th>User</th><th>Title</th><th>Jam</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for game in all_games %}
+          <tr>
+            <td>@{{ game.username }}</td>
             <td>{{ game.title }}</td>
-            <td><button class="outline" hx-delete="/api/jam/{{ game.id }}" hx-target="closest tr" hx-swap="outerHTML">Drop Payload</button></td>
-        </tr>
-        {% endfor %}
-    </table>
+            <td>{{ 'Jam #' ~ game.jam_id if game.jam_id else '—' }}</td>
+            <td>
+              {% if game.validation_status == 'Valid' %}
+                <span class="badge badge-active">Valid</span>
+              {% elif game.validation_status == 'Pending' %}
+                <span class="badge badge-upcoming">Pending</span>
+              {% else %}
+                <span class="badge badge-ended">{{ game.validation_status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="outline contrast" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
+                      hx-delete="/api/jam/{{ game.id }}"
+                      hx-target="closest tr"
+                      hx-swap="outerHTML"
+                      hx-confirm="Delete '{{ game.title }}' by @{{ game.username }}?">Delete</button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center; color:grey;">No games submitted yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </article>
 </section>
 {% endblock %}

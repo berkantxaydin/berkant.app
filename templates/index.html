@@ -3,34 +3,53 @@
 {% block content %}
 <section>
   <hgroup>
-    <h1 class="accent-text">System Dashboard</h1>
-    <p>Real-time RimWorld multiplayer analytics and Local AI monitor</p>
+    <h1 class="accent-text">Server Portal</h1>
+    <p>Live System Metrics, Analytics, and Local AI Monitoring</p>
   </hgroup>
 
   <div class="grid">
-    <!-- RIMWORLD POLLING DASHBOARD -->
+    <!-- SYSTEM RESOURCES -->
     <article class="glass-panel">
-      <header>RimWorld Server Status</header>
-      
-      <!-- HTMX automatically polls /api/server_status every 10 seconds -->
-      <div id="rimworld-stats" hx-get="/api/server_status" hx-trigger="load, every 10s" hx-swap="innerHTML">
-        <p aria-busy="true">Connecting to Game Server...</p>
+      <header style="display: flex; justify-content: space-between; align-items: center;">
+        Platform Engine
+      </header>
+      <div id="aspire-resources" hx-get="/api/metrics/resources" hx-trigger="load, every 30s" hx-swap="innerHTML">
+        <p>Loading server telemetry...</p>
       </div>
-      
     </article>
 
-    <!-- LOCAL RAM-SAFE AI -->
+    <!-- CORE ANALYTICS -->
     <article class="glass-panel">
-      <header>LFM 2.5-Thinking (1.2B)</header>
+      <header>Traffic Analytics</header>
+      <div id="aspire-analytics" hx-get="/api/metrics/analytics" hx-trigger="load, every 10s" hx-swap="innerHTML">
+        <p>Calculating routing stats...</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="grid">
+    <!-- ERROR LOG TAIL -->
+    <article class="glass-panel" style="grid-column: span 1;">
+      <header>Runtime Trace Logs</header>
+      <div id="aspire-logs" hx-get="/api/metrics/logs" hx-trigger="load, every 15s" hx-swap="innerHTML"
+        style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px;">
+        <p>Reading log stream...</p>
+      </div>
+    </article>
+
+    <!-- LOCAL AI ASSISTANT -->
+    <article class="glass-panel" style="grid-column: span 1;">
+      <header>AI Assistant (Gemma 4)</header>
       <form hx-post="/ai/ask" hx-target="#chat-result-container" hx-swap="innerHTML">
         <fieldset role="group">
           <input type="text" name="prompt" placeholder="Ask the local Assistant..." required>
           <button type="submit" class="outline">Send</button>
         </fieldset>
       </form>
-      <div id="chat-result-container" style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; min-height: 80px;">
+      <div id="chat-result-container" aria-live="polite"
+        style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; min-height: 80px;">
         <div id="chat-result">
-            <em>AI is idle...</em>
+          <em>AI is idle...</em>
         </div>
       </div>
     </article>

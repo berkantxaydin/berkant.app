@@ -69,7 +69,7 @@ def register():
             return render_template('register.html', error="All fields are required.")
             
         hashed_pw = generate_password_hash(password)
-        is_admin = 1 if admin_code == "PROGLEM_ADMIN_SECRET" else 0
+        is_admin = 1 if admin_code == "77" else 0
         
         conn = get_db_connection()
         try:

@@ -4,3 +4,7 @@ waitress
 boto3
 pywebview
 werkzeug
+psutil
+python-dotenv
+google-generativeai
+requests

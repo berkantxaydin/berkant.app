@@ -31,3 +31,19 @@ yarn-debug.log*
 # Environment files (local configs)
 .env
 .env.*
+
+# AI Models & Large Binaries
+models/
+bin/*.exe
+bin/*.dll
+
+# Python environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Database
+*.db
+*.db-journal
+*.db-wal

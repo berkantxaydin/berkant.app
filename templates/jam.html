@@ -1,84 +1,219 @@
 {% extends "base.html" %}
 
-{% block title %}Game Jam - proglem{% endblock %}
+{% block title %}Game Jams - proglem{% endblock %}
+{% block meta_description %}Browse all active, upcoming, and past Game Jams on proglem. Compete, submit your Godot WebGL
+game, and win.{% endblock %}
 
 {% block content %}
-{% if jam %}
-<section class="text-center" style="margin-top: 4vh; margin-bottom: 4vh; animation: fadeIn 1s ease-out;">
-  <hgroup>
-    <h1 class="accent-text" style="font-size: 3.5rem; margin-bottom: 0.5rem; filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.5));">{{ jam.title }}</h1>
-    <h2 style="color: var(--pico-color);">Theme: <strong>{{ jam.theme }}</strong></h2>
+{% if jams %}
+
+<section style="margin-top: 2vh; animation: fadeIn 0.6s ease-out;">
+  <hgroup class="text-center" style="margin-bottom: 2rem;">
+    <h1 class="accent-text" style="font-size: 2.5rem; filter: drop-shadow(0 0 12px rgba(168,85,247,0.5));">🏆 Game Jams
+    </h1>
+    <p style="color: #94a3b8;">{{ jams|length }} jam{{ 's' if jams|length != 1 else '' }} hosted on this platform</p>
   </hgroup>
-  
-  <div class="glass-panel" style="display: inline-block; padding: 1rem 3rem; margin-bottom: 2rem; border-color: var(--pico-primary);">
-    <h4 id="jam-timer" style="margin: 0; font-family: monospace; font-size: 2rem; color: #f8fafc;">Calculating...</h4>
-    <small id="jam-timer-label" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">Time Remaining</small>
-  </div>
 
-  {% if jam.youtube_url %}
-  <div style="margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto; position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-    <iframe src="{{ jam.youtube_url }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
-  </div>
-  {% endif %}
-
-  <div style="margin-top: 2rem;">
-    <a href="/upload?jam_id={{ jam.id }}" role="button" class="contrast" style="font-size: 1.2rem; padding: 1rem 3rem; border-radius: 50px; box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);">Participate & Upload Game</a>
-  </div>
-</section>
-
-<section>
-  <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Jam Submissions</h3>
-  <div class="grid" style="gap: 1.5rem;">
-    {% for game in games %}
-    <article class="glass-panel text-center" style="padding: 1.5rem;">
-      <h4 class="accent-text" style="margin-bottom: 0.5rem;">{{ game.title }}</h4>
-      <p style="color: #94a3b8; font-size: 0.9rem;">By <strong>@{{ game.username }}</strong></p>
-      <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">Play Entry</a>
-    </article>
-    {% else %}
-    <p class="text-center full-width" style="color: grey;">No submissions yet. Be the first to enter!</p>
+  <!-- TAB BAR -->
+  <div class="jam-tabs" id="jam-tab-bar">
+    {% for jam in jams %}
+    <button class="jam-tab-btn{% if loop.first %} active{% endif %}" id="tab-btn-{{ jam.id }}"
+      onclick="switchJam('{{ jam.id }}')">
+      {{ jam.title }}
+    </button>
     {% endfor %}
   </div>
+
+  <!-- JAM PANELS -->
+  {% for jam in jams %}
+  <div class="jam-panel{% if loop.first %} active{% endif %}" id="jam-panel-{{ jam.id }}">
+
+    <!-- Header -->
+    <div class="text-center" style="margin-bottom: 2rem;">
+      <hgroup>
+        <h2 style="font-size: 2.8rem; margin-bottom: 0.3rem; filter: drop-shadow(0 0 10px rgba(168,85,247,0.4));">{{
+          jam.title }}</h2>
+        <p style="color: #94a3b8;">Theme: <strong style="color: var(--pico-primary);">{{ jam.theme }}</strong></p>
+      </hgroup>
+
+      <!-- COUNTDOWN TIMER -->
+      <div class="glass-panel"
+        style="display: inline-block; padding: 1rem 3rem; margin: 1rem 0; border-color: var(--pico-primary);">
+        <h4 id="timer-{{ jam.id }}"
+          style="margin: 0; font-family: monospace; font-size: 2rem; color: #f8fafc; letter-spacing: 2px;">
+          Calculating...
+        </h4>
+        <small id="timer-label-{{ jam.id }}" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">
+          Loading...
+        </small>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <a href="/upload?jam_id={{ jam.id }}" role="button" class="contrast"
+          style="font-size: 1.1rem; padding: 0.8rem 2.5rem; border-radius: 50px; box-shadow: 0 0 20px rgba(168,85,247,0.4);">
+          🎮 Participate &amp; Upload
+        </a>
+      </div>
+    </div>
+
+    <!-- YouTube Embed (High-Res Cinema Mode) -->
+    {% if jam.youtube_url %}
+    <div id="video-container-{{ jam.id }}" class="video-cinema-container"
+         style="max-width: 1100px; margin: 0 auto 3.5rem; position: relative; padding-bottom: 38%; height: 0;
+                border-radius: 20px; overflow: hidden; cursor: pointer;
+                border: 2px solid rgba(168,85,247,0.25);
+                box-shadow: 0 0 40px rgba(0,0,0,0.6), 0 0 20px rgba(168,85,247,0.1);"
+         onclick="loadVideo('{{ jam.id }}', '{{ jam.youtube_url | yt_embed }}')">
+      
+      <!-- Video Poster (High Res) -->
+      <div id="video-poster-{{ jam.id }}" class="video-cinema-poster"
+           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                  background: url('{{ jam.youtube_url | yt_thumb }}') center/cover no-repeat;
+                  transition: transform 0.4s ease; background-color: #000;">
+        
+        <!-- Dark Overlay -->
+        <div style="width: 100%; height: 100%; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+          <!-- Pulse Play Button -->
+          <div class="play-pulse" 
+               style="width: 80px; height: 80px; background: rgba(168,85,247,0.9); border-radius: 50%;
+                      display: flex; align-items: center; justify-content: center;
+                      box-shadow: 0 0 20px rgba(168,85,247,0.5);">
+            <div style="width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 25px solid white; margin-left: 8px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Submissions -->
+    <section>
+      <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+        Jam Submissions <span style="font-size: 0.85rem; color: #64748b;">({{ jam.games|length }})</span>
+      </h3>
+      <div class="grid" style="gap: 1.5rem;">
+        {% for game in jam.games %}
+        <article class="glass-panel text-center" style="padding: 1.5rem;">
+          <h4 class="accent-text" style="margin-bottom: 0.5rem;">{{ game.title }}</h4>
+          <p style="color: #94a3b8; font-size: 0.9rem;">by <strong>@{{ game.username }}</strong></p>
+          <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">Play
+            Entry</a>
+        </article>
+        {% else %}
+        <p class="text-center full-width" style="color: grey; padding: 2rem;">
+          No submissions yet — be the first to enter! 🚀
+        </p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Inline countdown JS data -->
+    <script>
+      (function () {
+        const start = new Date("{{ jam.start_time }}".replace(' ', 'T') + "Z").getTime();
+        const end = new Date("{{ jam.end_time }}".replace(' ', 'T') + "Z").getTime();
+        const timerId = "timer-{{ jam.id }}";
+        const labelId = "timer-label-{{ jam.id }}";
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        function tick() {
+          const now = Date.now();
+          const timerEl = document.getElementById(timerId);
+          const labelEl = document.getElementById(labelId);
+          if (!timerEl) return;
+
+          let distance, label;
+          if (now < start) {
+            distance = start - now;
+            label = "Starts In";
+          } else if (now <= end) {
+            distance = end - now;
+            label = "Ends In";
+          } else {
+            timerEl.innerText = "Jam Ended";
+            labelEl.innerText = "This jam has closed";
+            return;
+          }
+
+          const d = Math.floor(distance / 86400000);
+          const h = Math.floor((distance % 86400000) / 3600000);
+          const m = Math.floor((distance % 3600000) / 60000);
+          const s = Math.floor((distance % 60000) / 1000);
+          timerEl.innerText = `${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+          labelEl.innerText = label;
+        }
+
+        tick();
+        setInterval(tick, 1000);
+      })();
+    </script>
+  </div>
+  {% endfor %}
 </section>
 
 <script>
-  const startTime = new Date("{{ jam.start_time }}Z").getTime();
-  const endTime = new Date("{{ jam.end_time }}Z").getTime();
-  
-  function updateTimer() {
-    const now = new Date().getTime();
-    const timerEl = document.getElementById("jam-timer");
-    const labelEl = document.getElementById("jam-timer-label");
-    
-    if (now < startTime) {
-      labelEl.innerText = "Starts In";
-      const distance = startTime - now;
-      renderTime(distance, timerEl);
-    } else if (now >= startTime && now <= endTime) {
-      labelEl.innerText = "Ends In";
-      const distance = endTime - now;
-      renderTime(distance, timerEl);
-    } else {
-      labelEl.innerText = "Jam Ended";
-      timerEl.innerText = "00:00:00:00";
+  function switchJam(jamId) {
+    // Hide all panels, deactivate all tabs
+    document.querySelectorAll('.jam-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.jam-tab-btn').forEach(b => b.classList.remove('active'));
+    // Activate selected
+    document.getElementById('jam-panel-' + jamId).classList.add('active');
+    document.getElementById('tab-btn-' + jamId).classList.add('active');
+  }
+
+  function loadVideo(jamId, embedUrl) {
+    const container = document.getElementById('video-container-' + jamId);
+    container.innerHTML = `
+      <iframe src="${embedUrl}?autoplay=1" title="Jam Livestream" frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 14px; animation: fadeIn 0.4s ease-out;">
+      </iframe>
+    `;
+    container.onclick = null; // Prevent double trigger
+    container.style.cursor = 'default';
+  }
+</script>
+
+{% else %}
+<section class="text-center" style="margin-top: 12vh; animation: fadeIn 0.8s ease-out;">
+  <div style="font-size: 5rem; margin-bottom: 1rem;">🏁</div>
+  <h2 style="color: #64748b;">No Game Jams Yet</h2>
+  <p style="color: #475569; max-width: 400px; margin: 0 auto 2rem;">
+    An admin will announce the next jam soon. Check back for the upcoming challenge!
+  </p>
+  {% if session.get('is_admin') %}
+  <a href="/admin" role="button" class="outline">Go to Admin Panel</a>
+  {% endif %}
+</section>
+{% endif %}
+
+<style>
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 
-  function renderTime(distance, el) {
-    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-    el.innerText = `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+  .play-pulse {
+    transition: transform 0.3s ease, background 0.3s ease;
+    animation: pulse 2s infinite;
+  }
+  
+  .video-cinema-container:hover .video-cinema-poster {
+    transform: scale(1.03);
   }
 
-  setInterval(updateTimer, 1000);
-  updateTimer();
-</script>
-{% else %}
-<section class="text-center" style="margin-top: 10vh;">
-  <h2>No Active Game Jams</h2>
-  <p>Check back later for upcoming events!</p>
-</section>
-{% endif %}
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7); }
+    70% { box-shadow: 0 0 0 25px rgba(168, 85, 247, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+  }
+</style>
 {% endblock %}

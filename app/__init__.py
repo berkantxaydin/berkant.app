@@ -15,8 +15,9 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-unsafe-dev-key')
     
     # Configure robust logging handling for error.log
+    # mode='w' ensures the log is fresh for this session, starting from "instance created"
     log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] in %(module)s: %(message)s')
-    file_handler = RotatingFileHandler('error.log', maxBytes=5_000_000, backupCount=5)
+    file_handler = RotatingFileHandler('error.log', mode='w', maxBytes=5_000_000, backupCount=5, encoding='utf-8')
     file_handler.setFormatter(log_formatter)
     file_handler.setLevel(logging.INFO) # Log info and above
     
@@ -42,5 +43,72 @@ def create_app():
     app.register_blueprint(api_bp)
     app.register_blueprint(ai_bp)
     app.register_blueprint(auth_bp)
+    
+    # Register custom Jinja filters
+    def yt_embed_filter(url):
+        import re
+        if not url: return ""
+        # Handle watch?v= format
+        if "youtube.com/watch?v=" in url:
+            video_id = url.split("v=")[1].split("&")[0]
+            return f"https://www.youtube.com/embed/{video_id}"
+        # Handle youtu.be/ format
+        if "youtu.be/" in url:
+            video_id = url.split("youtu.be/")[1].split("?")[0]
+            return f"https://www.youtube.com/embed/{video_id}"
+        # Handle existing embed format
+        if "youtube.com/embed/" in url:
+            return url
+        return url # fallback
+    
+    app.jinja_env.filters['yt_embed'] = yt_embed_filter
+
+    def yt_thumb_filter(url):
+        if not url: return ""
+        # Handle watch?v= format
+        if "youtube.com/watch?v=" in url:
+            video_id = url.split("v=")[1].split("&")[0]
+        # Handle youtu.be/ format
+        elif "youtu.be/" in url:
+            video_id = url.split("youtu.be/")[1].split("?")[0]
+        # Handle existing embed format
+        elif "youtube.com/embed/" in url:
+            video_id = url.split("youtube.com/embed/")[1].split("?")[0]
+        else:
+            return ""
+        
+        # We always attempt maxresdefault for highest resolution
+        return f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+
+    app.jinja_env.filters['yt_thumb'] = yt_thumb_filter
+
+    import time
+    from flask import request, g
+    
+    @app.before_request
+    def start_timer():
+        g.start_time = time.time()
+
+    @app.after_request
+    def log_request(response):
+        if hasattr(g, 'start_time'):
+            duration_ms = int((time.time() - g.start_time) * 1000)
+            
+            # Log all non-static traffic to provide accurate analytics on the dashboard
+            if not request.path.startswith('/static/'):
+                from app.database import get_db_connection
+                try:
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "INSERT INTO Analytics_Logs (method, path, ip_address, status_code, duration_ms) VALUES (?, ?, ?, ?, ?)",
+                        (request.method, request.path, request.remote_addr, response.status_code, duration_ms)
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    app.logger.error(f"Analytics logging failed: {e}")
+                    
+        return response
 
     return app
