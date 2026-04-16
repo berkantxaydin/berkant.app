@@ -37,7 +37,7 @@ def main():
         
         prompt = f"""
         Act as a Senior Security & Python Engineer. Review the following Git diff for a Pull Request.
-        Context: This project is a highly constrained Flask app running on 8GB RAM using SQLite (WAL).
+        Context: This project is a highly constrained Flask app running on 16GB RAM using SQLite (WAL).
         
         Tasks:
         1. Look for obvious bugs or logic errors.

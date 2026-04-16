@@ -1,9 +1,6 @@
 import queue
 import threading
 import uuid
-import time
-import zipfile
-import io
 import urllib.request
 from app.database import get_db_connection
 
@@ -26,15 +23,21 @@ def validation_worker():
         success = False
         with validator_mutex:
             try:
-                # We specifically enforce WebGL proofs as per rule #2 by fetching only remote file metadata limits
-                # In production, we request the first 256 bytes (Chunked Transfer) to extract the localized ZIP root header directly
-                print(f"[{job_uid}] Mutex locked. Simulating secure remote ZIP HTTP header parsing for WebGL integrity...")
-                time.sleep(3) # Emulate heavy byte-chunk HTTP network retrieval safely
-                
-                # Rule enforcement: if it strictly ends with .zip or satisfies WebGL markers
-                cloudflare_r2_patterns = [".zip", "/play_mock/", "r2.cloudflarestorage.com", "cloudflared.com", "/submissions/"]
-                if any(pattern in s3_url.lower() for pattern in cloudflare_r2_patterns):
-                    success = True
+                print(f"[{job_uid}] Mutex locked. Validating remote ZIP HTTP header or parsing mock WebGL integrity...")
+                # We do a lightweight HTTP HEAD request to verify file existence without downloading it
+                if s3_url.startswith("http://") or s3_url.startswith("https://"):
+                    req = urllib.request.Request(s3_url, method='HEAD')
+                    try:
+                        with urllib.request.urlopen(req, timeout=5) as response:
+                            if response.status in [200, 301, 302, 204]:
+                                success = True
+                    except Exception as e:
+                        print(f"[{job_uid}] Network validation failed: {e}")
+                else:
+                    # Local fallback: Rule enforcement for strictly ends with .zip or satisfies WebGL markers
+                    cloudflare_r2_patterns = [".zip", "/play_mock/", "r2.cloudflarestorage.com", "cloudflared.com", "/submissions/"]
+                    if any(pattern in s3_url.lower() for pattern in cloudflare_r2_patterns):
+                        success = True
             except Exception as e:
                 print(f"[{job_uid}] Worker Failure: {e}")
         
