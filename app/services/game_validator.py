@@ -28,7 +28,7 @@ def validation_worker():
                 if s3_url.startswith("http://") or s3_url.startswith("https://"):
                     req = urllib.request.Request(s3_url, method='HEAD')
                     try:
-                        with urllib.request.urlopen(req, timeout=5) as response:
+                        with urllib.request.urlopen(req, timeout=5) as response: # nosec B310
                             if response.status in [200, 301, 302, 204]:
                                 success = True
                     except Exception as e:

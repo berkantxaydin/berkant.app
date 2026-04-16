@@ -625,7 +625,7 @@ def translate_missing():
                     headers={"Content-Type": "application/json", "Authorization": "Bearer admin"})
                 
                 # Higher timeout (300s) for slow local generation
-                with urllib.request.urlopen(req, timeout=300) as response:
+                with urllib.request.urlopen(req, timeout=300) as response: # nosec B310
                     result = json.loads(response.read().decode('utf-8'))
                     raw_content = result['choices'][0]['message']['content']
                     
