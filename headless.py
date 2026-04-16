@@ -9,4 +9,4 @@ if __name__ == '__main__':
     logging.getLogger('waitress').setLevel(logging.ERROR)
     print("[Headless] Booting pure background WSGI...")
     server = create_app()
-    serve(server, host='127.0.0.1', port=5000)
+    serve(server, host='[IP_ADDRESS]', port=5000)

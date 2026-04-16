@@ -1,6 +1,6 @@
 # 🚀 Scalable Micro-Platform
 
-A highly optimized, resource-efficient web platform and API backend built to run on constrained hardware. This project hosts developer portfolios(users will be able to togle if they looking for job), manages Game Jam events or similar for sofware devs, serves as a backend for Godot WebGL games, and acts as a bridge to a live C# multiplayer game server (RimWorld Together).
+A highly optimized, resource-efficient web platform and API backend built to run on constrained hardware. This project hosts developer portfolios(users will be able to togle if they looking for job), manages Game Jam events or similar for sofware devs, and serves as a backend for Godot WebGL games.
 
 Designed from the ground up to operate on an 8GB RAM headless Debian server, behind a strict ISP CGNAT, with a 22 Mbps upload limit.
 
@@ -9,7 +9,6 @@ Designed from the ground up to operate on an 8GB RAM headless Debian server, beh
 ## ✨ Core Features
 * **CV Catalog & Game Jam Dashboard:** Ultra-lightweight web UI for users to view portfolios and register for events.
 * **Godot Game API:** Fast, secure JSON endpoints for Godot WebGL clients to read/write game data.
-* **Multiplayer Server Bridge:** Secure reading and writing to a local RimWorld Together C# server configuration to display live server stats.
 * **Local AI Integration:** A local LFM 2.5-Thinking 1.2B LLM that assists users, wrapped in a strict concurrency queue to prevent server RAM overload.
 * **Bandwidth Saver Uploads:** Bypasses the 22 Mbps server upload limit by generating pre-signed cloud URLs (S3/R2) for massive Game Jam file submissions.
 * **CGNAT Bypass:** The entire platform is tunneled securely to the public internet without port forwarding.

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}@{{ profile_user.username }} - proglem{% endblock %}
+{% block meta_description %}View @{{ profile_user.username }}'s developer profile, CVs, and Godot game submissions on proglem.{% endblock %}
+
+{% block content %}
+<section style="max-width: 900px; margin: 0 auto; animation: fadeIn 0.5s ease-out;">
+
+  <!-- Profile Header -->
+  <article class="glass-panel" style="padding: 2rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;">
+    <!-- Avatar (generated from username initial) -->
+    <div style="width: 80px; height: 80px; border-radius: 50%; flex-shrink: 0;
+                background: linear-gradient(135deg, #a855f7, #ec4899);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 2.2rem; font-weight: 800; color: #fff;
+                box-shadow: 0 0 25px rgba(168,85,247,0.5);">
+      {{ profile_user.username[0].upper() }}
+    </div>
+
+    <div style="flex: 1; min-width: 0;">
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
+        <h1 style="margin: 0; font-size: 1.8rem;">@{{ profile_user.username }}</h1>
+        {% if profile_user.is_admin %}
+        <span class="badge badge-active">&#x1F468;&#x200D;&#x1F4BB; Admin</span>
+        {% endif %}
+      </div>
+      <p style="color: #64748b; margin: 0; font-size: 0.9rem;">
+        Member since {{ profile_user.created_at[:10] if profile_user.created_at else 'unknown' }}
+      </p>
+      <div style="margin-top: 0.8rem; display: flex; gap: 1rem;">
+        <span style="color: #94a3b8; font-size: 0.9rem;">📄 {{ user_cvs|length }} CV{% if user_cvs|length != 1 %}s{% endif %}</span>
+        <span style="color: #94a3b8; font-size: 0.9rem;">🎮 {{ user_games|length }} Game{% if user_games|length != 1 %}s{% endif %}</span>
+      </div>
+    </div>
+  </article>
+
+  <div class="grid" style="gap: 2rem; align-items: start;">
+
+    <!-- CVs Column -->
+    <div>
+      <h3 class="accent-text" style="margin-bottom: 1rem;">📄 CVs</h3>
+      {% for cv in user_cvs %}
+      <article class="glass-panel" style="padding: 1.2rem; margin-bottom: 1rem; cursor: pointer;"
+               onclick="window.location.href='/cv/{{ cv.id }}'">
+        <strong>{{ cv.title }}</strong>
+        <p style="color: #64748b; font-size: 0.85rem; margin: 0.3rem 0 0;">
+          {{ cv.summary[:120] }}{% if cv.summary|length > 120 %}...{% endif %}
+        </p>
+      </article>
+      {% else %}
+      <p style="color: #475569; font-size: 0.9rem;">No CVs published yet.</p>
+      {% endfor %}
+    </div>
+
+    <!-- Games Column -->
+    <div>
+      <h3 class="accent-text" style="margin-bottom: 1rem;">🎮 Games</h3>
+      {% for game in user_games %}
+      <article class="glass-panel" style="padding: 1.2rem; margin-bottom: 1rem; cursor: pointer;"
+               onclick="window.location.href='/games/{{ game.id }}'">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+          <strong>{{ game.title }}</strong>
+          {% if game.validation_status == 'Valid' or game.validation_status == 'Approved' %}
+            <span class="badge badge-active">✓ Valid</span>
+          {% elif game.validation_status == 'Pending' %}
+            <span class="badge badge-upcoming">⏳ Scanning</span>
+          {% else %}
+            <span class="badge badge-ended">{{ game.validation_status }}</span>
+          {% endif %}
+        </div>
+        {% if game.description %}
+        <p style="color: #64748b; font-size: 0.85rem; margin: 0.3rem 0 0;">
+          {{ game.description[:100] }}{% if game.description|length > 100 %}...{% endif %}
+        </p>
+        {% endif %}
+      </article>
+      {% else %}
+      <p style="color: #475569; font-size: 0.9rem;">No games submitted yet.</p>
+      {% endfor %}
+    </div>
+
+  </div>
+</section>
+
+<style>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}

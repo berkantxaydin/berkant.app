@@ -1,52 +1,210 @@
 {% extends "base.html" %}
 
-{% block title %}Chat Room - proglem{% endblock %}
+{% block title %}Chat Rooms - proglem{% endblock %}
+{% block meta_description %}Join live community chat rooms tied to Game Jams and general discussion on proglem.{%
+endblock %}
 
 {% block content %}
-<section>
-  <hgroup class="text-center" style="margin-bottom: 2rem;">
-    <h2 class="accent-text">Community Chat</h2>
-    <p>Live discussions with zero bloated JS payloads. Powered by HTMX.</p>
+<section class="container" style="animation: fadeIn 0.5s ease-out;">
+  <hgroup>
+    <h1 class="accent-text">💬 Community Hub</h1>
+    <p style="color: #64748b;">Unified developer collaboration & dev logs</p>
   </hgroup>
 
-  <article class="glass-panel" style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; height: 60vh;">
-    <!-- Chat Messages Container -->
-    <div id="chat-messages" 
-         hx-get="/api/chat/messages" 
-         hx-trigger="load, every 3s" 
-         style="flex-grow: 1; overflow-y: auto; padding: 1rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 1rem; display: flex; flex-direction: column-reverse; gap: 0.5rem;">
-      <!-- Messages load here -->
-      <p class="text-center" style="color: grey;"><small>Loading messages...</small></p>
-    </div>
+  {% if not rooms %}
+  <p class="text-center" style="color: grey; margin-top: 4rem;">No chat rooms are currently active.</p>
+  {% else %}
+  <div class="grid">
+    <aside style="grid-column: span 1;">
+      <article class="glass-panel"
+        style="padding: 1rem; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2);">
+        <header style="margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <strong>Channels</strong>
+        </header>
+        <nav id="room-tab-bar">
+          <ul style="flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0;">
+            {% for room in rooms %}
+            <li style="width: 100%; list-style: none;">
+              <button id="room-tab-{{ room.id }}" class="jam-tab-btn {{ 'active' if loop.first else '' }} outline"
+                data-room-id="{{ room.id }}"
+                style="width: 100%; text-align: left; padding: 0.5rem 0.8rem; font-size: 0.9rem;">
+                # {{ room.name }}
+                {% if not room.is_enabled %}<span style="font-size:0.7rem; opacity:0.6;"> (off)</span>{% endif %}
+              </button>
+            </li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </article>
+    </aside>
 
-    <!-- Chat Input Form -->
-    {% if session.get('user_id') %}
-    <form hx-post="/api/chat/messages" hx-target="#chat-messages" hx-swap="innerHTML" hx-on::after-request="this.reset()" style="margin: 0;">
-      <fieldset role="group" style="margin: 0;">
-        <input type="text" name="content" placeholder="Type your message..." required autocomplete="off" maxlength="500">
-        <button type="submit" class="contrast" style="width: 120px;">Send</button>
-      </fieldset>
-    </form>
-    {% else %}
-    <footer class="text-center">
-      <small><a href="/login">Sign in</a> to participate in the chat.</small>
-    </footer>
-    {% endif %}
-  </article>
+    <div style="grid-column: span 3;">
+      <article class="glass-panel"
+        style="display: flex; flex-direction: column; height: 600px; padding: 0.5rem; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.1);">
+        <header
+          style="padding: 1rem; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <div style="min-width: 0;">
+            <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
+            <small id="active-room-desc"
+              style="display: block; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{
+              rooms[0].description }}</small>
+          </div>
+        </header>
+
+        <div id="chat-messages" hx-get="/api/chat/messages?room_id={{ rooms[0].id }}"
+          hx-trigger="load, every 3s[document.visibilityState === 'visible']" hx-swap="innerHTML"
+          style="flex-grow: 1; overflow-y: auto; padding: 1.5rem 1rem; scroll-behavior: smooth;">
+          <div style="display:flex; justify-content:center; padding:2rem;">
+            <span aria-busy="true">Connecting to secure tunnel...</span>
+          </div>
+        </div>
+
+        <footer style="padding: 1rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05);">
+          {% if session.get('user_id') %}
+          <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-swap="innerHTML"
+            hx-on::after-request="this.reset(); scrollToBottom();" style="margin-bottom: 0;">
+            <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
+            <fieldset role="group" style="margin-bottom: 0;">
+              <input type="text" id="chat-input" name="content" autocomplete="off"
+                placeholder="Message #{{ rooms[0].name }}..." required maxlength="500">
+              <button type="submit" style="width: 110px;">↵</button>
+            </fieldset>
+          </form>
+          {% else %}
+          <p class="text-center" style="margin: 0; color: #64748b;">
+            <a href="/login">Sign in</a> to participate.
+          </p>
+          {% endif %}
+        </footer>
+      </article>
+    </div>
+  </div>
+  {% endif %}
 </section>
 
+{% if rooms %}
+<input type="hidden" id="active-room-id" value="{{ rooms[0].id }}">
+{% endif %}
+
+<script id="chat-rooms-data" type="application/json">
+  {{ rooms | tojson }}
+</script>
+
 <script>
-  function formatTimes() {
-    document.querySelectorAll('.chat-time').forEach(el => {
-      if(!el.dataset.formatted) {
-        const d = new Date(el.getAttribute('datetime'));
-        el.innerText = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
-        el.dataset.formatted = "true";
+  (function () {
+    const chatRoomsDataElement = document.getElementById('chat-rooms-data');
+    const chatRooms = chatRoomsDataElement ? JSON.parse(chatRoomsDataElement.textContent) : [];
+
+    window.switchRoom = function (roomId) {
+      // Toggle Tab Active State
+      document.querySelectorAll('.jam-tab-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('room-tab-' + roomId);
+      if (btn) btn.classList.add('active');
+
+      // Update State Tracking
+      const activeRoomInput = document.getElementById('active-room-id');
+      if (activeRoomInput) activeRoomInput.value = roomId;
+
+      // Swap Messenger Target
+      const msgEl = document.getElementById('chat-messages');
+      if (msgEl) {
+        msgEl.setAttribute('hx-get', '/api/chat/messages?room_id=' + roomId);
+        msgEl.innerHTML = '<div style="display:flex; justify-content:center; padding:2rem;"><span aria-busy="true">Switching channels...</span></div>';
+        htmx.process(msgEl);
+        htmx.trigger(msgEl, 'load');
+      }
+
+      // Sync Form Context
+      const roomObj = chatRooms.find(r => r.id === roomId);
+      const input = document.getElementById('chat-input');
+      const roomInput = document.getElementById('chat-room-id-input');
+      const nameLabel = document.getElementById('active-room-name');
+      const descLabel = document.getElementById('active-room-desc');
+
+      if (roomObj) {
+        if (input) input.placeholder = 'Message #' + roomObj.name + '...';
+        if (roomInput) roomInput.value = roomId;
+        if (nameLabel) nameLabel.innerText = '# ' + roomObj.name;
+        if (descLabel) descLabel.innerText = roomObj.description || '';
+      }
+    };
+
+    // Event Delegation for Performance
+    document.getElementById('room-tab-bar')?.addEventListener('click', e => {
+      const btn = e.target.closest('[data-room-id]');
+      if (btn) window.switchRoom(Number(btn.dataset.roomId));
+    });
+
+    window.scrollToBottom = function () {
+      const el = document.getElementById('chat-messages');
+      if (el) el.scrollTop = el.scrollHeight;
+    };
+
+    // Real-time Time Formatting
+    window.formatTimes = function () {
+      document.querySelectorAll('.chat-time:not([data-fmt])').forEach(el => {
+        try {
+          const d = new Date(el.getAttribute('datetime'));
+          el.innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+          el.dataset.fmt = '1';
+        } catch (e) { }
+      });
+    };
+
+    document.body.addEventListener('htmx:afterSettle', () => {
+      window.formatTimes();
+      window.scrollToBottom();
+    });
+
+    // Smart Visibility Polling (Triggers an immediate load when tabbing back)
+    document.addEventListener('visibilitychange', () => {
+      const messagesEl = document.getElementById('chat-messages');
+      if (document.visibilityState === 'visible' && messagesEl) {
+        htmx.trigger(messagesEl, 'load');
       }
     });
-  }
-  
-  formatTimes();
-  document.body.addEventListener("htmx:afterSettle", formatTimes);
+  })();
 </script>
+
+<style>
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .jam-tab-btn.active {
+    background-color: var(--pico-primary) !important;
+    color: white !important;
+    border-color: var(--pico-primary) !important;
+  }
+
+  .jam-tab-btn {
+    justify-content: flex-start !important;
+  }
+
+  /* Scrollbar styling for a premium feel */
+  #chat-messages::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+
+  #chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--pico-primary);
+  }
+</style>
 {% endblock %}

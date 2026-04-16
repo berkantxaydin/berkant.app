@@ -23,17 +23,6 @@ def test_production_landing_api():
     assert "proglem" in response.text
 
 @pytest.mark.skipif(not is_server_running(), reason="Server not deployed.")
-def test_production_rimworld_polling():
-    """Hits the explicit /api/server_status JSON endpoint from the active deployment layer."""
-    response = requests.get(f"{BASE_URL}/api/server_status")
-    assert response.status_code == 200
-    
-    data = response.json()
-    assert "server_status" in data
-    assert "players_active" in data
-    assert data["server_status"] == "Online"
-
-@pytest.mark.skipif(not is_server_running(), reason="Server not deployed.")
 def test_production_secure_s3_url_generator():
     """Verifies that the live Nginx/Waitress deployment natively issues AWS payload URLs."""
     response = requests.get(f"{BASE_URL}/api/jam/get-upload-url?filename=shiftright.zip")
