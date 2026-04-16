@@ -59,7 +59,8 @@ def background_initialization():
         max_retries = 90
         for _ in range(max_retries):
             try:
-                with urllib.request.urlopen(url, timeout=2) as response:
+                # We use nosec B310 because this URL is hardcoded to localhost and safe.
+                with urllib.request.urlopen(url, timeout=2) as response: # nosec B310
                     if response.status == 200:
                         ai_ready = True
                         print("DEBUG: AI Engine is ready.")
