@@ -6,8 +6,8 @@
 <section style="display: flex; justify-content: center; align-items: center; min-height: 70vh;">
   <article class="glass-panel" style="width: 100%; max-width: 400px;">
     <hgroup class="text-center">
-      <h2 class="accent-text">Welcome Back</h2>
-      <p>Sign in to manage your CV and Games</p>
+      <h2 class="accent-text">{{ t("Welcome Back") }}</h2>
+      <p>{{ t("Sign in to manage your CV and Games") }}</p>
     </hgroup>
     
     {% if error %}
@@ -16,22 +16,22 @@
 
     <form method="POST" action="/login">
       <label>
-        Username
+        {{ t("Username") }}
         <input type="text" name="username" required>
       </label>
       <label>
-        Password
+        {{ t("Password") }}
         <input type="password" name="password" required>
       </label>
       <label>
         <input type="checkbox" name="remember">
-        Remember me
+        {{ t("Remember me") }}
       </label>
-      <button type="submit" class="contrast">Sign In</button>
+      <button type="submit" class="contrast">{{ t("Sign In") }}</button>
     </form>
     
     <footer class="text-center">
-      <small>Don't have an account? <a href="/register">Register</a></small>
+      <small>{{ t("Don't have an account?") }} <a href="/register">{{ t("Register") }}</a></small>
     </footer>
   </article>
 </section>

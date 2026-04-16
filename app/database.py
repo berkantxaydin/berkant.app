@@ -1,9 +1,9 @@
 import os
 import sqlite3
-import json
 import logging
 
-DB_NAME = 'proglem.db'
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DB_NAME = os.path.join(BASE_DIR, 'proglem.db')
 
 def get_db_connection():
     """Create a database connection to the SQLite database with strictly enforced PRAGMAs."""
@@ -104,14 +104,51 @@ def init_db():
             )
         ''')
 
+        # Create Chat_Rooms table (multi-room support)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS Chat_Rooms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                jam_id INTEGER DEFAULT NULL,
+                is_enabled BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (jam_id) REFERENCES Game_Jams (id) ON DELETE SET NULL
+            )
+        ''')
+
+        # Seed the default General room if it doesn't exist yet
+        cursor.execute("SELECT id FROM Chat_Rooms WHERE name = '💬 General'")
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO Chat_Rooms (name, jam_id, is_enabled) VALUES ('💬 General', NULL, 1)")
+
         # Create Chat_Messages table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Chat_Messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
+                room_id INTEGER NOT NULL DEFAULT 1,
                 content TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES Users (id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Safe migration: add room_id to pre-existing Chat_Messages tables
+        try:
+            cursor.execute("ALTER TABLE Chat_Messages ADD COLUMN room_id INTEGER NOT NULL DEFAULT 1")
+        except Exception:
+            pass  # Column already exists — no-op
+        
+        # Create Analytics_Logs table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS Analytics_Logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                method TEXT,
+                path TEXT,
+                ip_address TEXT,
+                status_code INTEGER,
+                duration_ms INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         

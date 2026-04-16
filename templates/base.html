@@ -1,29 +1,33 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}proglem - Unified Platform{% endblock %}</title>
-  
+  <title>{% block title %}{{ t("proglem - Unified Platform") }}{% endblock %}</title>
+
   <!-- SEO & Meta Tags -->
-  <meta name="description" content="{% block meta_description %}A scalable unified platform serving Game Jam Godot WebGL portfolios, native interactive CV talent pools, and RimWorld community matchmaking.{% endblock %}">
-  <meta name="keywords" content="Godot, Game Jam, CV Portfolio, Developer Resumes, HTMX, SQLite, RimWorld Server">
-  <meta name="author" content="proglem Community">
-  <meta property="og:title" content="proglem - The Developer Ecosystem">
-  <meta property="og:description" content="Explore developer CVs, interactive resumes, and Godot WebGL game binaries all from one unified hub.">
+  <meta name="description"
+    content="{% block meta_description %}{{ t('A scalable unified platform serving Game Jam Godot WebGL portfolios and native interactive CV talent pools.') }}{% endblock %}">
+  <meta name="keywords" content="{{ t('Godot, Game Jam, CV Portfolio, Developer Resumes, HTMX, SQLite') }}">
+  <meta name="author" content="{{ t('proglem Community') }}">
+  <meta property="og:title" content="{{ t('proglem - The Developer Ecosystem') }}">
+  <meta property="og:description"
+    content="{{ t('Explore developer CVs, interactive resumes, and Godot WebGL game binaries all from one unified hub.') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  
+
   <!-- Localized Pico.css Framework (Zero-build) -->
   <link rel="stylesheet" href="/static/css/pico.min.css">
-  
+
   <!-- Premium Custom Theme -->
   <link rel="stylesheet" href="/static/css/custom.css">
-  
+
   <!-- HTMX for SPA interactions -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
+
 <body>
 
   <nav class="container-fluid">
@@ -31,20 +35,35 @@
       <li><a href="/" style="text-decoration: none; border-bottom: none;"><strong class="logo">proglem</strong></a></li>
     </ul>
     <ul>
-      <li><a href="/dashboard" class="contrast">Metrics</a></li>
-      <li><a href="/cv" class="contrast">CV Pool</a></li>
-      <li><a href="/games" class="contrast">Gaming Hub</a></li>
-      <li><a href="/jam" class="contrast" style="color: var(--pico-primary); font-weight: bold;">Game Jam</a></li>
-      <li><a href="/chat" class="contrast">Chat Room</a></li>
-      
-      {% if session.get('user_id') %}
-        <li><a href="/account" role="button" class="outline">My Account</a></li>
-        {% if session.get('is_admin') %}
-          <li><a href="/admin" role="button" class="contrast">Admin</a></li>
+      <li>
+        {% if current_lang == 'en' %}
+        <a href="/set-lang/tr" class="secondary" title="{{ t('Translate to Turkish') }}"
+          style="text-decoration:none; font-size:1.7rem; padding:0.2rem 0.6rem; display:inline-block; opacity:0.3; filter:grayscale(100%); transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); vertical-align: middle;"
+          onmouseover="this.style.opacity='0.8'; this.style.transform='scale(1.15)';"
+          onmouseout="this.style.opacity='0.3'; this.style.transform='scale(1)';">🇹🇷</a>
+        {% else %}
+        <a href="/set-lang/en" class="secondary" title="{{ t('Revert to English') }}"
+          style="text-decoration:none; font-size:1.7rem; padding:0.2rem 0.6rem; display:inline-block; opacity:1; filter:drop-shadow(0 0 10px rgba(168,85,247,0.8)); transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); vertical-align: middle;"
+          onmouseover="this.style.transform='scale(1.15)';" onmouseout="this.style.transform='scale(1)';"><span
+            class="waving-flag">🇹🇷</span></a>
         {% endif %}
-        <li><a href="/logout" class="secondary">Logout</a></li>
+      </li>
+
+      <li><a href="/dashboard" class="contrast">{{ t("Metrics") }}</a></li>
+      <li><a href="/cv" class="contrast">{{ t("CV Pool") }}</a></li>
+      <li><a href="/games" class="contrast">{{ t("Gaming Hub") }}</a></li>
+      <li><a href="/jam" class="contrast" style="color: var(--pico-primary); font-weight: bold;">{{ t("Game Jam") }}</a>
+      </li>
+      <li><a href="/chat" class="contrast">{{ t("Chat") }}</a></li>
+
+      {% if session.get('user_id') %}
+      <li><a href="/account" role="button" class="outline">{{ t("My Account") }}</a></li>
+      {% if session.get('is_admin') %}
+      <li><a href="/admin" role="button" class="contrast">{{ t("Admin") }}</a></li>
+      {% endif %}
+      <li><a href="/logout" class="secondary">{{ t("Logout") }}</a></li>
       {% else %}
-        <li><a href="/login" role="button" class="outline">Login</a></li>
+      <li><a href="/login" role="button" class="outline">{{ t("Login") }}</a></li>
       {% endif %}
     </ul>
   </nav>
@@ -54,8 +73,9 @@
   </main>
 
   <footer class="container">
-    <small><a href="#">proglem</a> platform. Constrained Hardware, Infinite Scale.</small>
+    <small><a href="#">proglem</a> {{ t("platform. Constrained Hardware, Infinite Scale.") }}</small>
   </footer>
 
 </body>
+
 </html>
