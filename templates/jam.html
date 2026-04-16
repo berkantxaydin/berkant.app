@@ -9,9 +9,9 @@ game, and win.{% endblock %}
 
 <section style="margin-top: 2vh; animation: fadeIn 0.6s ease-out;">
   <hgroup class="text-center" style="margin-bottom: 2rem;">
-    <h1 class="accent-text" style="font-size: 2.5rem; filter: drop-shadow(0 0 12px rgba(168,85,247,0.5));">🏆 Game Jams
+    <h1 class="accent-text" style="font-size: 2.5rem; filter: drop-shadow(0 0 12px rgba(168,85,247,0.5));">🏆 {{ t("Game Jams") }}
     </h1>
-    <p style="color: #94a3b8;">{{ jams|length }} jam{{ 's' if jams|length != 1 else '' }} hosted on this platform</p>
+    <p style="color: #94a3b8;">{{ jams|length }} {{ t("jam") }}{{ 's' if jams|length != 1 else '' }} {{ t("hosted on this platform") }}</p>
   </hgroup>
 
   <!-- TAB BAR -->
@@ -33,7 +33,7 @@ game, and win.{% endblock %}
       <hgroup>
         <h2 style="font-size: 2.8rem; margin-bottom: 0.3rem; filter: drop-shadow(0 0 10px rgba(168,85,247,0.4));">{{
           jam.title }}</h2>
-        <p style="color: #94a3b8;">Theme: <strong style="color: var(--pico-primary);">{{ jam.theme }}</strong></p>
+        <p style="color: #94a3b8;">{{ t("Theme:") }} <strong style="color: var(--pico-primary);">{{ jam.theme }}</strong></p>
       </hgroup>
 
       <!-- COUNTDOWN TIMER -->
@@ -41,17 +41,17 @@ game, and win.{% endblock %}
         style="display: inline-block; padding: 1rem 3rem; margin: 1rem 0; border-color: var(--pico-primary);">
         <h4 id="timer-{{ jam.id }}"
           style="margin: 0; font-family: monospace; font-size: 2rem; color: #f8fafc; letter-spacing: 2px;">
-          Calculating...
+          {{ t("Calculating...") }}
         </h4>
         <small id="timer-label-{{ jam.id }}" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">
-          Loading...
+          {{ t("Loading...") }}
         </small>
       </div>
 
       <div style="margin-top: 1rem;">
         <a href="/upload?jam_id={{ jam.id }}" role="button" class="contrast"
           style="font-size: 1.1rem; padding: 0.8rem 2.5rem; border-radius: 50px; box-shadow: 0 0 20px rgba(168,85,247,0.4);">
-          🎮 Participate &amp; Upload
+          🎮 {{ t("Participate & Upload") }}
         </a>
       </div>
     </div>
@@ -88,19 +88,18 @@ game, and win.{% endblock %}
     <!-- Submissions -->
     <section>
       <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-        Jam Submissions <span style="font-size: 0.85rem; color: #64748b;">({{ jam.games|length }})</span>
+        {{ t("Jam Submissions") }} <span style="font-size: 0.85rem; color: #64748b;">({{ jam.games|length }})</span>
       </h3>
       <div class="grid" style="gap: 1.5rem;">
         {% for game in jam.games %}
         <article class="glass-panel text-center" style="padding: 1.5rem;">
           <h4 class="accent-text" style="margin-bottom: 0.5rem;">{{ game.title }}</h4>
-          <p style="color: #94a3b8; font-size: 0.9rem;">by <strong>@{{ game.username }}</strong></p>
-          <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">Play
-            Entry</a>
+          <p style="color: #94a3b8; font-size: 0.9rem;">{{ t("by") }} <strong>@{{ game.username }}</strong></p>
+          <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">{{ t("Play Entry") }}</a>
         </article>
         {% else %}
         <p class="text-center full-width" style="color: grey; padding: 2rem;">
-          No submissions yet — be the first to enter! 🚀
+          {{ t("No submissions yet — be the first to enter! 🚀") }}
         </p>
         {% endfor %}
       </div>
@@ -178,12 +177,12 @@ game, and win.{% endblock %}
 {% else %}
 <section class="text-center" style="margin-top: 12vh; animation: fadeIn 0.8s ease-out;">
   <div style="font-size: 5rem; margin-bottom: 1rem;">🏁</div>
-  <h2 style="color: #64748b;">No Game Jams Yet</h2>
+  <h2 style="color: #64748b;">{{ t("No Game Jams Yet") }}</h2>
   <p style="color: #475569; max-width: 400px; margin: 0 auto 2rem;">
-    An admin will announce the next jam soon. Check back for the upcoming challenge!
+    {{ t("An admin will announce the next jam soon. Check back for the upcoming challenge!") }}
   </p>
   {% if session.get('is_admin') %}
-  <a href="/admin" role="button" class="outline">Go to Admin Panel</a>
+  <a href="/admin" role="button" class="outline">{{ t("Go to Admin Panel") }}</a>
   {% endif %}
 </section>
 {% endif %}

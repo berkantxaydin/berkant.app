@@ -44,9 +44,18 @@ def create_app():
     app.register_blueprint(ai_bp)
     app.register_blueprint(auth_bp)
     
+    from app.i18n import load_translations, t
+    load_translations()
+    
+    @app.context_processor
+    def inject_t():
+        from flask import session
+        if 'lang' not in session:
+            session['lang'] = 'en'
+        return dict(t=t, current_lang=session.get('lang', 'en'))
+    
     # Register custom Jinja filters
     def yt_embed_filter(url):
-        import re
         if not url: return ""
         # Handle watch?v= format
         if "youtube.com/watch?v=" in url:

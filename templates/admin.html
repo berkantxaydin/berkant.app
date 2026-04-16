@@ -5,14 +5,31 @@
 {% block content %}
 <section>
   <hgroup>
-    <h2 style="color: var(--pico-ins-color);">⚙️ Site Administration</h2>
-    <p>Full control over the proglem ecosystem. All mutations are reflected instantly via HTMX — no page reloads.</p>
+    <h2 style="color: var(--pico-ins-color);">⚙️ {{ t("Site Administration") }}</h2>
+    <p>{{ t("Full control over the proglem ecosystem.") }}</p>
   </hgroup>
+
+  <!-- ===== LOCALIZATION MANAGEMENT ===== -->
+  <article class="glass-panel" style="border: 1px solid #10b981; margin-bottom: 2rem;">
+    <h3 style="color: #10b981;">🌍 Language Localization (AI)</h3>
+    <p style="color: #94a3b8; font-size: 0.9rem;">Automatically identify new English text scattered across the dashboards, and ping the local Gemma Model to translate them into Turkish in the background.</p>
+    
+    <div id="translation-status-ring">
+      <button class="outline" style="border-color: #10b981; color: #10b981; padding:0.5rem 1rem; width: auto;"
+              hx-post="/api/admin/translate_missing"
+              hx-target="#translation-status-ring"
+              hx-swap="innerHTML"
+              hx-indicator="#translation-spinner">
+        Scan & Translate Missing UI
+      </button>
+      <span id="translation-spinner" class="htmx-indicator" style="margin-left: 1rem; color:#10b981;"><span aria-busy="true"></span> Transmitting keys to Local AI Core...</span>
+    </div>
+  </article>
 
   <!-- ===== CHAT ROOM MANAGEMENT ===== -->
   <article class="glass-panel" style="border: 1px solid #a855f7; margin-bottom: 2rem;">
-    <h3 class="accent-text">💬 Chat Room Management</h3>
-    <p style="color: #94a3b8; font-size: 0.9rem;">Toggle rooms on/off for users. The General room cannot be deleted. Each new Jam auto-creates its own room.</p>
+    <h3 class="accent-text">💬 {{ t("Chat Room Management") }}</h3>
+    <p style="color: #94a3b8; font-size: 0.9rem;">{{ t("Toggle rooms on/off for users.") }}</p>
 
     <div id="chat-room-admin-table-wrapper" hx-get="/api/chat/rooms/admin" hx-trigger="load" hx-swap="innerHTML">
       <p aria-busy="true">Loading rooms...</p>
@@ -86,7 +103,7 @@
     <h3 style="color: var(--pico-ins-color);">💼 Master CV Controls</h3>
     <div style="overflow-x: auto;">
       <table>
-        <thead><tr><th>User</th><th>Title</th><th>Actions</th></tr></thead>
+        <thead><tr><th>{{ t("User") }}</th><th>{{ t("Title") }}</th><th>{{ t("Actions") }}</th></tr></thead>
         <tbody>
           {% for cv in all_cvs %}
           <tr>
@@ -113,7 +130,7 @@
     <h3 style="color: var(--pico-ins-color);">🎮 Master Game Controls</h3>
     <div style="overflow-x: auto;">
       <table>
-        <thead><tr><th>User</th><th>Title</th><th>Jam</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>{{ t("User") }}</th><th>{{ t("Title") }}</th><th>{{ t("Jam") }}</th><th>{{ t("Status") }}</th><th>{{ t("Actions") }}</th></tr></thead>
         <tbody>
           {% for game in all_games %}
           <tr>
@@ -134,7 +151,7 @@
                       hx-delete="/api/jam/{{ game.id }}"
                       hx-target="closest tr"
                       hx-swap="outerHTML"
-                      hx-confirm="Delete '{{ game.title }}' by @{{ game.username }}?">Delete</button>
+                      hx-confirm="Delete '{{ game.title }}' by @{{ game.username }}?">{{ t("Delete") }}</button>
             </td>
           </tr>
           {% else %}

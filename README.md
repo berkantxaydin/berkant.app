@@ -1,79 +1,168 @@
-# 🚀 Scalable Micro-Platform
+# 🚀 proglem — Scalable Micro-Platform
 
-A highly optimized, resource-efficient web platform and API backend built to run on constrained hardware. This project hosts developer portfolios(users will be able to togle if they looking for job), manages Game Jam events or similar for sofware devs, and serves as a backend for Godot WebGL games.
+A resource-efficient, full-featured developer community platform built to run on **constrained hardware** (8GB RAM, 22 Mbps upload, CGNAT ISP). It hosts developer CV portfolios, runs Game Jam events with Godot WebGL submissions, and powers a community chat — all on a single home server.
 
-Designed from the ground up to operate on an 8GB RAM headless Debian server, behind a strict ISP CGNAT, with a 22 Mbps upload limit.
-
----
-
-## ✨ Core Features
-* **CV Catalog & Game Jam Dashboard:** Ultra-lightweight web UI for users to view portfolios and register for events.
-* **Godot Game API:** Fast, secure JSON endpoints for Godot WebGL clients to read/write game data.
-* **Local AI Integration:** A local LFM 2.5-Thinking 1.2B LLM that assists users, wrapped in a strict concurrency queue to prevent server RAM overload.
-* **Bandwidth Saver Uploads:** Bypasses the 22 Mbps server upload limit by generating pre-signed cloud URLs (S3/R2) for massive Game Jam file submissions.
-* **CGNAT Bypass:** The entire platform is tunneled securely to the public internet without port forwarding.
+> **Live platform:** [berkant.app](https://berkant.app)
 
 ---
 
-## 🛠️ Tech Stack & Architecture
-* **OS:** Headless Debian Linux
-* **Backend:** Python 3.11+, Flask, Gunicorn
-* **Database:** SQLite (Configured with `WAL` mode & `JSON1` for high concurrency and dynamic data)
-* **Frontend:** HTMX + Pico.css (Zero-build, under 20KB total payload for instant loading)
-* **Networking:** Nginx Reverse Proxy, Cloudflare Tunnels (`cloudflared` for web), Playit.gg (TCP/UDP Game Tunnel)
-* **CI/CD & DevOps:** GitHub Actions (pytest, bandit) + Gemini AI API for Automated Pull Request Code Reviews.
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🧑‍💼 **CV Pool** | Developers publish structured CV cards. Filterable talent pool, with optional raw HTMX resume injection. |
+| 🎮 **Gaming Hub** | Godot WebGL game library with likes, comments, and live in-browser play. |
+| 🏆 **Game Jam** | Host timed events. Players upload ZIP exports; the browser extracts and streams files directly to Cloudflare R2. Server bandwidth is never touched. |
+| 💬 **Community Hub** | Multi-room real-time chat with HTMX polling. Rooms can be tied to Game Jams. |
+| 🤖 **Local AI Assistant** | Powered by a local **Gemma 4** model via `llama-server`. Context-aware: knows top games, active jams, CVs, and live CPU/RAM stats. |
+| 🌍 **Full i18n (EN/TR)** | Every UI string — templates, HTMX fragments, error messages — is wrapped in `t()`. A Gemma-powered admin job auto-translates missing keys in batches. |
+| 📊 **Metrics Dashboard** | Real-time CPU, RAM, AI memory usage bars, request analytics, and error log viewer. |
+| 🔐 **IAM** | Session-based auth with admin roles, login-required routes, and activation code registration. |
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Python 3.11+, Flask, Waitress (Windows) / Gunicorn (Linux) |
+| **Database** | SQLite3 with `PRAGMA journal_mode=WAL` + `PRAGMA synchronous=NORMAL` + JSON1 extension |
+| **Frontend** | HTMX 1.9 + Pico.css (classless, CDN-free local copy) — zero build step, <20KB payload |
+| **AI Engine** | `llama-server` (llama.cpp binary) running Gemma 4 locally; queue-protected with a single-slot semaphore |
+| **AI Translation** | Same Gemma 4 model auto-translates missing UI strings in batches of 15 via the Admin panel |
+| **Uploads** | AWS S3 / Cloudflare R2 via `boto3` pre-signed POST — browser uploads directly, server never handles file bytes |
+| **Networking** | Nginx reverse proxy, `cloudflared` (HTTPS tunnel), `playit.gg` (TCP/UDP tunnel) |
+| **CI/CD** | GitHub Actions: `flake8`, `pytest`, `bandit` + Gemini AI automated PR review |
+| **Containers** | Docker + GitHub Container Registry (`ghcr.io`) |
 
 ---
 
 ## 🧠 Engineering Solutions to Hardware Constraints
 
-### 1. The RAM Bottleneck (8GB Limit)
-Running a web server, a C# game server, and an AI model simultaneously risks Out-Of-Memory (OOM) crashes. 
-* **Solution:** Implemented `asyncio.Semaphore(1)` around the LLM inference. Only one AI request processes at a time, returning an HTTP 202 "Thinking" status to concurrent users, keeping RAM usage strictly capped.
+### 1. RAM Bottleneck (8GB)
+Running Flask + Gemma 4 (~5GB VRAM) simultaneously risks OOM crashes.
+- **Solution:** The AI worker thread is guarded by a `queue.Queue` + single-slot processing. Concurrent users receive an HTTP "queued" response with HTMX polling — only one inference runs at a time.
 
-### 2. The Bandwidth Bottleneck (22 Mbps Upload)
-Hosting 500MB Game Jam ZIPs locally would choke the network and disconnect multiplayer game users. 
-* **Solution:** The Flask API generates Cloudflare R2/S3 Pre-signed POST URLs. Users upload files directly from their browser to the cloud bucket, bypassing the local server network entirely.
+### 2. Upload Bandwidth (22 Mbps)
+Hosting 500MB Game Jam ZIP files locally would choke the network.
+- **Solution:** Flask generates a **Cloudflare R2 pre-signed POST URL**. The user's browser extracts the ZIP via `JSZip` in-memory and streams each file directly to R2. The server handles zero bytes of file data.
 
-### 3. The ISP CGNAT Problem
-The local ISP blocks incoming web traffic, making traditional port forwarding impossible. 
-* **Solution:** `cloudflared` handles HTTP/HTTPS web traffic via outbound tunneling, and `playit.gg` handles raw TCP/UDP game traffic, making the server publicly accessible without router configuration.
+### 3. ISP CGNAT (No Port Forwarding)
+The ISP blocks all inbound connections.
+- **Solution:** `cloudflared` maintains an outbound tunnel for HTTPS web traffic. `playit.gg` handles TCP/UDP game tunnels. Both work without any router configuration.
 
 ---
 
-## ⚙️ Local Development Setup
+## 🐳 Docker Deployment (Quick Start)
 
-**Clone the repository:**
-   git clone [https://github.com/berkantxaydin/berkant.app](https://github.com/berkantxaydin/berkant.app)
-   cd scalable-micro-platform
-   Create and activate a virtual environment:
+Releases are published to the **GitHub Container Registry**. You only need `docker-compose.yml` and your own Gemma model file.
 
-    python3 -m venv venv
-    source venv/bin/activate
+### 1. Download the compose file
+```bash
+curl -L https://github.com/berkantxaydin/berkant.app/releases/latest/download/docker-compose.yml -o docker-compose.yml
+```
 
-    Install dependencies:
+### 2. Prepare directories
+```bash
+mkdir -p models data
+```
 
-    pip install -r requirements.txt
+### 3. Download the AI model
+Get `gemma-4-E4B-it-Q4_K_M.gguf` from Hugging Face and place it in `./models/`:
+```bash
+# Example using huggingface-cli:
+huggingface-cli download google/gemma-4-GGUF gemma-4-E4B-it-Q4_K_M.gguf --local-dir ./models
+```
+> The model is ~3-5GB and is **not** bundled in the Docker image.
 
-    Set up Environment Variables:
-    Create a .env file in the root directory and add your secret keys (e.g., Cloudflare R2 credentials, Gemini API key).
+### 4. Configure environment
+```bash
+cp .env.example .env
+# Edit .env with your SECRET_KEY and optional R2 credentials
+```
 
-    Run the Flask development server:
+### 5. Run
+```bash
+docker compose up
+```
+The platform will be available at `http://localhost:5000`. On first boot, the database schema is created automatically and a default `💬 General` chat room is seeded.
 
-    flask run --debug
+---
 
-🧪 Testing & CI/CD (Shift-Left)
+## ⚙️ Local Development (Windows)
 
-This project utilizes a "Shift-Left" testing approach integrated with Jira. On every push and Pull Request, GitHub Actions will automatically run:
+```powershell
+git clone https://github.com/berkantxaydin/berkant.app
+cd berkant.app
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+# Place your .gguf model in ./models/
+.\run_dev_windows.bat
+```
 
-    flake8 for Python linting.
+### Linux / macOS
+```bash
+chmod +x run_dev_linux.sh
+./run_dev_linux.sh
+```
 
-    pytest for unit testing the API and database logic.
+### Environment variables (`.env`)
+```env
+SECRET_KEY=your-super-secret-key
+R2_ENDPOINT_URL=https://your-account.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=your-key
+R2_SECRET_ACCESS_KEY=your-secret
+R2_BUCKET_NAME=jam-uploads
+GEMINI_API_KEY=your-gemini-key     # For automated PR reviews only
+```
 
-    bandit for security and SQL injection scanning.
+---
 
-    Gemini AI Code Review: An automated agent that analyzes the git diff of Pull Requests for bugs, security flaws, and best practices.
+## 🌍 Localization (EN/TR)
 
-📄 License
+The platform is fully bilingual. All strings are wrapped in `{{ t("...") }}` (Jinja2 templates) or `t("...")` (Python fragments).
 
-This project is licensed under the Creative Commons Zero v1.0 Universal (CC0 1.0) license. You are free to copy, modify, distribute, and perform the work, even for commercial purposes, all without asking permission.
+**How translation works:**
+1. Any new string is auto-registered into `translations.json` on first render.
+2. An Admin goes to the **Admin Panel → "Scan & Translate Missing UI"**.
+3. The local **Gemma 4 model** translates all missing keys in batches of 15, saving incrementally to avoid timeouts.
+4. Users toggle the 🇹🇷 flag in the navbar to switch languages (persisted in session).
+
+---
+
+## 🧪 Testing & CI/CD
+
+Every push and Pull Request triggers:
+
+| Check | Tool |
+|-------|------|
+| Syntax / linting | `flake8` |
+| Unit tests | `pytest` |
+| Security scan | `bandit` (SQL injection, subprocess safety) |
+| AI Code Review | Gemini API — posts a review comment directly on the PR |
+
+**Git flow:** Never push to `main` directly. All changes go through a `feature/` branch → PR to `dev` → PR to `main`.
+
+---
+
+## 📦 Releases
+
+Docker images are published automatically when a version tag is pushed:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actions will:
+1. Run the full CI test suite
+2. Build the Docker image
+3. Push to `ghcr.io/berkantxaydin/berkant.app:latest` and `:v1.0.0`
+4. Create a GitHub Release with `docker-compose.yml` attached as a download
+
+---
+
+## 📄 License
+
+[Creative Commons Zero v1.0 Universal (CC0 1.0)](LICENSE) — public domain. Use freely for any purpose.

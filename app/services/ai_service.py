@@ -118,7 +118,7 @@ def get_public_snapshot():
     snapshot = []
     try:
         conn = get_db_connection()
-        conn.row_factory = sqlite3.Row # Use Row for easier field access
+        conn.row_factory = sqlite3.Row
         c = conn.cursor()
         
         # 1. Recent Game Jams (with schedules)
@@ -130,15 +130,18 @@ def get_public_snapshot():
                 jam_texts.append(f"{j['title']} (Theme: {j['theme']}, Ends: {j['end_time']})")
             snapshot.append("### RECENT JAMS\n- " + "\n- ".join(jam_texts))
 
-        # 2. Latest Games (with Social Context & Descriptions)
-        # We join with Likes and Comments to give the AI a sense of 'popularity'
+        # 2. Top Games by Likes (most popular first)
         c.execute("""
             SELECT g.title, g.description, 
-                   (SELECT COUNT(*) FROM Game_Likes WHERE game_id = g.id) as likes,
-                   (SELECT COUNT(*) FROM Game_Comments WHERE game_id = g.id) as comments
+                   COUNT(DISTINCT gl.id) as likes,
+                   COUNT(DISTINCT gc.id) as comments
             FROM Godot_Games g 
+            LEFT JOIN Game_Likes gl ON gl.game_id = g.id
+            LEFT JOIN Game_Comments gc ON gc.game_id = g.id
             WHERE g.validation_status = 'Validated' 
-            ORDER BY g.id DESC LIMIT 5
+            GROUP BY g.id
+            ORDER BY likes DESC, comments DESC
+            LIMIT 5
         """)
         games = c.fetchall()
         if games:
@@ -146,18 +149,46 @@ def get_public_snapshot():
             for g in games:
                 desc = (g['description'][:60] + "...") if g['description'] and len(g['description']) > 60 else (g['description'] or "No description")
                 game_texts.append(f"'{g['title']}': {desc} [{g['likes']} likes, {g['comments']} comments]")
-            snapshot.append("### FEATURED GAMES\n- " + "\n- ".join(game_texts))
-            
-        # 3. Public Channels
+            snapshot.append("### TOP GAMES BY POPULARITY\n- " + "\n- ".join(game_texts))
+
+        # 3. Latest CV profiles
+        c.execute("""
+            SELECT cv.title, u.username,
+                   (SELECT GROUP_CONCAT(skill) FROM (
+                       SELECT json_each.value as skill
+                       FROM json_each(cv.cv_data, '$.skills')
+                       LIMIT 4
+                   )) as top_skills
+            FROM CV_Catalog cv
+            JOIN Users u ON cv.user_id = u.id
+            ORDER BY cv.id DESC LIMIT 5
+        """)
+        cvs = c.fetchall()
+        if cvs:
+            cv_texts = []
+            for cv in cvs:
+                skills = cv['top_skills'] or 'N/A'
+                cv_texts.append(f"'{cv['title']}' by {cv['username']} (Skills: {skills})")
+            snapshot.append("### RECENT CVs\n- " + "\n- ".join(cv_texts))
+
+        # 4. Public Channels
         c.execute("SELECT name FROM Chat_Rooms WHERE is_enabled = 1")
         rooms = c.fetchall()
         if rooms:
             snapshot.append("### ACTIVE CHANNELS: " + ", ".join([r['name'] for r in rooms]))
 
+        # 5. Platform totals
+        c.execute("SELECT COUNT(*) FROM Users")
+        total_users = (c.fetchone() or [0])[0]
+        c.execute("SELECT COUNT(*) FROM Godot_Games WHERE validation_status='Validated'")
+        total_games = (c.fetchone() or [0])[0]
+        c.execute("SELECT COUNT(*) FROM CV_Catalog")
+        total_cvs = (c.fetchone() or [0])[0]
+        snapshot.append(f"### PLATFORM STATS\n- Registered Developers: {total_users}\n- Validated Games: {total_games}\n- Published CVs: {total_cvs}")
+
         conn.close()
     except Exception as e:
         print(f"AI Snapshot Error: {e}")
-        pass
     return "\n\n".join(snapshot)
 
 def ai_worker():
@@ -202,10 +233,7 @@ def ai_worker():
                 "Do not explain your reasoning. Use following public data strictly:\n\n"
                 f"--- SITE VITALS ---\n"
                 f"- CPU Load: {cpu_load}%\n"
-                f"- RAM Usage: {ram_usage}\n"
-                f"- Developers Join: {total_users}\n"
-                f"- Library Size: {total_games} games\n"
-                f"- Active Jam: {active_jam}\n\n"
+                f"- RAM Usage: {ram_usage}\n\n"
                 f"--- COMMUNITY PULSE ---\n"
                 f"{community_data}\n"
             )

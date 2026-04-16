@@ -1,11 +1,10 @@
 import os
-import random
 import boto3
-from botocore.exceptions import ClientError
-from flask import Blueprint, jsonify, request, current_app, render_template_string
+from flask import Blueprint, jsonify, request, current_app
 from app.repositories.cv_repository import CVRepository
 from app.repositories.game_repository import GameRepository
 from app.routes.auth_routes import login_required, admin_required
+from app.i18n import t
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -26,16 +25,16 @@ def get_cvs():
                     <header>
                         <hgroup>
                             <h3 class="accent-text">{cv['title']}</h3>
-                            <p>by <strong>{cv['username']}</strong></p>
+                            <p>{t('by')} <strong>{cv['username']}</strong></p>
                         </hgroup>
                     </header>
                     <p>{cv['summary']}</p>
                     <footer>
-                        <small>Skills: <em>{skills}</em></small>
+                        <small>{t('Skills:')} <em>{skills}</em></small>
                     </footer>
                 </article>"""
             if not results:
-                html = "<p>No CVs found matching that query.</p>"
+                html = f"<p>{t('No CVs found matching that query.')}</p>"
             return html
             
         return jsonify({"status": "success", "count": len(results), "data": results}), 200
@@ -44,8 +43,10 @@ def get_cvs():
         return jsonify({"error": "Internal server error"}), 500
 
 @api_bp.route('/cv/create', methods=['POST'])
+@login_required
 def create_ecom_cv():
-    user_id = request.form.get('user_id', 1)
+    from flask import session
+    user_id = session['user_id']  # Always use the authenticated session user
     title = request.form.get('title')
     summary = request.form.get('summary')
     skills = [s.strip() for s in request.form.get('skills', '').split(',') if s.strip()]
@@ -170,15 +171,15 @@ def get_cv_edit_form(cv_id):
         return "Unauthorized", 403
     return f"""
     <form hx-put="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML">
-        <label>Title
+        <label>{t('Title')}
             <input type="text" name="title" value="{cv['title']}" required>
         </label>
-        <label>Summary
+        <label>{t('Summary')}
             <textarea name="summary" required>{cv['summary']}</textarea>
         </label>
         <div class="grid">
-            <button type="submit">Save Changes</button>
-            <button type="button" class="secondary" onclick="window.location.reload()">Cancel</button>
+            <button type="submit">{t('Save Changes')}</button>
+            <button type="button" class="secondary" onclick="window.location.reload()">{t('Cancel')}</button>
         </div>
     </form>
     """
@@ -194,13 +195,13 @@ def update_cv_htmx(cv_id):
         <article>
             <header>
                 <strong>{title}</strong>
-                <a href="#" hx-get="/api/cv/{cv_id}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">Edit</a>
-                <a href="#" hx-delete="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">Delete</a>
+                <a href="#" hx-get="/api/cv/{cv_id}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">{t('Edit')}</a>
+                <a href="#" hx-delete="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">{t('Delete')}</a>
             </header>
             <p>{summary}</p>
         </article>
         """
-    return "Update failed", 400
+    return t("Update failed"), 400
 
 @api_bp.route('/jam/<int:game_id>', methods=['DELETE'])
 @login_required
@@ -316,7 +317,7 @@ def delete_game_comment(comment_id):
             cursor.execute("SELECT user_id FROM Game_Comments WHERE id = ?", (comment_id,))
             comment = cursor.fetchone()
             if not comment or comment['user_id'] != uid:
-                return "Unauthorized", 403
+                return f"{t('Unauthorized')}", 403
                 
         cursor.execute("DELETE FROM Game_Comments WHERE id = ?", (comment_id,))
         conn.commit()
@@ -345,7 +346,7 @@ def _render_messages(room_id):
         conn.close()
 
     if not messages:
-        return "<p class='text-center' style='color: grey;'><small>No messages yet. Start the conversation!</small></p>"
+        return f"<p class='text-center' style='color: grey;'><small>{t('No messages yet. Start the conversation!')}</small></p>"
 
     html = ""
     current_user_id = session.get('user_id')
@@ -362,7 +363,7 @@ def _render_messages(room_id):
             delete_btn = f"""<a href="#" hx-delete="/api/chat/messages/{msg['id']}"
                 hx-target="closest article" hx-swap="outerHTML"
                 style="color: var(--pico-del-color); cursor: pointer; text-decoration: none; font-weight: bold; font-size: 1rem;"
-                title="Delete">&#x2A2F;</a>"""
+                title="{t('Delete')}">&#x2A2F;</a>"""
 
         html += f"""
         <article style="padding: 0.4rem 0.8rem; margin-bottom: 0;
@@ -432,7 +433,7 @@ def post_chat_message():
         room_id = 1
 
     if not content:
-        return "Message cannot be empty", 400
+        return f"{t('Message cannot be empty')}", 400
 
     # Verify room exists and is enabled
     conn = get_db_connection()
@@ -441,7 +442,7 @@ def post_chat_message():
         cursor.execute("SELECT is_enabled FROM Chat_Rooms WHERE id = ?", (room_id,))
         row = cursor.fetchone()
         if not row or (not row['is_enabled'] and not session.get('is_admin')):
-            return "This room is currently disabled.", 403
+            return f"{t('This room is currently disabled.')}", 403
         cursor.execute(
             "INSERT INTO Chat_Messages (user_id, room_id, content) VALUES (?, ?, ?)",
             (uid, room_id, str(escape(content)))
@@ -505,7 +506,7 @@ def _render_room_admin_table():
                 hx-delete="/api/chat/rooms/{r['id']}"
                 hx-target="#chat-room-admin-table"
                 hx-swap="outerHTML"
-                hx-confirm="Delete room '{r['name']}'? All messages will be lost.">Delete</button>"""
+                hx-confirm="{t('Delete room')} '{r['name']}'? {t('All messages will be lost.')}">{t('Delete')}</button>"""
 
         rows += f"""
         <tr id="chat-room-row-{r['id']}">
@@ -522,10 +523,10 @@ def _render_room_admin_table():
         </tr>"""
 
     if not rows:
-        rows = "<tr><td colspan='4' style='text-align:center; color:grey;'>No rooms.</td></tr>"
+        rows = f"<tr><td colspan='4' style='text-align:center; color:grey;'>{t('No rooms.')}</td></tr>"
 
     return f"""<table id="chat-room-admin-table">
-        <thead><tr><th>Room Name</th><th>Linked Jam</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>{t('Room Name')}</th><th>{t('Linked Jam')}</th><th>{t('Status')}</th><th>{t('Actions')}</th></tr></thead>
         <tbody>{rows}</tbody>
     </table>"""
 
@@ -543,7 +544,7 @@ def create_chat_room():
     from app.database import get_db_connection
     name = request.form.get('name', '').strip()
     if not name:
-        return "<p style='color:var(--pico-del-color);'>Room name is required.</p>", 400
+        return f"<p style='color:var(--pico-del-color);'>{t('Room name is required.')}</p>", 400
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -584,24 +585,101 @@ def delete_chat_room(room_id):
         conn.close()
     return _render_room_admin_table()
 
+@api_bp.route('/admin/translate_missing', methods=['POST'])
+@admin_required
+def translate_missing():
+    from app.i18n import translations
+    
+    missing_keys = [k for k in translations.get('en', {}) if k not in translations.get('tr', {})]
+    if not missing_keys:
+        return f"<p style='color:var(--pico-primary);'>{t('All keys are already translated!')}</p>"
+    
+    def background_translation_job(all_keys):
+        import urllib.request
+        import json
+        import time
+        from app.i18n import save_translations
+        import app.i18n
+
+        # Break into chunks of 15 to avoid model context/timeout limits
+        chunk_size = 15
+        chunks = [all_keys[i:i + chunk_size] for i in range(0, len(all_keys), chunk_size)]
+        
+        print(f"Starting background translation for {len(all_keys)} keys in {len(chunks)} batches.")
+
+        for idx, keys_chunk in enumerate(chunks):
+            print(f"Processing batch {idx+1}/{len(chunks)} ({len(keys_chunk)} keys)...")
+            
+            prompt = "Translate the following UI English strings exactly to Turkish. Respond ONLY with a valid JSON object mapping the English key to the Turkish translation. No code blocks, no markdown, just RAW JSON.\nKeys:\n" + json.dumps(keys_chunk)
+            
+            payload = {
+                "model": "local-model",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 2048,
+                "temperature": 0.2
+            }
+            
+            try:
+                req = urllib.request.Request(f"http://127.0.0.1:8082/v1/chat/completions",
+                    data=json.dumps(payload).encode('utf-8'),
+                    headers={"Content-Type": "application/json", "Authorization": "Bearer admin"})
+                
+                # Higher timeout (300s) for slow local generation
+                with urllib.request.urlopen(req, timeout=300) as response:
+                    result = json.loads(response.read().decode('utf-8'))
+                    raw_content = result['choices'][0]['message']['content']
+                    
+                    # Clean up model garbage if present
+                    if "```json" in raw_content:
+                        raw_content = raw_content.split("```json")[-1].split("```")[0]
+                    elif "```" in raw_content:
+                        raw_content = raw_content.split("```")[-1].split("```")[0]
+                    
+                    new_translations = json.loads(raw_content.strip())
+                    
+                    if 'tr' not in translations: translations['tr'] = {}
+                    for k, v in new_translations.items():
+                        if k in keys_chunk:
+                            translations['tr'][k] = v
+                    
+                    # Save after each successful chunk
+                    app.i18n._dirty = True
+                    save_translations()
+                    print(f"Batch {idx+1} saved successfully.")
+                    
+            except Exception as e:
+                print(f"Error in batch {idx+1}: {e}")
+                # Brief sleep before retry or next batch
+                time.sleep(2)
+                
+        print("Background translation job complete.")
+            
+    import threading
+    threading.Thread(target=background_translation_job, args=(missing_keys,), daemon=True).start()
+    
+    return f"<p style='color:var(--pico-primary);'><i>{t('Translation job sent to AI Core in background. Progress will be saved incrementally. Refresh later!')}</i></p>"
+
 # --- SYSTEM METRICS (DASHBOARD) ---
 @api_bp.route('/metrics/resources', methods=['GET'])
 def get_system_resources():
     import psutil
-    import os
+    import time as _time
+    _t0 = _time.monotonic()
     
-    # 1. Global Metrics
-    cpu_usage = psutil.cpu_percent()
-    sys_ram = psutil.virtual_memory() # Total system RAM
+    # 1. Global Metrics — interval=0.5 blocks briefly but gives a real non-zero reading
+    cpu_usage = psutil.cpu_percent(interval=0.5)
+    sys_ram = psutil.virtual_memory()
     
     # 2. AI Specific Metrics
     ai_ram_mb = 0
-    for proc in psutil.process_iter(['name', 'memory_info']):
-        try:
-            if 'llama-server' in proc.info['name'].lower():
-                ai_ram_mb += proc.info['memory_info'].rss / (1024 * 1024)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
+    try:
+        from app.services.ai_service import ai_processes
+        proc = ai_processes.get('chat')
+        if proc and proc.poll() is None:
+            p = psutil.Process(proc.pid)
+            ai_ram_mb = p.memory_info().rss / (1024 * 1024)
+    except Exception:
+        pass
     
     # User has 16GB RAM budget
     budget_mb = 16384
@@ -609,39 +687,90 @@ def get_system_resources():
     ai_ram_percent = min((ai_ram_mb / budget_mb) * 100, 100)
     
     return f"""
-    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+    <style>
+        @keyframes pulse-dot {{
+            0% {{ transform: scale(0.95); opacity: 0.5; }}
+            50% {{ transform: scale(1.1); opacity: 1; }}
+            100% {{ transform: scale(0.95); opacity: 0.5; }}
+        }}
+        @keyframes stripe-move {{
+            0% {{ background-position: 0 0; }}
+            100% {{ background-position: 30px 30px; }}
+        }}
+        .live-dot {{
+            height: 8px;
+            width: 8px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse-dot 2s infinite ease-in-out;
+        }}
+        .metric-bar-container {{
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+        }}
+        .metric-bar-fill {{
+            height: 100%;
+            border-radius: 6px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            background-image: linear-gradient(
+                45deg, 
+                rgba(255, 255, 255, 0.15) 25%, 
+                transparent 25%, 
+                transparent 50%, 
+                rgba(255, 255, 255, 0.15) 50%, 
+                rgba(255, 255, 255, 0.15) 75%, 
+                transparent 75%, 
+                transparent
+            );
+            background-size: 1rem 1rem;
+            animation: stripe-move 1s linear infinite;
+        }}
+        .cpu-bar {{ background-color: {'var(--pico-del-color)' if cpu_usage > 90 else 'var(--pico-primary)'}; box-shadow: 0 0 10px {'var(--pico-del-color)' if cpu_usage > 90 else 'var(--pico-primary)'}; }}
+        .ram-bar {{ background-color: {'var(--pico-del-color)' if global_ram_percent > 85 else 'var(--pico-primary)'}; box-shadow: 0 0 10px {'var(--pico-del-color)' if global_ram_percent > 85 else 'var(--pico-primary)'}; }}
+        .ai-bar {{ background-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.6); }}
+        
+        .metric-label-group {{
+            display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; margin-bottom: 0.4rem;
+        }}
+        .mono-val {{ font-family: monospace; font-size: 1rem; font-weight: 600; text-shadow: 0 0 5px rgba(255,255,255,0.2); }}
+    </style>
+    <div style="display: flex; flex-direction: column; gap: 1.2rem; padding-top: 0.5rem;">
         <!-- CPU USAGE -->
         <div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
-                <strong>Global CPU Usage</strong>
-                <span class="accent-text">{cpu_usage}%</span>
+            <div class="metric-label-group">
+                <strong style="display:flex; align-items:center;"><span class="live-dot"></span>{t("Global CPU Usage")}</strong>
+                <span class="accent-text mono-val">{cpu_usage:.1f}%</span>
             </div>
-            <progress value="{cpu_usage}" max="100" 
-                      style="--pico-progress-color: {'var(--pico-del-color)' if cpu_usage > 90 else 'var(--pico-primary)'}"></progress>
+            <div class="metric-bar-container">
+                <div class="metric-bar-fill cpu-bar" style="width: {cpu_usage}%;"></div>
+            </div>
         </div>
 
         <!-- TOTAL RAM -->
         <div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
-                <strong>Global RAM (16GB)</strong>
-                <span class="accent-text">{sys_ram.used / (1024**3):.1f} / 16 GB</span>
+            <div class="metric-label-group">
+                <strong style="display:flex; align-items:center;"><span class="live-dot" style="background-color: #eab308; animation-delay: 0.5s;"></span>{t("Global RAM & AI (16GB)")}</strong>
+                <span class="accent-text mono-val">{sys_ram.used / (1024**3):.1f} / 16 GB</span>
             </div>
-            <progress value="{global_ram_percent}" max="100" 
-                      style="--pico-progress-color: {'var(--pico-del-color)' if global_ram_percent > 85 else 'var(--pico-primary)'}"></progress>
-        </div>
-
-        <!-- AI FOOTPRINT -->
-        <div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
-                <strong>AI Engine Footprint</strong>
-                <span style="color: #60a5fa;">{ai_ram_mb:.0f} MB</span>
+            <div class="metric-bar-container" style="display: flex;">
+                <div class="metric-bar-fill ai-bar" style="width: {ai_ram_percent}%; border-radius: 0;"></div>
+                <div class="metric-bar-fill ram-bar" style="width: {max(0, global_ram_percent - ai_ram_percent)}%; border-radius: 0;"></div>
             </div>
-            <progress value="{ai_ram_percent}" max="100" 
-                      style="--pico-progress-color: #3b82f6;"></progress>
+            <div style="display:flex; justify-content: space-between; font-size: 0.75rem; margin-top: 0.4rem; color: #94a3b8; font-weight: 500;">
+                <span>{t("System")}: {max(0, (sys_ram.used/1024**3) - (ai_ram_mb/1024)):.1f} GB</span>
+                <span style="color: #60a5fa;">{t("AI Core")}: {ai_ram_mb:.0f} MB</span>
+            </div>
         </div>
         
-        <small style="font-size: 0.7rem; opacity: 0.6; text-align: center;">
-            Metrics refresh every 30s. Gemma 4 Q4_K_M is active.
+        <small style="font-size: 0.75rem; opacity: 0.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.8rem; margin-top: 0.2rem; display: block;">
+            {t("Live Telemetry")} &bull; {t("Response")}: {int((_time.monotonic() - _t0) * 1000)}ms &bull; Gemma 4 {t("Active")}
         </small>
     </div>
     """
@@ -675,13 +804,13 @@ def get_core_analytics():
         
         admin_controls = ""
         if session.get('is_admin'):
-            admin_controls = """
+            admin_controls = f"""
             <footer style="margin-top: 1rem; border:0; background: transparent;">
                 <button class="outline contrast" 
                         hx-delete="/api/metrics/analytics" 
                         hx-target="#aspire-analytics" 
-                        hx-confirm="Clear all traffic analytics?">
-                    Clear Traffic Logs
+                        hx-confirm="{t('Clear all traffic analytics?')}">
+                    {t("Clear Traffic Logs")}
                 </button>
             </footer>
             """
@@ -691,18 +820,18 @@ def get_core_analytics():
             <div class="grid">
                 <article style="padding: 1rem;">
                     <h2 style="margin-bottom: 0; color: var(--pico-primary);">{total}</h2>
-                    <small>Total Requests</small>
+                    <small>{t("Total Requests")}</small>
                 </article>
                 <article style="padding: 1rem;">
                     <h2 style="margin-bottom: 0; color: {'var(--pico-del-color)' if errors > 0 else 'var(--pico-primary)'};">{error_rate:.1f}%</h2>
-                    <small>Error Rate</small>
+                    <small>{t("Error Rate")}</small>
                 </article>
                 <article style="padding: 1rem;">
                     <h2 style="margin-bottom: 0; color: var(--pico-primary);">{unique_ips}</h2>
-                    <small>Unique IPs</small>
+                    <small>{t("Unique IPs")}</small>
                 </article>
             </div>
-            <p style="margin-top: 0.5rem;"><small>Average Latency: <strong>{avg_ms}ms</strong></small></p>
+            <p style="margin-top: 0.5rem;"><small>{t("Average Latency")}: <strong>{avg_ms}ms</strong></small></p>
             {admin_controls}
         </div>
         """
@@ -728,7 +857,7 @@ def get_recent_errors():
     from flask import current_app
     log_path = os.path.join(current_app.root_path, '..', 'error.log')
     if not os.path.exists(log_path):
-        return "<p><em>No error logs recorded.</em></p>"
+        return f"<p><em>{t('No error logs recorded.')}</em></p>"
         
     try:
         with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
@@ -747,7 +876,7 @@ def get_recent_errors():
             tail = session_lines[-50:]
             
             if not tail:
-                return "<p><em>Session log empty.</em></p>"
+                return f"<p><em>{t('Session log empty.')}</em></p>"
             
             html = "<div style='font-family: monospace; font-size: 0.8rem; overflow-x: auto; white-space: pre;'>"
             for line in reversed(tail):
@@ -761,7 +890,7 @@ def get_recent_errors():
             html += "</div>"
             return html
     except Exception as e:
-        return f"<p>Error reading logs: {e}</p>"
+        return f"<p>{t('Error reading logs')}: {e}</p>"
 
 
 # --- GAME JAM ADMIN CRUD ---
@@ -783,11 +912,11 @@ def _render_jam_admin_table():
     for j in jams:
         # Determine status label
         if j['start_time'] > now:
-            status = '<span class="badge badge-upcoming">Upcoming</span>'
+            status = f'<span class="badge badge-upcoming">{t("Upcoming")}</span>'
         elif j['end_time'] < now:
-            status = '<span class="badge badge-ended">Ended</span>'
+            status = f'<span class="badge badge-ended">{t("Ended")}</span>'
         else:
-            status = '<span class="badge badge-active">Active</span>'
+            status = f'<span class="badge badge-active">{t("Active")}</span>'
 
         rows += f"""
         <tr id="jam-row-{j['id']}">
@@ -800,22 +929,22 @@ def _render_jam_admin_table():
                 <button class="outline" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
                     hx-get="/api/jams/{j['id']}/edit_form"
                     hx-target="#jam-row-{j['id']}"
-                    hx-swap="outerHTML">Edit</button>
+                    hx-swap="outerHTML">{t("Edit")}</button>
                 <button class="outline contrast" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
                     hx-delete="/api/jams/{j['id']}"
                     hx-target="#jam-row-{j['id']}"
                     hx-swap="outerHTML"
-                    hx-confirm="Delete '{j['title']}'? This removes all its submissions too.">Delete</button>
+                    hx-confirm="{t('Delete')} '{j['title']}'? {t('This removes all its submissions too.')}">{t("Delete")}</button>
             </td>
         </tr>"""
 
     if not rows:
-        rows = "<tr><td colspan='6' style='text-align:center; color:grey;'>No jams yet. Create one below.</td></tr>"
+        rows = f"<tr><td colspan='6' style='text-align:center; color:grey;'>{t('No jams yet. Create one below.')}</td></tr>"
 
     return f"""
     <table id="jam-admin-table">
         <thead><tr>
-            <th>Title</th><th>Theme</th><th>Start (UTC)</th><th>End (UTC)</th><th>Status</th><th>Actions</th>
+            <th>{t("Title")}</th><th>{t("Theme")}</th><th>{t("Start (UTC)")}</th><th>{t("End (UTC)")}</th><th>{t("Status")}</th><th>{t("Actions")}</th>
         </tr></thead>
         <tbody>{rows}</tbody>
     </table>"""
@@ -840,7 +969,7 @@ def create_jam():
     youtube_url = request.form.get('youtube_url', '').strip() or None
 
     if not all([title, theme, start_time, end_time]):
-        return "<p style='color:var(--pico-del-color);'>All fields except YouTube URL are required.</p>", 400
+        return f"<p style='color:var(--pico-del-color);'>{t('All fields except YouTube URL are required.')}</p>", 400
 
     # Normalize datetime-local format to ISO (replace T with space)
     start_time = start_time.replace('T', ' ')
@@ -880,7 +1009,7 @@ def get_jam_edit_form(jam_id):
         conn.close()
 
     if not row:
-        return "Not Found", 404
+        return t("Not Found"), 404
 
     j = dict(row)
     # Convert stored " " back to "T" for datetime-local input
@@ -897,11 +1026,11 @@ def get_jam_edit_form(jam_id):
             <td><input name="end_time"    type="datetime-local" value="{end_val}"   required style="margin:0;" /></td>
             <td><input name="youtube_url" value="{yt_val}" placeholder="YouTube embed URL" style="margin:0;" /></td>
             <td style="display:flex; gap:0.5rem;">
-                <button type="submit" style="padding:0.3rem 0.8rem; font-size:0.85rem;">Save</button>
+                <button type="submit" style="padding:0.3rem 0.8rem; font-size:0.85rem;">{t("Save")}</button>
                 <button type="button" class="outline secondary" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
                     hx-get="/api/jams"
                     hx-target="#jam-admin-table"
-                    hx-swap="outerHTML">Cancel</button>
+                    hx-swap="outerHTML">{t("Cancel")}</button>
             </td>
         </form>
     </tr>"""
@@ -919,7 +1048,7 @@ def update_jam(jam_id):
     youtube_url = request.form.get('youtube_url', '').strip() or None
 
     if not all([title, theme, start_time, end_time]):
-        return "<p style='color:var(--pico-del-color);'>All fields are required.</p>", 400
+        return f"<p style='color:var(--pico-del-color);'>{t('All fields are required.')}</p>", 400
 
     conn = get_db_connection()
     try:

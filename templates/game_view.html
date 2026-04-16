@@ -13,7 +13,7 @@
             <iframe src="{{ game.game_url }}"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
                 allow="cross-origin-isolated; autoplay; fullscreen; focus-without-user-activation *; share-client-id *; camera *; microphone *; clipboard-read *; clipboard-write *"
-                placeholder="Loading Godot Engine...">
+                placeholder="{{ t('Loading Godot Engine...') }}">
             </iframe>
         </div>
         <footer style="padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
@@ -24,7 +24,7 @@
                     ❤️ {{ like_count }}
                 </button>
             </div>
-            <a href="/games" role="button" class="outline full-width" hx-swap="outerHTML">Back to Gallery</a>
+            <a href="/games" role="button" class="outline full-width" hx-swap="outerHTML">{{ t("Back to Gallery") }}</a>
         </footer>
     </article>
 
@@ -32,13 +32,13 @@
         <!-- Game Info -->
         <div style="flex: 2;">
             <article class="glass-panel">
-                <header>About this Game</header>
+                <header>{{ t("About this Game") }}</header>
                 <p>{{ game.description }}</p>
             </article>
 
             <!-- HTMX Comment Section -->
             <article class="glass-panel">
-                <header>Community Comments</header>
+                <header>{{ t("Community Comments") }}</header>
                 <div id="comment-list">
                     {% for comment in comments %}
                     <article
@@ -53,7 +53,7 @@
                         <footer
                             style="margin-top: 0.5rem; text-align: right; background: transparent; border: 0; padding: 0;">
                             <a href="#" hx-delete="/api/comments/{{ comment.id }}" hx-target="closest article"
-                                hx-swap="outerHTML" class="contrast" style="font-size: 0.8rem;">Delete</a>
+                                hx-swap="outerHTML" class="contrast" style="font-size: 0.8rem;">{{ t("Delete") }}</a>
                         </footer>
                         {% endif %}
                     </article>
@@ -62,8 +62,8 @@
                     <form hx-post="/api/games/{{ game.id }}/comments" hx-target="#comment-list"
                         hx-on::after-request="this.reset()" style="margin-top: 1.5rem;">
                         <fieldset role="group">
-                            <input type="text" name="content" placeholder="Write a comment..." required>
-                            <button type="submit" class="outline">Post</button>
+                            <input type="text" name="content" placeholder="{{ t('Write a comment...') }}" required>
+                            <button type="submit" class="outline">{{ t("Post") }}</button>
                         </fieldset>
                     </form>
                 </div>
@@ -73,14 +73,14 @@
         <!-- Sidebar / Dev Profile link -->
         <aside style="flex: 1;">
             <article class="glass-panel text-center">
-                <header>Developer</header>
+                <header>{{ t("Developer") }}</header>
                 <p><strong>{{ game.username }}</strong></p>
-                <a href="/cv" role="button" class="outline full-width">View Portfolio</a>
+                <a href="/cv" role="button" class="outline full-width">{{ t("View Portfolio") }}</a>
             </article>
             <article class="glass-panel">
-                <header>System Status</header>
-                <small>Validation: <strong>Approved</strong></small><br>
-                <small>Format: WebGL (Godot)</small>
+                <header>{{ t("System Status") }}</header>
+                <small>{{ t("Validation:") }} <strong>{{ t("Approved") }}</strong></small><br>
+                <small>{{ t("Format: WebGL (Godot)") }}</small>
             </article>
         </aside>
     </div>

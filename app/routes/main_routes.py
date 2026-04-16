@@ -3,6 +3,7 @@ import json
 from flask import Blueprint, render_template, abort, current_app, send_from_directory, make_response, session, request
 from app.database import get_db_connection
 from app.repositories.game_repository import GameRepository
+from app.i18n import t
 
 main_bp = Blueprint('main', __name__)
 
@@ -12,8 +13,21 @@ def landing_page():
 
 @main_bp.route('/health')
 def health_check():
-    """Simple healthcheck for CI/CD and deployment monitoring."""
-    return "OK"
+    """Real healthcheck for CI/CD and deployment monitoring."""
+    try:
+        conn = get_db_connection()
+        conn.execute("SELECT 1").fetchone()
+        conn.close()
+        return "OK", 200
+    except Exception as e:
+        return f"{t('Database Error')}: {str(e)}", 503
+
+from flask import redirect
+@main_bp.route('/set-lang/<lang>')
+def set_lang(lang):
+    if lang in ['en', 'tr']:
+        session['lang'] = lang
+    return redirect(request.referrer or '/')
 
 @main_bp.route('/dashboard')
 def dashboard():
@@ -56,12 +70,7 @@ def view_cv(cv_id):
         cv['cv_data'] = json.loads(cv['cv_data'])
         
         # User id from CV to fetch games
-        user_games = []
-        all_games = GameRepository.get_all_games()
-        for g in all_games:
-            # Simplistic relation fetch
-            if g.get('username') == cv['username']:
-                user_games.append(g)
+        user_games = GameRepository.get_games_by_user(cv['user_id'])
                 
         return render_template('cv_view.html', cv=cv, games=user_games)
     finally:

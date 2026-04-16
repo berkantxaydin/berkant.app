@@ -3,26 +3,26 @@
 {% block content %}
 <section>
   <hgroup>
-    <h1 class="accent-text">Server Portal</h1>
-    <p>Live System Metrics, Analytics, and Local AI Monitoring</p>
+    <h1 class="accent-text">{{ t("Server Portal") }}</h1>
+    <p>{{ t("Live System Metrics, Analytics, and Local AI Monitoring") }}</p>
   </hgroup>
 
   <div class="grid">
     <!-- SYSTEM RESOURCES -->
     <article class="glass-panel">
       <header style="display: flex; justify-content: space-between; align-items: center;">
-        Platform Engine
+        {{ t("Platform Engine") }}
       </header>
       <div id="aspire-resources" hx-get="/api/metrics/resources" hx-trigger="load, every 30s" hx-swap="innerHTML">
-        <p>Loading server telemetry...</p>
+        <p>{{ t("Loading server telemetry...") }}</p>
       </div>
     </article>
 
     <!-- CORE ANALYTICS -->
     <article class="glass-panel">
-      <header>Traffic Analytics</header>
+      <header>{{ t("Traffic Analytics") }}</header>
       <div id="aspire-analytics" hx-get="/api/metrics/analytics" hx-trigger="load, every 10s" hx-swap="innerHTML">
-        <p>Calculating routing stats...</p>
+        <p>{{ t("Calculating routing stats...") }}</p>
       </div>
     </article>
   </div>
@@ -30,26 +30,26 @@
   <div class="grid">
     <!-- ERROR LOG TAIL -->
     <article class="glass-panel" style="grid-column: span 1;">
-      <header>Runtime Trace Logs</header>
+      <header>{{ t("Runtime Trace Logs") }}</header>
       <div id="aspire-logs" hx-get="/api/metrics/logs" hx-trigger="load, every 15s" hx-swap="innerHTML"
         style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px;">
-        <p>Reading log stream...</p>
+        <p>{{ t("Reading log stream...") }}</p>
       </div>
     </article>
 
     <!-- LOCAL AI ASSISTANT -->
     <article class="glass-panel" style="grid-column: span 1;">
-      <header>AI Assistant (Gemma 4)</header>
+      <header>{{ t("AI Assistant (Gemma 4)") }}</header>
       <form hx-post="/ai/ask" hx-target="#chat-result-container" hx-swap="innerHTML">
         <fieldset role="group">
-          <input type="text" name="prompt" placeholder="Ask the local Assistant..." required>
-          <button type="submit" class="outline">Send</button>
+          <input type="text" name="prompt" placeholder="{{ t('Ask the local Assistant...') }}" required>
+          <button type="submit" class="outline">{{ t("Send") }}</button>
         </fieldset>
       </form>
       <div id="chat-result-container" aria-live="polite"
         style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; min-height: 80px;">
         <div id="chat-result">
-          <em>AI is idle...</em>
+          <em>{{ t("AI is idle...") }}</em>
         </div>
       </div>
     </article>
