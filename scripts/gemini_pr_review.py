@@ -29,30 +29,34 @@ def main():
 
     # 2. Ask Gemini to Review
     print("🧠 Sending diff to Gemini API...")
-    genai.configure(api_key=gemini_key)
-    
-    # Using Gemini 2.5 Flash for speed and cost efficiency on code reviews
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    
-    prompt = f"""
-    Act as a Senior Security & Python Engineer. Review the following Git diff for a Pull Request.
-    Context: This project is a highly constrained Flask app running on 8GB RAM using SQLite (WAL).
-    
-    Tasks:
-    1. Look for obvious bugs or logic errors.
-    2. Check for security vulnerabilities (especially SQL injection or bad file handling).
-    3. Ensure no bloated libraries are being imported.
-    
-    Format your response in Markdown. Be concise. If the code looks perfect, say so.
-    
-    DIFF:
-    ```diff
-    {diff_text}
-    ```
-    """
-    
-    response = model.generate_content(prompt)
-    review_comment = response.text
+    try:
+        genai.configure(api_key=gemini_key)
+        
+        # Using Gemini 1.5 Flash for high speed and code-native reasoning
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+        Act as a Senior Security & Python Engineer. Review the following Git diff for a Pull Request.
+        Context: This project is a highly constrained Flask app running on 8GB RAM using SQLite (WAL).
+        
+        Tasks:
+        1. Look for obvious bugs or logic errors.
+        2. Check for security vulnerabilities (especially SQL injection or bad file handling).
+        3. Ensure no bloated libraries are being imported.
+        
+        Format your response in Markdown. Be concise. If the code looks perfect, say so.
+        
+        DIFF:
+        ```diff
+        {diff_text}
+        ```
+        """
+        
+        response = model.generate_content(prompt)
+        review_comment = response.text
+    except Exception as e:
+        print(f"❌ Gemini AI failed to generate review: {e}")
+        return
 
     # 3. Post the comment back to GitHub
     print("📝 Posting review to GitHub PR...")
