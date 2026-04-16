@@ -32,8 +32,8 @@ def main():
     try:
         genai.configure(api_key=gemini_key)
         
-        # Using Gemini 1.5 Flash for high speed and code-native reasoning
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Using Gemini 2.5 Flash as requested by the user
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         prompt = f"""
         Act as a Senior Security & Python Engineer. Review the following Git diff for a Pull Request.

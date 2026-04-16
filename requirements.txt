@@ -6,3 +6,5 @@ pywebview
 werkzeug
 psutil
 python-dotenv
+google-generativeai
+requests
