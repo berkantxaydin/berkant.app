@@ -14,6 +14,10 @@
                 <strong>{{ game.title }}</strong>
             </header>
             <p style="min-height: 3rem;">{{ game.description[:100] }}{% if game.description|length > 100 %}...{% endif %}</p>
+            <div style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--pico-muted-color);">
+                <span title="{{ t('Likes') }}">❤️ {{ game.likes or 0 }}</span>
+                <span title="{{ t('Views') }}" style="margin-left: 1rem;">👁️ {{ game.views or 0 }}</span>
+            </div>
             <footer>
                 <a href="/games/{{ game.id }}" role="button" class="outline">{{ t("Open Game Page") }}</a>
             </footer>

@@ -72,6 +72,7 @@ def init_db():
                 description TEXT,
                 game_url TEXT NOT NULL,
                 validation_status TEXT DEFAULT 'Pending',
+                views INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES Users (id) ON DELETE CASCADE,
                 FOREIGN KEY (jam_id) REFERENCES Game_Jams (id) ON DELETE SET NULL

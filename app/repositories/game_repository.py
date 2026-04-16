@@ -6,7 +6,13 @@ class GameRepository:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT g.*, u.username FROM Godot_Games g JOIN Users u ON g.user_id = u.id ORDER BY g.created_at DESC")
+            cursor.execute("""
+                SELECT g.*, u.username, 
+                (SELECT COUNT(*) FROM Game_Likes WHERE game_id = g.id) as likes
+                FROM Godot_Games g 
+                JOIN Users u ON g.user_id = u.id 
+                ORDER BY g.created_at DESC
+            """)
             return [dict(row) for row in cursor.fetchall()]
         finally:
             conn.close()
@@ -16,7 +22,13 @@ class GameRepository:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM Godot_Games WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+            cursor.execute("""
+                SELECT g.*, 
+                (SELECT COUNT(*) FROM Game_Likes WHERE game_id = g.id) as likes
+                FROM Godot_Games g 
+                WHERE g.user_id = ? 
+                ORDER BY g.created_at DESC
+            """, (user_id,))
             return [dict(row) for row in cursor.fetchall()]
         finally:
             conn.close()
@@ -71,5 +83,18 @@ class GameRepository:
                 cursor.execute("DELETE FROM Godot_Games WHERE id = ? AND user_id = ?", (game_id, user_id))
             conn.commit()
             return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    @staticmethod
+    def increment_view(game_id):
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE Godot_Games SET views = views + 1 WHERE id = ?", (game_id,))
+            conn.commit()
+            return True
+        except Exception:
+            return False
         finally:
             conn.close()
