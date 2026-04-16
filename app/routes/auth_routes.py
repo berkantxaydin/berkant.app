@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from app.database import get_db_connection
+from app.i18n import t
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -23,7 +24,7 @@ def admin_required(f):
         if 'user_id' not in session:
             return redirect(url_for('auth.login'))
         if not session.get('is_admin', False):
-            return "Unauthorized. Admin privileges required.", 403
+            return f"{t('Unauthorized. Admin privileges required.')}", 403
         return f(*args, **kwargs)
     return decorated_function
 
@@ -51,7 +52,7 @@ def login():
                     
                 return redirect(url_for('main.landing_page'))
             else:
-                return render_template('login.html', error="Invalid username or password.")
+                return render_template('login.html', error=t("Invalid username or password."))
         finally:
             conn.close()
             
@@ -66,10 +67,10 @@ def register():
         admin_code = request.form.get('admin_code', '')
         
         if not username or not email or not password:
-            return render_template('register.html', error="All fields are required.")
+            return render_template('register.html', error=t("All fields are required."))
             
         hashed_pw = generate_password_hash(password)
-        is_admin = 1 if admin_code == "PROGLEM_ADMIN_SECRET" else 0
+        is_admin = 1 if admin_code == "77" else 0
         
         conn = get_db_connection()
         try:
@@ -82,7 +83,7 @@ def register():
             return redirect(url_for('auth.login'))
         except Exception as e:
             current_app.logger.error(f"Registration error: {e}")
-            return render_template('register.html', error="Username or email already exists.")
+            return render_template('register.html', error=t("Username or email already exists."))
         finally:
             conn.close()
 

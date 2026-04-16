@@ -6,13 +6,13 @@
 {% block content %}
 <section>
   <hgroup>
-    <h2 class="accent-text">CV Talent Pool</h2>
-    <p>Live filter through candidates via purely HTMX (No JavaScript Required)</p>
+    <h2 class="accent-text">{{ t("CV Talent Pool") }}</h2>
+    <p>{{ t("Live filter through candidates via purely HTMX (No JavaScript Required)") }}</p>
   </hgroup>
   
   <input type="search" 
          name="search" 
-         placeholder="Search by skills, title, or summary (e.g. Python, Godot, React)"
+         placeholder="{{ t('Search by skills, title, or summary (e.g. Python, Godot, React)') }}"
          hx-get="/api/cv"
          hx-trigger="keyup changed delay:500ms, search"
          hx-target="#search-results"
@@ -21,7 +21,7 @@
          style="margin-bottom: 2rem;">
          
   <div id="search-results" class="grid" hx-get="/api/cv" hx-trigger="load">
-     <p aria-busy="true">Loading CVs from Database...</p>
+     <p aria-busy="true">{{ t('Loading CVs from Database...') }}</p>
   </div>
 </section>
 {% endblock %}

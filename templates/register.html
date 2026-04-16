@@ -6,34 +6,34 @@
 <section style="display: flex; justify-content: center; align-items: center; min-height: 70vh;">
   <article class="glass-panel" style="width: 100%; max-width: 400px;">
     <hgroup class="text-center">
-      <h2 class="accent-text">Join the Ecosystem</h2>
-      <p>Create your standard portfolio today</p>
+      <h2 class="accent-text">{{ t("Join the Ecosystem") }}</h2>
+      <p>{{ t("Create your standard portfolio today") }}</p>
     </hgroup>
-    
+
     {% if error %}
     <p style="color: var(--pico-del-color);"><strong>{{ error }}</strong></p>
     {% endif %}
 
     <form method="POST" action="/register">
       <label>
-        Username
+        {{ t("Username") }}
         <input type="text" name="username" required>
       </label>
       <label>
-        Email Address
+        {{ t("Email Address") }}
         <input type="email" name="email" required>
       </label>
       <label>
-        Password
+        {{ t("Password") }}
         <input type="password" name="password" required>
       </label>
       <details>
-        <summary>Admin Activation (Optional)</summary>
-        <label>Secret Code
-          <input type="password" name="admin_code" placeholder="Leave blank if standard developer">
+        <summary>{{ t("Admin Activation (Optional)") }}</summary>
+        <label>{{ t("Secret Code") }}
+          <input type="password" name="admin_code" placeholder=">.<">
         </label>
       </details>
-      <button type="submit">Create Account</button>
+      <button type="submit">{{ t("Create Account") }}</button>
     </form>
   </article>
 </section>

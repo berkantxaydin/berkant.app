@@ -4,28 +4,28 @@
     <header>
         <hgroup>
             <h2 class="accent-text">{{ cv.title }}</h2>
-            <p>Developer: <strong>{{ cv.username }}</strong></p>
+            <p>{{ t("Developer:") }} <strong>{{ cv.username }}</strong></p>
         </hgroup>
     </header>
     
     <div id="resume-container">
         {% if cv.custom_htmx %}
             <div hx-get="/api/cv/{{ cv.id }}/htmx" hx-trigger="load">
-                <p aria-busy="true">Loading interactive HTMX resume...</p>
+                <p aria-busy="true">{{ t("Loading interactive HTMX resume...") }}</p>
             </div>
         {% else %}
             <!-- Default Standard JSON rendering -->
-            <h5>Summary</h5>
+            <h5>{{ t("Summary") }}</h5>
             <p>{{ cv.summary }}</p>
             
-            <h5>Skills</h5>
+            <h5>{{ t("Skills") }}</h5>
             <ul>
                 {% for skill in cv.cv_data.skills %}
                 <li>{{ skill }}</li>
                 {% endfor %}
             </ul>
             
-            <h5>Recent Experience</h5>
+            <h5>{{ t("Recent Experience") }}</h5>
             <ul>
                 {% for exp in cv.cv_data.experience %}
                 <li>{{ exp.role }}</li>
@@ -37,16 +37,16 @@
 
 <!-- Shared Godot Portfolio Section -->
 <section style="margin-top: 3rem;">
-    <h3 class="accent-text">Godot WebGL Portfolio</h3>
+    <h3 class="accent-text">{{ t("Godot WebGL Portfolio") }}</h3>
     <div class="grid">
         {% for game in games %}
         <article class="glass-panel">
             <header>{{ game.title }}</header>
             <p>{{ game.description }}</p>
-            <footer><a href="{{ game.game_url }}" target="_blank" role="button" class="outline">Play Game</a></footer>
+            <footer><a href="{{ game.game_url }}" target="_blank" role="button" class="outline">{{ t("Play Game") }}</a></footer>
         </article>
         {% else %}
-        <p>This developer hasn't uploaded any Godot WebGL games yet.</p>
+        <p>{{ t("This developer hasn't uploaded any Godot WebGL games yet.") }}</p>
         {% endfor %}
     </div>
 </section>
