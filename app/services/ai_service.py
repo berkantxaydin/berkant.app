@@ -7,9 +7,10 @@ import urllib.request
 import json
 import atexit
 import queue
-import psutil # Moved to top-level for proficiency
+import psutil 
+import sqlite3
 from datetime import datetime, timedelta
-from app.database import get_db_connection # Moved to top-level
+from app.database import get_db_connection
 
 # Global paths
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
