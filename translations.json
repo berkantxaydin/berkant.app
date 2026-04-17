@@ -201,7 +201,11 @@
     "No CVs found matching that query.": "No CVs found matching that query.",
     "No games have been submitted yet. Be the first!": "No games have been submitted yet. Be the first!",
     "No Game Jams Yet": "No Game Jams Yet",
-    "An admin will announce the next jam soon. Check back for the upcoming challenge!": "An admin will announce the next jam soon. Check back for the upcoming challenge!"
+    "An admin will announce the next jam soon. Check back for the upcoming challenge!": "An admin will announce the next jam soon. Check back for the upcoming challenge!",
+    "No error logs recorded.": "No error logs recorded.",
+    "No jams yet. Create one below.": "No jams yet. Create one below.",
+    "off": "off",
+    "Go to Admin Panel": "Go to Admin Panel"
   },
   "tr": {
     "Metrics": "Metrikler",
@@ -381,6 +385,32 @@
     "Server rejected routing bindings.": "Sunucu yönlendirme bağlamalarını reddetti.",
     "Create Standardized CV - proglem": "Standartlaştırılmış CV Oluştur - proglem",
     "Build and publish your professional skills to the standard proglem talent pool, or inject your interactive raw HTMX resume.": "Profesyonel becerilerinizi standart proglem yetenek havuzuna yükleyin veya etkileşimli ham HTMX özgeçmişinizi enjekte edin.",
-    "This developer hasn't uploaded any Godot WebGL games yet.": "Bu geliştirici henüz herhangi bir Godot WebGL oyunu yüklememiştir."
+    "This developer hasn't uploaded any Godot WebGL games yet.": "Bu geliştirici henüz herhangi bir Godot WebGL oyunu yüklememiştir.",
+    "AI Assistant": "Yapay Zeka Asistanı",
+    "AI is warming up (loading 5GB Gemma model)...": "Yapay zeka ısınıyor (5GB Gemma modeli yükleniyor)...",
+    "The site is ready, but the AI engine is still loading into VRAM. Please wait.": "Site hazır, ancak yapay zeka motoru hala VRAM'e yükleniyor. Lütfen bekleyin.",
+    "No messages yet. Start the conversation!": "Henüz mesaj yok. Sohbeti başlat!",
+    "Likes": "Beğeniler",
+    "Views": "Görünümler",
+    "Submit Game Jam Entry - proglem": "Game Jam Girişi Gönder - proglem",
+    "Upload your Godot WebGL zip export safely to the proglem Game Jam. The browser extracts and deploys it directly to cloud storage.": "Godot WebGL zip dışa aktarımınızı proglem Game Jam'a güvenle yükleyin. Tarayıcı bunu doğrudan bulut depolamaya çıkarır ve dağıtır.",
+    "Submitting Official Entry to Active Game Jam": "Aktif Game Jam'a Resmi Giriş Gönderme",
+    "Login to like this game": "Bu oyunu beğenmek için giriş yapın",
+    "Login to like": "Beğenmek için giriş yapın",
+    "Invalid username or password.": "Geçersiz kullanıcı adı veya şifre.",
+    "Play Entry": "Girişi Oyna",
+    "Sign in": "Giriş Yap",
+    "to participate.": "katılmak için.",
+    "Create your standard portfolio today": "Standart portföyünüzü bugün oluşturun",
+    "Email Address": "E-posta Adresi",
+    "Admin Activation (Optional)": "Yönetici Aktivasyonu (İsteğe Bağlı)",
+    "Secret Code": "Gizli Kod",
+    "Create Account": "Hesap Oluştur",
+    "No CVs found matching that query.": "Bu sorguya uyan CV bulunamadı.",
+    "No games have been submitted yet. Be the first!": "Henüz oyun gönderilmedi. İlk siz olun!",
+    "No Game Jams Yet": "Henüz Oyun Jam'i Yok",
+    "An admin will announce the next jam soon. Check back for the upcoming challenge!": "Bir yönetici yakında bir sonraki jam'i duyuracak. Yaklaşan meydan okuma için geri dönün!",
+    "No error logs recorded.": "Hiç hata kaydı kaydedilmedi.",
+    "No jams yet. Create one below.": "Henüz jam yok. Aşağıda bir tane oluşturun."
   }
 }
