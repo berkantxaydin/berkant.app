@@ -1,12 +1,12 @@
 # cleanup_runner.ps1
 # Consistently stops all platform processes and clears runner locks.
-# Hardened to be 100% non-interactive and skip current run temp files.
+# 100% ASCII ONLY to prevent encoding-related CMD crashes.
 
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 $RunnerDir = "C:\Users\berka\runner_work"
-$CurrentTemp = $env:RUNNER_TEMP # The temp directory of the current GitHub Action run
+$CurrentTemp = $env:RUNNER_TEMP
 
-Write-Output "--- 🧹 Starting Surgical Runner Cleanup ---"
+Write-Output "--- Starting Surgical Runner Cleanup ---"
 
 # 1. Kill processes (Waitress, Nginx, AI Engine)
 Write-Output "Stopping all platform processes..."
@@ -29,9 +29,9 @@ foreach ($port in $ports) {
     } catch { }
 }
 
-# 3. Clear the _temp directories (EXCEPT the current one)
+# 3. Clear Stale Temp Folders (EXCEPT the current run)
 if (Test-Path "$RunnerDir\_temp") {
-    Write-Output "Clearing stale runner _temp folders..."
+    Write-Output "Clearing stale runner temp folders..."
     Get-ChildItem -Path "$RunnerDir\_temp" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne $CurrentTemp } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 
@@ -39,5 +39,5 @@ if (Test-Path "$RunnerDir\_temp") {
 & git fsmonitor--daemon stop 2> $null | Out-Null
 & git maintenance stop 2> $null | Out-Null
 
-Write-Output "✅ Runner environment stabilized and unlocked."
+Write-Output "CLEANUP COMPLETE. ENVIRONMENT UNLOCKED."
 exit 0

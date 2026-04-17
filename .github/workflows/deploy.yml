@@ -1,4 +1,4 @@
-name: 🚀 Continuous Deployment
+name: Continuous Deployment
 
 on:
   push:
@@ -37,4 +37,4 @@ jobs:
     - name: Verify Health
       shell: cmd
       run: |
-        echo "✅ Native Windows Deployment successful!"
+        echo "SUCCESS: Native Windows Deployment successful!"
