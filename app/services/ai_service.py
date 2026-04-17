@@ -32,7 +32,7 @@ else:
 AI_CONFIG = {
     "file": "gemma-4-E4B-it-Q4_K_M.gguf",
     "port": 8082,
-    "context": 8192
+    "context": 4096
 }
 
 
