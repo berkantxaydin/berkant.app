@@ -13,6 +13,14 @@ Start-Process -FilePath "$ProjectDir\venv\Scripts\waitress-serve.exe" -ArgumentL
 # 2. Start Nginx
 Write-Output "Starting Nginx..."
 if (Test-Path "$NginxDir\nginx.exe") {
+    # Ensure Nginx temp directories exist (Nginx for Windows crashes if they are missing)
+    $nginxTempDirs = @("temp", "temp/client_body_temp", "temp/proxy_temp", "temp/fastcgi_temp", "temp/uwsgi_temp", "temp/scgi_temp")
+    foreach ($dir in $nginxTempDirs) {
+        if (-not (Test-Path "$NginxDir\$dir")) {
+            New-Item -ItemType Directory -Path "$NginxDir\$dir" -Force | Out-Null
+        }
+    }
+
     Set-Location $NginxDir
     Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
 } else {
