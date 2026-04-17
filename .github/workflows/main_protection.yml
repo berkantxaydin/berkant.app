@@ -14,8 +14,8 @@ jobs:
         run: |
           echo "Checking source branch: ${{ github.head_ref }}"
           if [[ "${{ github.head_ref }}" != "dev" ]]; then
-            echo "❌ ERROR: Merges into 'main' are only allowed from the 'dev' branch."
+            echo "ERROR: Merges into 'main' are only allowed from the 'dev' branch."
             echo "Please merge your feature branch into 'dev' first, then create a PR from 'dev' to 'main'."
             exit 1
           fi
-          echo "✅ Source branch is 'dev'. Proceeding."
+          echo "SUCCESS: Source branch is 'dev'. Proceeding."
