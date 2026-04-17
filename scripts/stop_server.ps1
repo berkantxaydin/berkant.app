@@ -15,11 +15,19 @@ Write-Output "Stopping Nginx..."
 Stop-Process -Name "nginx" -Force -ErrorAction SilentlyContinue
 & taskkill /F /IM nginx.exe /T 2>$null
 
-# 3. Extra insurance: Port 5000 cleanup
-$portProcess = Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1
-if ($portProcess) {
-    Write-Output "Force-killing leftover process on port 5000 (PID: $portProcess)..."
-    Stop-Process -Id $portProcess -Force -ErrorAction SilentlyContinue
+# 3. Kill AI Engine (Llama)
+Write-Output "Stopping AI Engine (Llama)..."
+Stop-Process -Name "llama-server" -Force -ErrorAction SilentlyContinue
+& taskkill /F /IM llama-server.exe /T 2>$null
+
+# 4. Extra insurance: Port cleanup (5000, 80, 443)
+$ports = @(5000, 80, 443)
+foreach ($port in $ports) {
+    $portProcess = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1
+    if ($portProcess) {
+        Write-Output "Force-killing process on port $port (PID: $portProcess)..."
+        Stop-Process -Id $portProcess -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Output "✅ All server processes stopped."
