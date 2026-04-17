@@ -13,7 +13,13 @@ Get-Service "actions.runner.*" | Stop-Service -Force -ErrorAction SilentlyContin
 Start-Sleep -Seconds 2
 
 # 2. Kill all potentially locking processes
-Write-Output "Killing ALL Flask, Waitress, Nginx, and Git processes..."
+Write-Output "Killing ALL Flask, Waitress, Nginx, Git, and Node processes..."
+
+# Explicitly stop Git daemons
+& git fsmonitor--daemon stop 2>$null
+& git maintenance stop 2>$null
+git config --local core.fsmonitor false
+
 $locks = @("waitress-serve", "python", "nginx", "git", "node")
 foreach ($name in $locks) {
     Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
