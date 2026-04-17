@@ -197,7 +197,11 @@
     "Email Address": "Email Address",
     "Admin Activation (Optional)": "Admin Activation (Optional)",
     "Secret Code": "Secret Code",
-    "Create Account": "Create Account"
+    "Create Account": "Create Account",
+    "No CVs found matching that query.": "No CVs found matching that query.",
+    "No games have been submitted yet. Be the first!": "No games have been submitted yet. Be the first!",
+    "No Game Jams Yet": "No Game Jams Yet",
+    "An admin will announce the next jam soon. Check back for the upcoming challenge!": "An admin will announce the next jam soon. Check back for the upcoming challenge!"
   },
   "tr": {
     "Metrics": "Metrikler",
