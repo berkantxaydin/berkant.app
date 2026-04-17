@@ -1,14 +1,14 @@
 # stop_server.ps1
-# This script forcefully terminates all server-related processes.
+# Manually stops all server-related processes (Waitress and Nginx).
 
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 
 Write-Output "--- 🛑 Stopping Server Processes ---"
 
-# 1. Kill Waitress (Python)
+# 1. Kill Waitress/Python
 Write-Output "Stopping Waitress (Python)..."
 Stop-Process -Name "waitress-serve" -Force -ErrorAction SilentlyContinue
-& taskkill /F /IM waitress-serve.exe /T 2>$null
+Stop-Process -Name "python" -Force -ErrorAction SilentlyContinue
 
 # 2. Kill Nginx
 Write-Output "Stopping Nginx..."

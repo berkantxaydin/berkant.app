@@ -20,9 +20,9 @@ Write-Output "Killing ALL Flask, Waitress, Nginx, Git, and Node processes..."
 & git maintenance stop 2>$null
 git config --local core.fsmonitor false
 
-$locks = @("waitress-serve", "python", "nginx", "llama-server", "git", "node", "git-remote-https", "git-lfs")
+$locks = @("waitress-serve", "python", "nginx", "git", "node", "git-remote-https", "git-lfs")
 foreach ($name in $locks) {
-    Get-Process -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$ProjectDir*" -or $name -eq "llama-server" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$ProjectDir*" -or $name -ne "node" } | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
 # 3. Clear the _temp directories inside _work

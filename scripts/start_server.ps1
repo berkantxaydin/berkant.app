@@ -1,5 +1,5 @@
 # start_server.ps1
-# This script starts the Waitress server and Nginx.
+# Manually starts the server processes (Waitress and Nginx).
 
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 $NginxDir = "$ProjectDir\nginx-1.30.0"
