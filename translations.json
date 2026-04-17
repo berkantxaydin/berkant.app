@@ -213,7 +213,11 @@
     "Overall Traffic": "Overall Traffic",
     "Avg Latency": "Avg Latency",
     "AI is idle (Waking up)...": "AI is idle (Waking up)...",
-    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware."
+    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.",
+    "Approved WebGL": "Approved WebGL",
+    "Upcoming": "Upcoming",
+    "Ended": "Ended",
+    "The model is loading into system RAM.": "The model is loading into system RAM."
   },
   "tr": {
     "Metrics": "Metrikler",
