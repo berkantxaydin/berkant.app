@@ -1,0 +1,41 @@
+services:
+  web:
+    build: .
+    container_name: proglem_app
+    restart: always
+    env_file: .env
+    volumes:
+      - ./proglem.db:/app/proglem.db
+      - ./models:/app/models
+      - ./logs:/app/logs
+    ports:
+      - "5000:5000"
+      - "8082:8082"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    depends_on:
+      - nginx
+
+  nginx:
+    image: nginx:alpine
+    container_name: proglem_proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./app/static:/app/static:ro
+    depends_on:
+      - web
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: proglem_tunnel
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - nginx

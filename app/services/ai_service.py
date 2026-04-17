@@ -7,20 +7,27 @@ import urllib.request
 import json
 import atexit
 import queue
-import psutil 
+import psutil
 import sqlite3
 from datetime import datetime, timedelta
 from app.database import get_db_connection
 
 # Global paths
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-server_exe = os.path.join(BASE_DIR, 'bin', 'llama-server.exe')
+
+# In Docker/Linux, we use the installed package command. 
+# On Windows, we try to use the local binary if available.
+if os.name == 'nt':
+    server_exe = os.path.join(BASE_DIR, 'bin', 'llama-server.exe')
+else:
+    # On Linux/Docker, llama-cpp-python[server] provides the command
+    server_exe = "python3" # We will use -m llama_cpp.server
 
 # Configuration for the primary Gemma 4 model
 AI_CONFIG = {
     "file": "gemma-4-E4B-it-Q4_K_M.gguf",
     "port": 8082,
-    "context": 8192 # Expanded context for single-model setup
+    "context": 8192
 }
 
 
@@ -33,16 +40,28 @@ def start_llama_server():
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
     
     # Redirect errors to a log file for debugging
-    log_file = os.path.join(BASE_DIR, 'llm_server_error.log')
-    err_out = open(log_file, 'w', encoding='utf-8')
+    log_file = os.path.join(BASE_DIR, 'logs', 'llm_server_error.log')
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    err_out = open(log_file, 'a', encoding='utf-8')
     
     startupinfo = None
-    if os.name == 'nt':
+    if os.name == 'nt' and os.path.exists(server_exe):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        cmd = [server_exe, "-m", model_path, "--port", str(AI_CONFIG['port']), "-c", str(AI_CONFIG['context'])]
+    else:
+        # Docker / Linux path: using python -m llama_cpp.server
+        # We assume the model path is correctly mapped in Docker
+        cmd = [
+            "python3", "-m", "llama_cpp.server", 
+            "--model", model_path, 
+            "--port", str(AI_CONFIG['port']), 
+            "--n_ctx", str(AI_CONFIG['context']),
+            "--host", "0.0.0.0"
+        ]
     
     proc = subprocess.Popen( # nosec B603
-        [server_exe, "-m", model_path, "--port", str(AI_CONFIG['port']), "-c", str(AI_CONFIG['context'])],
+        cmd,
         stdout=subprocess.DEVNULL,
         stderr=err_out,
         startupinfo=startupinfo

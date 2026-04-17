@@ -17,7 +17,7 @@ def create_app():
     # Configure robust logging handling for error.log
     # mode='w' ensures the log is fresh for this session, starting from "instance created"
     log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] in %(module)s: %(message)s')
-    file_handler = RotatingFileHandler('error.log', mode='w', maxBytes=5_000_000, backupCount=5, encoding='utf-8')
+    file_handler = RotatingFileHandler('logs/error.log', mode='a', maxBytes=5_000_000, backupCount=5, encoding='utf-8')
     file_handler.setFormatter(log_formatter)
     file_handler.setLevel(logging.INFO) # Log info and above
     

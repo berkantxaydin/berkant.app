@@ -12,6 +12,14 @@
   --pico-h1-color: #f8fafc;
   --pico-h2-color: #f1f5f9;
   --pico-font-family: 'Inter', -apple-system, sans-serif;
+  --pico-heading-font-family: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--pico-heading-font-family);
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 body {
@@ -31,8 +39,10 @@ nav.container-fluid {
 }
 
 nav strong.logo {
-  font-size: 1.6rem;
+  font-family: var(--pico-heading-font-family);
+  font-size: 1.8rem;
   font-weight: 800;
+  letter-spacing: -1.5px;
   background: linear-gradient(90deg, #a855f7, #ec4899);
   -webkit-background-clip: text;
   background-clip: text;
@@ -164,6 +174,7 @@ button.outline:hover, [role="button"].outline:hover {
   display: inline-block;
   padding: 0.15rem 0.6rem;
   border-radius: 50px;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;

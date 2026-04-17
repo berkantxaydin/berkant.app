@@ -96,10 +96,14 @@ def jam_page():
         jams = []
         for jam_row in jams_raw:
             jam = dict(jam_row)
-            cursor.execute(
-                "SELECT g.*, u.username FROM Godot_Games g JOIN Users u ON g.user_id = u.id WHERE g.jam_id = ? ORDER BY g.created_at DESC",
-                (jam['id'],)
-            )
+            cursor.execute("""
+                SELECT g.*, u.username, 
+                (SELECT COUNT(*) FROM Game_Likes WHERE game_id = g.id) as likes
+                FROM Godot_Games g 
+                JOIN Users u ON g.user_id = u.id 
+                WHERE g.jam_id = ? 
+                ORDER BY g.created_at DESC
+            """, (jam['id'],))
             jam['games'] = [dict(r) for r in cursor.fetchall()]
             jams.append(jam)
 
