@@ -40,12 +40,37 @@ ai_booting = False
 IDLE_TIMEOUT = 10 * 60  # 10 minutes (in seconds)
 last_activity_time = time.time()
 
+def cleanup_orphans():
+    """Forcefully kills any orphaned llama-server processes to free GPU/RAM."""
+    target_name = "llama-server.exe"
+    for proc in psutil.process_iter(['pid', 'name', 'exe']):
+        try:
+            # Check by name or path match
+            is_match = False
+            if proc.info['name'] == target_name:
+                is_match = True
+            elif proc.info['exe'] and target_name in proc.info['exe']:
+                is_match = True
+            
+            if is_match:
+                print(f"Cleaning up orphaned AI process: {proc.info['pid']}")
+                p = psutil.Process(proc.info['pid'])
+                for child in p.children(recursive=True):
+                    child.kill()
+                p.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+
 def terminate_ai_server():
     """Unloads the model from RAM by terminating the background process."""
     global ai_ready, ai_booting
     for name, proc in list(ai_processes.items()):
         print(f"Terminating {name} AI server...")
         try:
+            # Kill children first (very important for GPU offloading sub-procs)
+            p = psutil.Process(proc.pid)
+            for child in p.children(recursive=True):
+                child.kill()
             proc.terminate()
             proc.wait(timeout=5)
         except Exception:
@@ -53,11 +78,18 @@ def terminate_ai_server():
                 proc.kill()
             except Exception:
                 pass
+    
+    # Final sweep to ensure no ghosts remain on GPU
+    cleanup_orphans()
+    
     ai_processes.clear()
     ai_ready = False
     ai_booting = False
 
 def start_llama_server():
+    # Ensure a clean slate before starting
+    cleanup_orphans()
+    
     print(f"Starting Gemma 4 server on port {AI_CONFIG['port']}...")
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
     
@@ -98,8 +130,14 @@ def background_initialization():
     try:
         start_llama_server()
         url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
-        max_retries = 90
+        max_retries = 60 # Reduced from 90 to 2 minutes total
         for _ in range(max_retries):
+            # 1. Check if the process has already crashed/exited
+            proc = ai_processes.get('chat')
+            if proc and proc.poll() is not None:
+                print("CRITICAL: AI Server exited immediately after launch.")
+                break
+
             try:
                 # We use nosec B310 because this URL is hardcoded to localhost and safe.
                 with urllib.request.urlopen(url, timeout=2) as response: # nosec B310
@@ -110,7 +148,9 @@ def background_initialization():
                         break
             except Exception:
                 time.sleep(2)
+        
         if not ai_ready:
+            print("ERROR: AI health check timed out or failed.")
             ai_booting = False
     except Exception as e:
         ai_booting = False
