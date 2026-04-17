@@ -202,7 +202,18 @@
     "No games have been submitted yet. Be the first!": "No games have been submitted yet. Be the first!",
     "No Game Jams Yet": "No Game Jams Yet",
     "An admin will announce the next jam soon. Check back for the upcoming challenge!": "An admin will announce the next jam soon. Check back for the upcoming challenge!",
-    "No error logs recorded.": "No error logs recorded."
+    "No error logs recorded.": "No error logs recorded.",
+    "Go to Admin Panel": "Go to Admin Panel",
+    "No jams yet. Create one below.": "No jams yet. Create one below.",
+    "off": "off",
+    "Game\n      Jams": "Game\n      Jams",
+    "hosted on\n      this platform": "hosted on\n      this platform",
+    "Page Views": "Page Views",
+    "Unique Devices": "Unique Devices",
+    "Overall Traffic": "Overall Traffic",
+    "Avg Latency": "Avg Latency",
+    "AI is idle (Waking up)...": "AI is idle (Waking up)...",
+    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware."
   },
   "tr": {
     "Metrics": "Metrikler",
@@ -382,6 +393,8 @@
     "Server rejected routing bindings.": "Sunucu yönlendirme bağlamalarını reddetti.",
     "Create Standardized CV - proglem": "Standartlaştırılmış CV Oluştur - proglem",
     "Build and publish your professional skills to the standard proglem talent pool, or inject your interactive raw HTMX resume.": "Profesyonel becerilerinizi standart proglem yetenek havuzuna yükleyin veya etkileşimli ham HTMX özgeçmişinizi enjekte edin.",
-    "This developer hasn't uploaded any Godot WebGL games yet.": "Bu geliştirici henüz herhangi bir Godot WebGL oyunu yüklememiştir."
+    "This developer hasn't uploaded any Godot WebGL games yet.": "Bu geliştirici henüz herhangi bir Godot WebGL oyunu yüklememiştir.",
+    "AI is idle (Waking up)...": "Yapay Zeka boşta (Uyandırılıyor)...",
+    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "Model sistem RAM'ine yükleniyor. Bu donanımda bu işlem genellikle 30-60 saniye sürer."
   }
 }
