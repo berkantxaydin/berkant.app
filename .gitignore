@@ -29,7 +29,6 @@ __pycache__/
 *.pycache
 
 # Database
-*.db
 *.db-journal
 *.db-wal
 
