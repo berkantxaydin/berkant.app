@@ -800,26 +800,27 @@ def get_core_analytics():
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Fetch total requests, total errors, unique IPs and avg latency
+        # Refined query: Unique Devices (cookies), Total Views (non-HTMX GETs), and All Traffic
         cursor.execute("""
             SELECT 
-                COUNT(*) as total, 
+                COUNT(*) as total_traffic,
+                COUNT(*) FILTER (WHERE is_htmx = 0 AND method = 'GET' AND path NOT LIKE '/api/%' AND path != '/health') as page_views,
                 COUNT(*) FILTER (WHERE status_code >= 400) as errors,
-                COUNT(DISTINCT ip_address) as unique_ips, 
+                COUNT(DISTINCT visitor_id) as unique_devices,
                 AVG(duration_ms) as avg_ms 
             FROM Analytics_Logs
         """)
         row = cursor.fetchone()
         
-        total = row['total'] or 0
+        total_traffic = row['total_traffic'] or 0
+        page_views = row['page_views'] or 0
         errors = row['errors'] or 0
-        unique_ips = row['unique_ips'] or 0
+        unique_devices = row['unique_devices'] or 0
         avg_ms = int(row['avg_ms'] or 0)
         
-        # Calculate error rate
         error_rate = 0
-        if total > 0:
-            error_rate = (errors / total) * 100
+        if total_traffic > 0:
+            error_rate = (errors / total_traffic) * 100
         
         admin_controls = ""
         if session.get('is_admin'):
@@ -838,19 +839,19 @@ def get_core_analytics():
         <div style="text-align: center;">
             <div class="grid">
                 <article style="padding: 1rem;">
-                    <h2 style="margin-bottom: 0; color: var(--pico-primary); font-family: var(--font-mono);">{total}</h2>
-                    <small>{t("Total Requests")}</small>
+                    <h2 style="margin-bottom: 0; color: var(--pico-primary); font-family: var(--font-mono);">{page_views}</h2>
+                    <small>{t("Page Views")}</small>
                 </article>
                 <article style="padding: 1rem;">
-                    <h2 style="margin-bottom: 0; color: {'var(--pico-del-color)' if errors > 0 else 'var(--pico-primary)'}; font-family: var(--font-mono);">{error_rate:.1f}%</h2>
+                    <h2 style="margin-bottom: 0; color: var(--pico-primary); font-family: var(--font-mono);">{unique_devices}</h2>
+                    <small>{t("Unique Devices")}</small>
+                </article>
+                <article style="padding: 1rem;">
+                    <h2 style="margin-bottom: 0; color: {'var(--pico-del-color)' if error_rate > 5 else 'var(--pico-primary)'}; font-family: var(--font-mono);">{error_rate:.1f}%</h2>
                     <small>{t("Error Rate")}</small>
                 </article>
-                <article style="padding: 1rem;">
-                    <h2 style="margin-bottom: 0; color: var(--pico-primary); font-family: var(--font-mono);">{unique_ips}</h2>
-                    <small>{t("Unique IPs")}</small>
-                </article>
             </div>
-            <p style="margin-top: 0.5rem;"><small>{t("Average Latency")}: <strong style="font-family: var(--font-mono);">{avg_ms}ms</strong></small></p>
+            <p style="margin-top: 0.5rem;"><small>{t("Overall Traffic")}: <strong>{total_traffic}</strong> &bull; {t("Avg Latency")}: <strong style="font-family: var(--font-mono);">{avg_ms}ms</strong></small></p>
             {admin_controls}
         </div>
         """

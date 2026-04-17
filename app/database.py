@@ -3,7 +3,7 @@ import sqlite3
 import logging
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DB_NAME = os.path.join(BASE_DIR, 'proglem.db')
+DB_NAME = os.path.join(BASE_DIR, 'db', 'proglem.db')
 
 def get_db_connection():
     """Create a database connection to the SQLite database with strictly enforced PRAGMAs."""
@@ -147,12 +147,24 @@ def init_db():
                 method TEXT,
                 path TEXT,
                 ip_address TEXT,
+                visitor_id TEXT,
+                is_htmx BOOLEAN DEFAULT 0,
                 status_code INTEGER,
                 duration_ms INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
+        # Migration: Add visitor_id to Analytics_Logs if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE Analytics_Logs ADD COLUMN visitor_id TEXT")
+        except Exception:
+            pass
+        try:
+            cursor.execute("ALTER TABLE Analytics_Logs ADD COLUMN is_htmx BOOLEAN DEFAULT 0")
+        except Exception:
+            pass
+
         conn.commit()
         logging.info("Database initialized successfully.")
     except Exception as e:

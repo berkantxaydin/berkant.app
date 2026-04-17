@@ -94,31 +94,45 @@ def create_app():
     app.jinja_env.filters['yt_thumb'] = yt_thumb_filter
 
     import time
-    from flask import request, g
+    import uuid
+    from flask import request, g, make_response
     
     @app.before_request
     def start_timer():
         g.start_time = time.time()
+        # Retrieve or generate a persistent visitor ID (Unique Device)
+        g.visitor_id = request.cookies.get('proglem_vid')
+        if not g.visitor_id:
+            g.visitor_id = str(uuid.uuid4())
+            g.new_visitor = True
+        else:
+            g.new_visitor = False
 
     @app.after_request
     def log_request(response):
         if hasattr(g, 'start_time'):
             duration_ms = int((time.time() - g.start_time) * 1000)
             
-            # Log all non-static traffic to provide accurate analytics on the dashboard
+            # Log non-static traffic. 
+            # We record both IP and Visitor ID (cookie) for maximum data resilience.
             if not request.path.startswith('/static/'):
                 from app.database import get_db_connection
                 try:
                     conn = get_db_connection()
                     cursor = conn.cursor()
+                    is_htmx = 1 if 'HX-Request' in request.headers else 0
                     cursor.execute(
-                        "INSERT INTO Analytics_Logs (method, path, ip_address, status_code, duration_ms) VALUES (?, ?, ?, ?, ?)",
-                        (request.method, request.path, request.remote_addr, response.status_code, duration_ms)
+                        "INSERT INTO Analytics_Logs (method, path, ip_address, visitor_id, is_htmx, status_code, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (request.method, request.path, request.remote_addr, g.visitor_id, is_htmx, response.status_code, duration_ms)
                     )
                     conn.commit()
                     conn.close()
                 except Exception as e:
                     app.logger.error(f"Analytics logging failed: {e}")
+            
+            # Set the persistent visitor cookie if it's new
+            if getattr(g, 'new_visitor', False):
+                response.set_cookie('proglem_vid', g.visitor_id, max_age=31536000, httponly=True, samesite='Lax')
                     
         return response
 
