@@ -15,7 +15,9 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-unsafe-dev-key')
     
     # Configure robust logging handling for error.log
-    # mode='w' ensures the log is fresh for this session, starting from "instance created"
+    # Ensure the logs directory exists before initializing the file handler
+    os.makedirs('logs', exist_ok=True)
+    
     log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] in %(module)s: %(message)s')
     file_handler = RotatingFileHandler('logs/error.log', mode='a', maxBytes=5_000_000, backupCount=5, encoding='utf-8')
     file_handler.setFormatter(log_formatter)

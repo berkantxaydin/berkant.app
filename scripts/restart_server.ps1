@@ -4,6 +4,11 @@
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 $NginxDir = "$ProjectDir\nginx-1.30.0"
 
+# 0. Ensure logs directory exists
+if (-not (Test-Path "$ProjectDir\logs")) {
+    New-Item -ItemType Directory -Path "$ProjectDir\logs" -Force
+}
+
 Write-Output "--- 🚀 Starting Native Windows Deployment ---"
 
 # 1. Kill existing Waitress process on port 5000
@@ -35,5 +40,9 @@ if ($nginxProcess) {
     Set-Location $NginxDir
     Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
 }
+
+# 5. Verify Health
+Start-Sleep -Seconds 2
+& "$ProjectDir\scripts\check_health.ps1"
 
 Write-Output "✅ Native Deployment Complete!"
