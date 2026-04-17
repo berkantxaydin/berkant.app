@@ -16,17 +16,107 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--pico-heading-font-family);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 body {
-  background: radial-gradient(circle at top, #1e1b4b 0%, var(--pico-background-color) 80%);
   min-height: 100vh;
   margin: 0;
-  background-attachment: fixed;
+  position: relative;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -2;
+
+  background-image:
+    url('/static/img/Protest3.png'),
+    radial-gradient(circle at top, #1e1b4b 70%, var(--pico-background-color) 100%);
+  background-size: 500px 250px, auto;
+  background-repeat: repeat, no-repeat;
+  background-blend-mode: overlay, normal;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: -1;
+
+  background-image:
+    url('/static/img/Rebellion2.png'),
+    radial-gradient(circle at top, #1e1b4b 70%, var(--pico-background-color) 100%);
+  background-size: 500px 250px;
+  background-repeat: repeat;
+  background-blend-mode: overlay;
+
+  /* The Mask that cuts alternating holes */
+  -webkit-mask-image: conic-gradient(from 0deg,
+      #000 90deg,
+      transparent 90deg 180deg,
+      #000 180deg 270deg,
+      transparent 270deg);
+  mask-image: conic-gradient(from 0deg,
+      #000 90deg,
+      transparent 90deg 180deg,
+      #000 180deg 270deg,
+      transparent 270deg);
+  -webkit-mask-size: 1000px 500px;
+  mask-size: 1000px 500px;
+}
+
+.fade-in-hero {
+  animation: fadeIn 1.2s ease-out;
+}
+
+.brand-title {
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.4));
+}
+
+.hero-subtitle {
+  font-weight: 600;
+  color: #fff;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.4;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.hero-actions {
+  margin-top: 3rem;
+}
+
+.btn-join {
+  font-size: 1.1rem;
+  padding: 0.8rem 2.5rem;
+  border-radius: 50px;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.btn-play {
+  font-size: 1.1rem;
+  padding: 0.8rem 2.5rem;
+  border-radius: 50px;
+  margin-left: 1rem;
+  backdrop-filter: blur(5px);
 }
 
 nav.container-fluid {
@@ -52,16 +142,47 @@ nav strong.logo {
 .glass-panel {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  background: rgba(30, 41, 59, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-panel:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 40px rgba(168, 85, 247, 0.15);
-  border-color: rgba(168, 85, 247, 0.3);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.premium-hero {
+  position: relative;
+  background-image: url('/static/img/Rebellion2.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 24px;
+  padding: 4rem 2rem;
+  margin-bottom: 3rem;
+  overflow: hidden;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+.premium-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.8));
+  z-index: 1;
+}
+
+.premium-hero>* {
+  position: relative;
+  z-index: 2;
 }
 
 .accent-text {
@@ -72,33 +193,39 @@ nav strong.logo {
 progress {
   border-radius: 8px;
 }
+
 progress::-webkit-progress-value {
   background: linear-gradient(90deg, #a855f7, #ec4899);
 }
 
 /* HTMX Transition fades */
 .htmx-indicator {
-    opacity: 0;
-    transition: opacity 200ms ease-in;
+  opacity: 0;
+  transition: opacity 200ms ease-in;
 }
+
 .htmx-request .htmx-indicator {
-    opacity: 1;
+  opacity: 1;
 }
+
 .htmx-request.htmx-indicator {
-    opacity: 1;
+  opacity: 1;
 }
 
 /* Enhanced Button Micro-Animations */
-button, [role="button"] {
+button,
+[role="button"] {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-button:hover, [role="button"]:hover {
+button:hover,
+[role="button"]:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
 }
 
-button.outline:hover, [role="button"].outline:hover {
+button.outline:hover,
+[role="button"].outline:hover {
   box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
 }
 
@@ -129,7 +256,7 @@ button.outline:hover, [role="button"].outline:hover {
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-bottom: 2rem;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 1rem;
 }
 
@@ -181,17 +308,45 @@ button.outline:hover, [role="button"].outline:hover {
   letter-spacing: 0.5px;
 }
 
-.badge-active  { background: rgba(34,197,94,0.2);  color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
-.badge-upcoming{ background: rgba(168,85,247,0.2);  color: #c084fc; border: 1px solid rgba(168,85,247,0.4); }
-.badge-ended   { background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(100,116,139,0.4); }
+.badge-active {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-upcoming {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.badge-ended {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+}
 
 /* Waving Flag Animation */
 @keyframes flag-wave {
-  0%   { transform: rotate(0deg) skew(0deg) scale(1); }
-  25%  { transform: rotate(4deg) skew(3deg) scale(1.05); }
-  50%  { transform: rotate(0deg) skew(0deg) scale(1); }
-  75%  { transform: rotate(-4deg) skew(-3deg) scale(1.05); }
-  100% { transform: rotate(0deg) skew(0deg) scale(1); }
+  0% {
+    transform: rotate(0deg) skew(0deg) scale(1);
+  }
+
+  25% {
+    transform: rotate(4deg) skew(3deg) scale(1.05);
+  }
+
+  50% {
+    transform: rotate(0deg) skew(0deg) scale(1);
+  }
+
+  75% {
+    transform: rotate(-4deg) skew(-3deg) scale(1.05);
+  }
+
+  100% {
+    transform: rotate(0deg) skew(0deg) scale(1);
+  }
 }
 
 .waving-flag {
@@ -200,4 +355,3 @@ button.outline:hover, [role="button"].outline:hover {
   transform-origin: left center;
   filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4));
 }
-
