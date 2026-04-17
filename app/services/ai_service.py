@@ -57,7 +57,7 @@ def start_llama_server():
             "--model", model_path, 
             "--port", str(AI_CONFIG['port']), 
             "--n_ctx", str(AI_CONFIG['context']),
-            "--host", "0.0.0.0"
+            "--host", "127.0.0.1"
         ]
     
     proc = subprocess.Popen( # nosec B603
