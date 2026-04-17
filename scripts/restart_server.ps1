@@ -57,6 +57,20 @@ Write-Output "Starting Waitress server on port 5000..."
 Start-Process -FilePath "$ProjectDir\venv\Scripts\waitress-serve.exe" -ArgumentList "--port=5000 --call app:create_app" -WindowStyle Hidden -WorkingDirectory $ProjectDir
 
 # 4. Check/Restart Nginx
+Write-Output "Ensuring Nginx temp directories exist..."
+$tempDirs = @(
+    "$NginxDir\temp\client_body_temp",
+    "$NginxDir\temp\proxy_temp",
+    "$NginxDir\temp\fastcgi_temp",
+    "$NginxDir\temp\uwsgi_temp",
+    "$NginxDir\temp\scgi_temp"
+)
+foreach ($dir in $tempDirs) {
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+}
+
 Write-Output "Checking Nginx status..."
 $nginxProcess = Get-Process nginx -ErrorAction SilentlyContinue
 if ($nginxProcess) {
