@@ -10,11 +10,22 @@ jobs:
     runs-on: self-hosted
     
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-      with:
-        clean: false
-        fetch-depth: 0
+    - name: Native Git Checkout
+      shell: powershell
+      run: |
+        # 1. Force kill any existing locks
+        Get-Process -Name git, git-remote-https, fsmonitor -ErrorAction SilentlyContinue | Stop-Process -Force
+        
+        # 2. Manual Auth using GITHUB_TOKEN
+        $auth = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("x-access-token:${{ secrets.GITHUB_TOKEN }}"))
+        git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
+        
+        # 3. Native Fetch and Checkout
+        git fetch --no-tags --prune --depth=1 origin main
+        git checkout -f main
+        
+        # 4. Cleanup auth for security
+        git config --local --unset http.https://github.com/.extraheader
 
     - name: Run Native Deployment Script
       shell: powershell
