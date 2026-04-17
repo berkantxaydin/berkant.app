@@ -1,89 +1,90 @@
-# restart_server.ps1
-# This script is called by GitHub Actions to deploy the app on Windows.
-
+# --- Configuration ---
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 $NginxDir = "$ProjectDir\nginx-1.30.0"
+$AppPort = 5000
 
-# 0. Ensure logs directory exists
-if (-not (Test-Path "$ProjectDir\logs")) {
-    New-Item -ItemType Directory -Path "$ProjectDir\logs" -Force
+# 0. Ensure crucial directories exist (Robocopy /MIR deletes these!)
+$RequiredDirs = @(
+    "$ProjectDir\logs",
+    "$NginxDir\temp\client_body_temp",
+    "$NginxDir\temp\proxy_temp",
+    "$NginxDir\temp\fastcgi_temp",
+    "$NginxDir\logs"
+)
+
+foreach ($dir in $RequiredDirs) {
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        Write-Output "Restored missing directory: $dir"
+    }
 }
 
 Write-Output "--- 🚀 Starting Native Windows Deployment ---"
 
-# 1. Kill existing background processes (Waitress, Nginx, or lingering Git/Python)
+# 1. Kill existing background processes
 Write-Output "Staging: Cleaning up old processes..."
+$processesToKill = @("waitress-serve", "python", "nginx", "git")
 
-# List of process names to terminate if they are locking the project directory
-$processesToKill = @("waitress-serve", "python", "nginx", "git", "node", "git-remote-https", "git-lfs")
-
-# Explicitly stop Git daemons before killing processes
-Write-Output "Stopping Git daemons..."
+# Stop Git daemons
 & git fsmonitor--daemon stop 2>$null
-& git maintenance stop 2>$null
 
 foreach ($procName in $processesToKill) {
     $foundProcs = Get-Process -Name $procName -ErrorAction SilentlyContinue
-    foreach ($proc in $foundProcs) {
-        try {
-            # Only kill if the process is related to this project (optional path check)
-            # If path check fails due to permissions, we still kill waitress/nginx by name
-            if ($proc.Path -like "$ProjectDir*" -or $procName -eq "waitress-serve" -or $procName -eq "nginx") {
-                Write-Output "Stopping $procName (PID: $($proc.Id))..."
-                Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-            }
-        } catch {
-            Write-Output "⚠️ Could not stop $procName (PID: $($proc.Id)) - it might already be closing."
-        }
+    if ($foundProcs) {
+        Write-Output "Stopping $procName..."
+        Stop-Process -Name $procName -Force -ErrorAction SilentlyContinue
     }
 }
 
-# Also ensure port 5000 is definitely free
-$portProcess = Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1
+# Ensure port 5000 is free
+$portProcess = Get-NetTCPConnection -LocalPort $AppPort -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1
 if ($portProcess) {
-    Write-Output "Force-killing leftover process on port 5000 (PID: $portProcess)..."
     Stop-Process -Id $portProcess -Force -ErrorAction SilentlyContinue
 }
 
-# Give Windows a moment to release file handles
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 2
 
 # 2. Update dependencies
 Write-Output "Updating dependencies..."
 & "$ProjectDir\venv\Scripts\python.exe" -m pip install -r "$ProjectDir\requirements.txt"
 
 # 3. Start Waitress in the background
-Write-Output "Starting Waitress server on port 5000..."
-Start-Process -FilePath "$ProjectDir\venv\Scripts\waitress-serve.exe" -ArgumentList "--port=5000 --call app:create_app" -WindowStyle Hidden -WorkingDirectory $ProjectDir
+Write-Output "Starting Waitress server on port $AppPort..."
+$waitressArgs = "--port=$AppPort --call app:create_app"
+Start-Process -FilePath "$ProjectDir\venv\Scripts\waitress-serve.exe" -ArgumentList $waitressArgs -WindowStyle Hidden -WorkingDirectory $ProjectDir
 
-# 4. Check/Restart Nginx
-Write-Output "Ensuring Nginx temp directories exist..."
-$tempDirs = @(
-    "$NginxDir\temp\client_body_temp",
-    "$NginxDir\temp\proxy_temp",
-    "$NginxDir\temp\fastcgi_temp",
-    "$NginxDir\temp\uwsgi_temp",
-    "$NginxDir\temp\scgi_temp"
-)
-foreach ($dir in $tempDirs) {
-    if (-not (Test-Path $dir)) {
-        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+# 4. CRITICAL: Wait for Waitress to be READY (Fixes ZOMBIE status)
+Write-Output "Waiting for App API to start listening..."
+$retry = 0
+$success = $false
+while ($retry -lt 15) {
+    $check = Test-NetConnection -ComputerName 127.0.0.1 -Port $AppPort -WarningAction SilentlyContinue
+    if ($check.TcpTestSucceeded) {
+        Write-Output "[OK] Waitress is ACTIVE and listening."
+        $success = $true
+        break
     }
+    Start-Sleep -Seconds 1
+    $retry++
 }
 
-Write-Output "Checking Nginx status..."
-$nginxProcess = Get-Process nginx -ErrorAction SilentlyContinue
-if ($nginxProcess) {
-    Write-Output "Reloading Nginx configuration..."
-    Set-Location $NginxDir
-    .\nginx.exe -s reload
-} else {
-    Write-Output "Starting Nginx..."
-    Set-Location $NginxDir
-    Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
+if (-not $success) {
+    Write-Error "Waitress failed to start within 15 seconds. Check app logs."
+    exit 1
 }
 
-# 5. Verify Health
+# 5. Start/Restart Nginx
+Write-Output "Starting Nginx..."
+Set-Location $NginxDir
+# If Nginx crashed, 'reload' won't work, so we just start it fresh
+if (Get-Process nginx -ErrorAction SilentlyContinue) {
+    .\nginx.exe -s stop
+    Start-Sleep -Seconds 1
+}
+Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
+
+# 6. Verify Health
+Write-Output "Running health check..."
 Start-Sleep -Seconds 2
 & "$ProjectDir\scripts\check_health.ps1"
 
