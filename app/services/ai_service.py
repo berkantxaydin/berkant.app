@@ -206,6 +206,9 @@ def start_llama_server():
         stderr=err_out,
         startupinfo=startupinfo
     )
+    # Important: Close the handle in the parent process. 
+    # The child process keeps its own inherited handle.
+    err_out.close()
     
     # Persist the PID for next app boot recovery
     try:

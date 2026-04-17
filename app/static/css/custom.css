@@ -64,13 +64,13 @@ body::before {
   background-image:
     url('/static/img/Rebellion2.png'),
     radial-gradient(circle at top, #1e1b4b 70%, var(--pico-background-color) 100%);
-  
+
   /* 2. Matched the sizing for both the image and the gradient */
   background-size: 500px 250px, auto;
-  
+
   /* 3. Matched the repeat behavior */
   background-repeat: repeat, no-repeat;
-  
+
   /* 4. Added the overlay blend mode to mix the image with the gradient */
   background-blend-mode: overlay, normal;
 
@@ -127,10 +127,9 @@ body::before {
 }
 
 nav {
-  background: var(--pico-background-color);
+  background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   z-index: 100;
 }
@@ -304,8 +303,10 @@ button.outline:hover,
 
 /* Mobile responsive refinements */
 @media (max-width: 768px) {
+
   /* Prevent horizontal overflow on body */
-  html, body {
+  html,
+  body {
     overflow-x: hidden;
     width: 100%;
     margin: 0;
@@ -324,7 +325,8 @@ button.outline:hover,
 
   /* Slider for Navigation Links */
   nav.container {
-    overflow: hidden; /* Prevent container stretching */
+    overflow: hidden;
+    /* Prevent container stretching */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -341,16 +343,19 @@ button.outline:hover,
     white-space: nowrap;
     justify-content: flex-start;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Hide scrollbar Firefox */
+    scrollbar-width: none;
+    /* Hide scrollbar Firefox */
     padding-bottom: 0.5rem;
     width: auto;
-    max-width: calc(100% - 100px); /* Leave room for logo */
+    max-width: calc(100% - 100px);
+    /* Leave room for logo */
     -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
     mask-image: linear-gradient(to right, black 85%, transparent 100%);
   }
-  
+
   nav ul:last-child::-webkit-scrollbar {
-    display: none; /* Hide scrollbar Chrome/Safari */
+    display: none;
+    /* Hide scrollbar Chrome/Safari */
   }
 
   nav ul:last-child li {
@@ -448,6 +453,7 @@ button.outline:hover,
   transform-origin: left center;
   filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4));
 }
+
 /* AI Assistant Spinner alignment fix */
 header strong[aria-busy='true'] {
   padding-left: 2rem;
