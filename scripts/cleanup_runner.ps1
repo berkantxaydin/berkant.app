@@ -1,9 +1,10 @@
 # cleanup_runner.ps1
 # Consistently stops all platform processes and clears runner locks.
-# Hardened to be 100% non-interactive.
+# Hardened to be 100% non-interactive and skip current run temp files.
 
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 $RunnerDir = "C:\Users\berka\runner_work"
+$CurrentTemp = $env:RUNNER_TEMP # The temp directory of the current GitHub Action run
 
 Write-Output "--- 🧹 Starting Surgical Runner Cleanup ---"
 
@@ -28,10 +29,10 @@ foreach ($port in $ports) {
     } catch { }
 }
 
-# 3. Clear the _temp directories inside _work (Prevents EBUSY)
+# 3. Clear the _temp directories (EXCEPT the current one)
 if (Test-Path "$RunnerDir\_temp") {
-    Write-Output "Clearing runner _temp folders..."
-    Get-ChildItem -Path "$RunnerDir\_temp" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Output "Clearing stale runner _temp folders..."
+    Get-ChildItem -Path "$RunnerDir\_temp" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne $CurrentTemp } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # 4. Stop Git Daemons (Silent)
