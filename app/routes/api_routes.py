@@ -354,15 +354,17 @@ def _render_messages(room_id):
     from markupsafe import escape
     conn = get_db_connection()
     try:
-        cursor = conn.cursor()
-        cursor.execute('''
+        c = conn.cursor()
+        # GET last 60 messages, then reverse them so newest is at the bottom
+        c.execute('''
             SELECT c.*, u.username, u.is_admin
             FROM Chat_Messages c
             JOIN Users u ON c.user_id = u.id
             WHERE c.room_id = ?
             ORDER BY c.created_at DESC LIMIT 60
         ''', (room_id,))
-        messages = [dict(row) for row in cursor.fetchall()]
+        messages = [dict(row) for row in c.fetchall()]
+        messages.reverse() # Newest at the bottom
     finally:
         conn.close()
 

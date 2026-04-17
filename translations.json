@@ -217,7 +217,11 @@
     "Approved WebGL": "Approved WebGL",
     "Upcoming": "Upcoming",
     "Ended": "Ended",
-    "The model is loading into system RAM.": "The model is loading into system RAM."
+    "The model is loading into system RAM.": "The model is loading into system RAM.",
+    "AI is waking up (Warm-up phase)...": "AI is waking up (Warm-up phase)...",
+    "AI Engine": "AI Engine",
+    "Waking up from idle...": "Waking up from idle...",
+    "The model is loading into system RAM. This may take 30-60 seconds.": "The model is loading into system RAM. This may take 30-60 seconds."
   },
   "tr": {
     "Metrics": "Metrikler",
