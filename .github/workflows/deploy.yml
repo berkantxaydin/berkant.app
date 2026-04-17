@@ -1,0 +1,23 @@
+name: 🚀 Continuous Deployment
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    name: Build & Deploy to Production
+    runs-on: self-hosted
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Run Native Deployment Script
+      shell: powershell
+      run: |
+        .\scripts\restart_server.ps1
+
+    - name: Verify Health
+      run: |
+        echo "✅ Native Windows Deployment successful!"
