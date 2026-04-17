@@ -14,17 +14,16 @@ if ($nginx) {
 # 2. Check Waitress (Flask)
 $waitress = Get-Process waitress-serve
 if ($waitress) {
-    # Perform a deep check via the /health API (increased timeout for 8GB RAM hardware)
+    # Perform a deep check via the /health API
     try {
-        $response = Invoke-WebRequest -Uri "http://127.0.0.1:5000/health" -TimeoutSec 5
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:5000/health" -TimeoutSec 2
         if ($response.StatusCode -eq 200) {
             Write-Output "✅ App (Waitress): [ACTIVE] (API: OK)"
         } else {
             Write-Output "⚠️ App (Waitress): [RUNNING] (API: Error $($response.StatusCode))"
         }
     } catch {
-        $err = $_.Exception.Message
-        Write-Output "❌ App (Waitress): [ZOMBIE] ($err)"
+        Write-Output "❌ App (Waitress): [ZOMBIE] (Process exists but API is unreachable)"
     }
 } else {
     Write-Output "❌ App (Waitress): [CRASHED/STOPPED]"
