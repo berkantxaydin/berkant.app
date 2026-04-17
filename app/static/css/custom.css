@@ -448,3 +448,8 @@ button.outline:hover,
   transform-origin: left center;
   filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4));
 }
+/* AI Assistant Spinner alignment fix */
+header strong[aria-busy='true'] {
+  padding-left: 2rem;
+  display: inline-block;
+}

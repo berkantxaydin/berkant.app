@@ -35,25 +35,49 @@ ai_processes = {}
 ai_ready = False
 ai_boot_thread = None
 ai_booting = False
+ai_init_lock = threading.Lock() # Robustness: prevent multiple boot threads
+PID_FILE = os.path.join(BASE_DIR, 'logs', '.ai_pid')
+LAST_RESTART_TIME = 0.0
+RESTART_COOLDOWN = 10 # 10 seconds debounce to prevent rapid-fire spawn loops
 
 # Configuration for RAM conservation (unloading after inactivity)
-IDLE_TIMEOUT = 10 * 60  # 10 minutes (in seconds)
+IDLE_TIMEOUT = 2 * 60  # 2 minutes (in seconds)
 last_activity_time = time.time()
 
 def cleanup_orphans():
     """Forcefully kills any orphaned llama-server processes to free GPU/RAM."""
-    target_name = "llama-server.exe"
+    target_names = ["llama-server.exe", "llama-server"]
+    
+    # 1. First, try cleaning using the persistent PID file if it exists
+    if os.path.exists(PID_FILE):
+        try:
+            with open(PID_FILE, 'r') as f:
+                old_pid = int(f.read().strip())
+                if psutil.pid_exists(old_pid):
+                    p = psutil.Process(old_pid)
+                    if any(tn in p.name().lower() for tn in target_names):
+                        print(f"Cleaning up persistent AI PID: {old_pid}")
+                        for child in p.children(recursive=True):
+                            child.kill()
+                        p.kill()
+            os.remove(PID_FILE)
+        except Exception as e:
+            print(f"PID Cleanup Error: {e}")
+
+    # 2. Broad sweep for any process matching 'llama' in name or path
     for proc in psutil.process_iter(['pid', 'name', 'exe']):
         try:
-            # Check by name or path match
             is_match = False
-            if proc.info['name'] == target_name:
+            pname = proc.info.get('name', '').lower()
+            pexe = (proc.info.get('exe') or '').lower()
+            
+            if any(tn in pname for tn in target_names):
                 is_match = True
-            elif proc.info['exe'] and target_name in proc.info['exe']:
+            elif "llama" in pexe or "llama-server" in pexe:
                 is_match = True
             
             if is_match:
-                print(f"Cleaning up orphaned AI process: {proc.info['pid']}")
+                print(f"Cleaning up orphaned AI process: {proc.info['pid']} ({pname})")
                 p = psutil.Process(proc.info['pid'])
                 for child in p.children(recursive=True):
                     child.kill()
@@ -87,8 +111,17 @@ def terminate_ai_server():
     ai_booting = False
 
 def start_llama_server():
+    global LAST_RESTART_TIME
+    
+    # Debounce: prevent spawning if we just tried very recently
+    now = time.time()
+    if now - LAST_RESTART_TIME < RESTART_COOLDOWN:
+        print("AI Server restart suppressed (cooldown active).")
+        return None
+        
     # Ensure a clean slate before starting
     cleanup_orphans()
+    LAST_RESTART_TIME = now
     
     print(f"Starting Gemma 4 server on port {AI_CONFIG['port']}...")
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
@@ -105,7 +138,6 @@ def start_llama_server():
         cmd = [server_exe, "-m", model_path, "--port", str(AI_CONFIG['port']), "-c", str(AI_CONFIG['context'])]
     else:
         # Docker / Linux path: using python -m llama_cpp.server
-        # We assume the model path is correctly mapped in Docker
         cmd = [
             "python3", "-m", "llama_cpp.server", 
             "--model", model_path, 
@@ -120,6 +152,14 @@ def start_llama_server():
         stderr=err_out,
         startupinfo=startupinfo
     )
+    
+    # Persist the PID for next app boot recovery
+    try:
+        with open(PID_FILE, 'w') as f:
+            f.write(str(proc.pid))
+    except Exception as e:
+        print(f"Error persisting AI PID: {e}")
+        
     ai_processes['chat'] = proc
     return proc
 
@@ -158,9 +198,13 @@ def background_initialization():
 
 def initialize_ai_system():
     """Initializes the background thread for AI boot if not already starting."""
-    global ai_boot_thread
-    if ai_booting:
-        return
+    global ai_boot_thread, ai_booting
+    
+    with ai_init_lock:
+        if ai_booting or ai_ready:
+            return
+        ai_booting = True
+        
     ai_boot_thread = threading.Thread(target=background_initialization, daemon=True)
     ai_boot_thread.start()
     print("AI Background initialization started...")
