@@ -10,17 +10,18 @@ jobs:
     runs-on: self-hosted
     
     steps:
+    - name: Pre-Deployment Cleanup (Release File Locks)
+      shell: cmd
+      run: |
+        powershell -ExecutionPolicy Bypass -Command "Get-Process -Name git, git-remote-https, fsmonitor, node -ErrorAction SilentlyContinue | Stop-Process -Force"
+        powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\stop_server.ps1
+
     - name: Native Git Checkout (Safe)
       uses: actions/checkout@v4
       with:
         ref: main
         clean: true
         fetch-depth: 1
-
-    - name: Stop Production Server (Release File Locks)
-      shell: cmd
-      run: |
-        powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\stop_server.ps1
 
     - name: Sync to Production
       shell: cmd
