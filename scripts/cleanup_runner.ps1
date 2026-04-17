@@ -20,15 +20,19 @@ Write-Output "Killing ALL Flask, Waitress, Nginx, Git, and Node processes..."
 & git maintenance stop 2>$null
 git config --local core.fsmonitor false
 
-$locks = @("waitress-serve", "python", "nginx", "git", "node")
+$locks = @("waitress-serve", "python", "nginx", "git", "node", "git-remote-https", "git-lfs")
 foreach ($name in $locks) {
-    Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$ProjectDir*" -or $name -ne "node" } | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
 # 3. Clear the _temp directories inside _work
 Write-Output "Cleaning temporary runner files..."
 if (Test-Path "$RunnerWorkDir\_temp") {
     Remove-Item -Path "$RunnerWorkDir\_temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    if (Test-Path "$RunnerWorkDir\_temp\*") {
+        Write-Output "⚠️ Some files in _temp are STILL locked. They might be held by Windows Defender or a System service."
+    }
 }
 
 # 4. Success message

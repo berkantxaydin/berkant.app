@@ -1,0 +1,17 @@
+{
+    "python.defaultInterpreterPath": ".\\venv\\Scripts\\python.exe",
+    "python.analysis.extraPaths": [
+        ".\\venv\\Lib\\site-packages"
+    ],
+    "files.exclude": {
+        "**/actions-runner/**": true,
+        "**/__pycache__/**": true,
+        "**/.git/**": true
+    },
+    "search.exclude": {
+        "**/actions-runner/**": true
+    },
+    "files.watcherExclude": {
+        "**/actions-runner/**": true
+    }
+}
