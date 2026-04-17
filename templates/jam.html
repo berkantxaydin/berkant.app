@@ -9,9 +9,11 @@ game, and win.{% endblock %}
 
 <section style="margin-top: 2vh; animation: fadeIn 0.6s ease-out;">
   <hgroup class="text-center" style="margin-bottom: 2rem;">
-    <h1 class="accent-text" style="font-size: 2.5rem; filter: drop-shadow(0 0 12px rgba(168,85,247,0.5));">🏆 {{ t("Game Jams") }}
+    <h1 class="accent-text" style="font-size: 2.5rem; filter: drop-shadow(0 0 12px rgba(168,85,247,0.5));">🏆 {{ t("Game
+      Jams") }}
     </h1>
-    <p style="color: #94a3b8;">{{ jams|length }} {{ t("jam") }}{{ 's' if jams|length != 1 else '' }} {{ t("hosted on this platform") }}</p>
+    <p style="color: #94a3b8;">{{ jams|length }} {{ t("jam") }}{{ 's' if jams|length != 1 else '' }} {{ t("hosted on
+      this platform") }}</p>
   </hgroup>
 
   <!-- TAB BAR -->
@@ -33,7 +35,8 @@ game, and win.{% endblock %}
       <hgroup>
         <h2 style="font-size: 2.8rem; margin-bottom: 0.3rem; filter: drop-shadow(0 0 10px rgba(168,85,247,0.4));">{{
           jam.title }}</h2>
-        <p style="color: #94a3b8;">{{ t("Theme:") }} <strong style="color: var(--pico-primary);">{{ jam.theme }}</strong></p>
+        <p style="color: #94a3b8;">{{ t("Theme:") }} <strong style="color: var(--pico-primary);">{{ jam.theme
+            }}</strong></p>
       </hgroup>
 
       <!-- COUNTDOWN TIMER -->
@@ -58,27 +61,27 @@ game, and win.{% endblock %}
 
     <!-- YouTube Embed (High-Res Cinema Mode) -->
     {% if jam.youtube_url %}
-    <div id="video-container-{{ jam.id }}" class="video-cinema-container"
-         style="max-width: 1100px; margin: 0 auto 3.5rem; position: relative; padding-bottom: 38%; height: 0;
+    <div id="video-container-{{ jam.id }}" class="video-cinema-container" style="max-width: 1100px; margin: 0 auto 3.5rem; position: relative; padding-bottom: 38%; height: 0;
                 border-radius: 20px; overflow: hidden; cursor: pointer;
                 border: 2px solid rgba(168,85,247,0.25);
                 box-shadow: 0 0 40px rgba(0,0,0,0.6), 0 0 20px rgba(168,85,247,0.1);"
-         onclick="loadVideo('{{ jam.id }}', '{{ jam.youtube_url | yt_embed }}')">
-      
+      onclick="loadVideo('{{ jam.id }}', '{{ jam.youtube_url | yt_embed }}')">
+
       <!-- Video Poster (High Res) -->
-      <div id="video-poster-{{ jam.id }}" class="video-cinema-poster"
-           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      <div id="video-poster-{{ jam.id }}" class="video-cinema-poster" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                   background: url('{{ jam.youtube_url | yt_thumb }}') center/cover no-repeat;
                   transition: transform 0.4s ease; background-color: #000;">
-        
+
         <!-- Dark Overlay -->
-        <div style="width: 100%; height: 100%; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+        <div
+          style="width: 100%; height: 100%; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
           <!-- Pulse Play Button -->
-          <div class="play-pulse" 
-               style="width: 80px; height: 80px; background: rgba(168,85,247,0.9); border-radius: 50%;
+          <div class="play-pulse" style="width: 80px; height: 80px; background: rgba(168,85,247,0.9); border-radius: 50%;
                       display: flex; align-items: center; justify-content: center;
                       box-shadow: 0 0 20px rgba(168,85,247,0.5);">
-            <div style="width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 25px solid white; margin-left: 8px;"></div>
+            <div
+              style="width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 25px solid white; margin-left: 8px;">
+            </div>
           </div>
         </div>
       </div>
@@ -99,7 +102,8 @@ game, and win.{% endblock %}
             <span>❤️ {{ game.likes or 0 }}</span>
             <span style="margin-left: 1rem;">👁️ {{ game.views or 0 }}</span>
           </div>
-          <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">{{ t("Play Entry") }}</a>
+          <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">{{ t("Play
+            Entry") }}</a>
         </article>
         {% else %}
         <p class="text-center full-width" style="color: grey; padding: 2rem;">
@@ -208,15 +212,23 @@ game, and win.{% endblock %}
     transition: transform 0.3s ease, background 0.3s ease;
     animation: pulse 2s infinite;
   }
-  
+
   .video-cinema-container:hover .video-cinema-poster {
     transform: scale(1.03);
   }
 
   @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7); }
-    70% { box-shadow: 0 0 0 25px rgba(168, 85, 247, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+    0% {
+      box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7);
+    }
+
+    70% {
+      box-shadow: 0 0 0 25px rgba(168, 85, 247, 0);
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+    }
   }
 </style>
 {% endblock %}

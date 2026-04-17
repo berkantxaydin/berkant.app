@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="text-center" style="margin-top: 8vh; margin-bottom: 8vh; animation: fadeIn 1s ease-out;">
+<section class="premium-hero text-center fade-in-hero">
   <hgroup>
-    <h1 class="hero-gradient" style="margin-bottom: 1rem;">proglem</h1>
-    <h2 style="font-weight: 400; color: var(--pico-color); max-width: 600px; margin: 0 auto; line-height: 1.5;">
+    <h1 class="hero-gradient brand-title">proglem</h1>
+    <h2 class="hero-subtitle">
       {{ t("The unified ecosystem for robust developer CVs and boundless Godot WebGL experiences.") }}
     </h2>
   </hgroup>
-  <div style="margin-top: 3rem;">
-    <a href="/register" role="button" class="contrast" style="font-size: 1.1rem; padding: 0.8rem 2rem; border-radius: 50px;">{{ t("Join the Ecosystem") }}</a>
-    <a href="/games" role="button" class="outline" style="font-size: 1.1rem; padding: 0.8rem 2rem; border-radius: 50px; margin-left: 1rem;">{{ t("Play Games") }}</a>
+  <div class="hero-actions">
+    <a href="/register" role="button" class="contrast btn-join">{{ t("Join the Ecosystem") }}</a>
+    <a href="/games" role="button" class="outline btn-play">{{ t("Play Games") }}</a>
   </div>
 </section>
 
@@ -30,11 +30,12 @@
     <div style="font-size: 3.5rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.4));">💼</div>
     <hgroup>
       <h3 class="accent-text" style="margin-bottom: 0.5rem;">{{ t("Talent Pool") }}</h3>
-      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Interactive developer resumes utilizing raw HTMX speed.") }}</p>
+      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Interactive developer resumes utilizing raw HTMX speed.") }}
+      </p>
     </hgroup>
     <div class="grid" style="margin-top: 1rem;">
-        <a href="/cv/create" role="button" style="padding: 0.6rem;">{{ t("Create CV") }}</a>
-        <a href="/cv" role="button" class="outline" style="padding: 0.6rem;">{{ t("Browse Pool") }}</a>
+      <a href="/cv/create" role="button" style="padding: 0.6rem;">{{ t("Create CV") }}</a>
+      <a href="/cv" role="button" class="outline" style="padding: 0.6rem;">{{ t("Browse Pool") }}</a>
     </div>
   </article>
 
@@ -46,16 +47,25 @@
       <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Explore massive Godot WebGL apps distributed safely.") }}</p>
     </hgroup>
     <div class="grid" style="margin-top: 1rem;">
-        <a href="/games" role="button" class="outline" style="padding: 0.6rem;">{{ t("Play") }}</a>
-        <a href="/upload" role="button" style="padding: 0.6rem;">{{ t("Upload") }}</a>
+      <a href="/games" role="button" class="outline" style="padding: 0.6rem;">{{ t("Play") }}</a>
+      <a href="/upload" role="button" style="padding: 0.6rem;">{{ t("Upload") }}</a>
     </div>
   </article>
 </section>
 
 <style>
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); filter: blur(4px); }
-  to { opacity: 1; transform: translateY(0); filter: blur(0); }
-}
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+      filter: blur(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+  }
 </style>
 {% endblock %}
