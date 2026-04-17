@@ -20,8 +20,8 @@ def ask_ai():
         status_text = t("AI is waking up (Warm-up phase)...") if ai_service.is_ai_booting() else t("AI is idle (Waking up)...")
         return f'''
         <div id="chat-result" hx-post="/ai/ask" hx-trigger="every 5s" hx-include="[name='prompt']" hx-swap="outerHTML">
-            <article class="thinking" aria-busy="true" style="border-color: var(--pico-primary);">
-                <header><strong>{t("AI Assistant")}</strong></header>
+            <article class="thinking" style="border-color: var(--pico-primary);">
+                <header><strong aria-busy="true">{t("AI Assistant")}</strong></header>
                 ⚡ {status_text}
                 <p><small>{t("The model is loading into system RAM.")}</small></p>
             </article>
@@ -50,8 +50,8 @@ def ask_ai():
 
     return f'''
     <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 1.5s" hx-swap="outerHTML">
-        <article class="thinking" aria-busy="true">
-            <header><strong>{t("AI Task Manager")}</strong></header>
+        <article class="thinking">
+            <header><strong aria-busy="true">{t("AI Task Manager")}</strong></header>
             {status_msg} ({t("Task")} {task_id[:8]})
         </article>
     </div>
@@ -98,8 +98,8 @@ def ai_status(task_id):
         msg = t("AI is processing your request...") if pos == 1 else f"{t('In Queue')}: {t('You are')} #{pos} {t('in line')}..."
         return f'''
         <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 1.5s" hx-swap="outerHTML">
-            <article class="thinking" aria-busy="true">
-                <header><strong>{t("AI Task Manager")}</strong></header>
+            <article class="thinking">
+                <header><strong aria-busy="true">{t("AI Task Manager")}</strong></header>
                 {msg}
             </article>
         </div>
