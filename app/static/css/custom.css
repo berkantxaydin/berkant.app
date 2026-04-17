@@ -459,3 +459,15 @@ header strong[aria-busy='true'] {
   padding-left: 2rem;
   display: inline-block;
 }
+
+@keyframes thinking-pulse {
+  0% { opacity: 0.6; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 10px var(--pico-primary)); }
+  100% { opacity: 0.6; transform: scale(0.98); }
+}
+
+.thinking {
+  animation: thinking-pulse 2s infinite ease-in-out;
+  border: 1px dashed var(--pico-primary);
+  background: rgba(168, 85, 247, 0.05) !important;
+}

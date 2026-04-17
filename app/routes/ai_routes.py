@@ -39,19 +39,6 @@ def format_ai_message(text):
 
 @ai_bp.route('/ask', methods=['POST'])
 def ask_ai():
-    # Check if the AI model is ready
-    if not ai_service.is_ai_ready():
-        status_text = t("AI is waking up (Warm-up phase)...") if ai_service.is_ai_booting() else t("AI is idle (Waking up)...")
-        return f'''
-        <div id="chat-result" hx-post="/ai/ask" hx-trigger="every 5s" hx-include="[name='prompt']" hx-swap="outerHTML">
-            <article class="thinking" style="border-color: var(--pico-primary);">
-                <header><strong aria-busy="true">{t("AI Assistant")}</strong></header>
-                ⚡ {status_text}
-                <p><small>{t("The model is loading into system RAM.")}</small></p>
-            </article>
-        </div>
-        '''
-
     prompt = request.form.get('prompt')
     if not prompt:
         return f"<strong>{t('Error:')}</strong> {t('Please provide a prompt.')}", 400
@@ -70,12 +57,16 @@ def ask_ai():
         </div>
         '''
 
-    status_msg = t("Adding to queue...") if is_busy else t("Initializing AI...")
+    # If the engine is completely cold, give immediate feedback
+    if not ai_service.is_ai_ready():
+        status_msg = t("AI is waking up (Warm-up phase)...")
+    else:
+        status_msg = t("Adding to queue...") if is_busy else t("Initializing AI...")
 
     return f'''
     <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 1.5s" hx-swap="outerHTML">
         <article class="thinking">
-            <header><strong aria-busy="true">{t("AI Task Manager")}</strong></header>
+            <header><strong aria-busy="true">{t("AI Assistant")}</strong></header>
             {status_msg} ({t("Task")} {task_id[:8]})
         </article>
     </div>
@@ -107,6 +98,16 @@ def ai_status(task_id):
             </article>
         </div>
         '''
+    elif status == 'waking_up':
+        return f'''
+        <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 2s" hx-swap="outerHTML">
+            <article class="thinking" style="border-color: var(--pico-primary);">
+                <header><strong aria-busy="true">{t("AI Engine")}</strong></header>
+                ⚡ {t("Waking up from idle...")}
+                <p><small>{t("The model is loading into system RAM. This may take 30-60 seconds.")}</small></p>
+            </article>
+        </div>
+        '''
     elif status == 'error':
         safe_error = html.escape(result.get('message', 'Unknown error occurred.'))
         return f'''
@@ -123,8 +124,8 @@ def ai_status(task_id):
         return f'''
         <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 1.5s" hx-swap="outerHTML">
             <article class="thinking">
-                <header><strong aria-busy="true">{t("AI Task Manager")}</strong></header>
+                <header><strong aria-busy="true">{t("AI Assistant")}</strong></header>
                 {msg}
             </article>
         </div>
-        '''
+        '''

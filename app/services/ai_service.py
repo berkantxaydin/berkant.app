@@ -46,7 +46,7 @@ LAST_RESTART_TIME = 0.0
 RESTART_COOLDOWN = 10 # 10 seconds debounce to prevent rapid-fire spawn loops
 
 # Configuration for RAM conservation (unloading after inactivity)
-IDLE_TIMEOUT = 2 * 60  # 2 minutes (in seconds)
+IDLE_TIMEOUT = 2 * 60  # 2 minutes for user testing (can be increased to 2*60*60 for production)
 last_activity_time = time.time()
 
 def log_ai_event(event_type, status, message):
@@ -417,11 +417,16 @@ def ai_worker():
         
         task_id, user_prompt, user_id = task
         try:
-            # Ensure AI is ready before processing
+            # Update status to Waking Up if not ready
             if not ai_ready:
+                with queue_lock:
+                    ai_results[task_id] = {"status": "waking_up"}
                 initialize_ai_system()
                 # Wait for bootup
                 while not ai_ready:
+                    # Heartbeat check: ensure we didn't fail and stop booting
+                    if not ai_booting and not ai_ready:
+                        raise Exception("AI Engine failed to initialize during wakeup.")
                     time.sleep(1)
 
             reset_activity_timer()
