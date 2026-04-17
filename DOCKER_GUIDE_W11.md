@@ -84,9 +84,17 @@ services:
 ## 🚀 3. Running it on Windows 11
 
 ### A. Environment Setup
-Create a `.env` file in the same folder as your `docker-compose.yml`:
+Create a `.env` file in the same folder as your `docker-compose.yml`. 
+
+> [!CAUTION]
+> **NEVER** use a placeholder like "your_secret_key_here" in production. A weak secret key allows attackers to hijack user sessions.
+> 
+> **Generate a secure key with this command:**
+> `python -c "import secrets; print(secrets.token_hex(24))"`
+
 ```env
-SECRET_KEY=your_secret_key_here
+# Paste your generated hex key here
+SECRET_KEY=y0ur-n3wly-g3n3r4t3d-h3x-k3y
 ```
 
 ### B. Launching

@@ -51,7 +51,3 @@ node_modules/
 # Local Infrastructure & Runners
 actions-runner/
 nginx-1.30.0/
-.dockerignore
-Dockerfile
-docker-compose.yml
-nginx.conf
