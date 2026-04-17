@@ -34,6 +34,8 @@ jobs:
 
     - name: Post-Deployment Stage (Startup & Heal)
       shell: cmd
+      env:
+        RUNNER_TRACKING_ID: "" # Magic Fix: Prevent GH runner from killing background processes
       run: |
         powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\restart_server.ps1
 
