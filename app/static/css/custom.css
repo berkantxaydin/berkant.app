@@ -61,8 +61,7 @@ body::before {
   z-index: -1;
 
   background-image:
-    url('/static/img/Rebellion2.png'),
-    radial-gradient(circle at top, #1e1b4b 70%, var(--pico-background-color) 100%);
+    url('/static/img/Rebellion2.png');
   background-size: 500px 250px;
   background-repeat: repeat;
   background-blend-mode: overlay;
