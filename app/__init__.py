@@ -2,8 +2,6 @@ import os
 import logging
 from flask import Flask
 from dotenv import load_dotenv
-from werkzeug.middleware.proxy_fix import ProxyFix
-import hashlib
 
 # Load environment variables from .env file before anything else
 load_dotenv()
@@ -15,10 +13,6 @@ def create_app():
     # Specify templates directory relative to the app package (root/templates)
     app = Flask(__name__, template_folder='../templates', static_folder='../app/static')
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-unsafe-dev-key')
-    
-    # Configure ProxyFix to trust headers from Nginx/Cloudflare
-    # x_for=1 treats one proxy (Nginx) as trusted
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
     
     # Configure robust logging handling for error.log
     # Ensure the logs directory exists before initializing the file handler
@@ -114,17 +108,12 @@ def create_app():
             # Log all non-static traffic to provide accurate analytics on the dashboard
             if not request.path.startswith('/static/'):
                 from app.database import get_db_connection
-                
-                # Anonymize IP: Use a salted hash of the real IP for unique tracking without storing PII
-                ip_raw = request.remote_addr or 'unknown'
-                ip_hash = hashlib.sha256(f"{ip_raw}{app.config['SECRET_KEY']}".encode()).hexdigest()[:16]
-                
                 try:
                     conn = get_db_connection()
                     cursor = conn.cursor()
                     cursor.execute(
                         "INSERT INTO Analytics_Logs (method, path, ip_address, status_code, duration_ms) VALUES (?, ?, ?, ?, ?)",
-                        (request.method, request.path, ip_hash, response.status_code, duration_ms)
+                        (request.method, request.path, request.remote_addr, response.status_code, duration_ms)
                     )
                     conn.commit()
                     conn.close()

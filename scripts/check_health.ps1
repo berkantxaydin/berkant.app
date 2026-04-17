@@ -1,9 +1,5 @@
 # --- 🩺 Platform Health Diagnostic Tool ---
-# Suppress all interactive prompts and progress bars for CI/CD
-$ProgressPreference = 'SilentlyContinue'
-$ConfirmPreference = 'None'
 $ErrorActionPreference = "SilentlyContinue"
-
 Write-Output "`n[ System Health Report - $(Get-Date) ]"
 Write-Output "------------------------------------------------"
 
@@ -20,7 +16,6 @@ $waitress = Get-Process waitress-serve
 if ($waitress) {
     # Perform a deep check via the /health API
     try {
-        # Added -UseBasicParsing here to prevent the "Script Execution Risk" prompt!
         $response = Invoke-WebRequest -Uri "http://127.0.0.1:5000/health" -TimeoutSec 2 -UseBasicParsing
         if ($response.StatusCode -eq 200) {
             Write-Output "✅ App (Waitress): [ACTIVE] (API: OK)"
