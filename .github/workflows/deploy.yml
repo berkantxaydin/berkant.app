@@ -19,6 +19,13 @@ jobs:
         git checkout -f main
         git config --local --unset http.https://github.com/.extraheader
 
+    - name: Sync to Production
+      shell: cmd
+      run: |
+        robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github"
+        if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
+        exit /b 0
+
     - name: Run Native Deployment Script
       shell: cmd
       run: |
