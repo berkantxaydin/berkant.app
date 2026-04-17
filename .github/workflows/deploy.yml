@@ -20,10 +20,11 @@ jobs:
         git config --local --unset http.https://github.com/.extraheader
 
     - name: Run Native Deployment Script
-      shell: powershell
+      shell: cmd
       run: |
-        .\scripts\restart_server.ps1
+        powershell -ExecutionPolicy Bypass -File .\scripts\restart_server.ps1
 
     - name: Verify Health
+      shell: cmd
       run: |
         echo "✅ Native Windows Deployment successful!"
