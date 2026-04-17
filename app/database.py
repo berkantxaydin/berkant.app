@@ -167,6 +167,17 @@ def init_db():
         except Exception:
             pass
 
+        # Create AI_System_Logs table for observability
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS AI_System_Logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT, -- 'STARTUP', 'HEALTH', 'SHUTDOWN', 'ERROR'
+                status TEXT,     -- 'INFO', 'WARNING', 'ERROR'
+                message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         conn.commit()
         logging.info("Database initialized successfully.")
     except Exception as e:

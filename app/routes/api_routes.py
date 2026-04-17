@@ -5,6 +5,8 @@ from app.repositories.cv_repository import CVRepository
 from app.repositories.game_repository import GameRepository
 from app.routes.auth_routes import login_required, admin_required
 from app.i18n import t
+from datetime import datetime, timedelta
+import logging
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -875,7 +877,7 @@ def clear_analytics():
 def get_recent_errors():
     import os
     from flask import current_app
-    log_path = os.path.join(current_app.root_path, '..', 'error.log')
+    log_path = os.path.join(current_app.root_path, '..', 'logs', 'error.log')
     if not os.path.exists(log_path):
         return f"<p><em>{t('No error logs recorded.')}</em></p>"
         
@@ -911,6 +913,39 @@ def get_recent_errors():
             return html
     except Exception as e:
         return f"<p>{t('Error reading logs')}: {e}</p>"
+
+
+@api_bp.route('/metrics/ai-logs', methods=['GET'])
+def get_ai_logs():
+    """Returns a list of recent AI service events from the database."""
+    from app.database import get_db_connection
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM AI_System_Logs ORDER BY created_at DESC LIMIT 40")
+        logs = cursor.fetchall()
+        
+        if not logs:
+            return f"<p style='color: grey; text-align: center; margin-top: 1rem;'><em>{t('No AI lifecycle events recorded yet.')}</em></p>"
+        
+        html = "<div style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; white-space: pre;'>"
+        for log in logs:
+            status_color = "var(--pico-del-color)" if log['status'] == 'ERROR' else ("#eab308" if log['status'] == 'WARNING' else "var(--pico-primary)")
+            # Strip date for brevity
+            ts = log['created_at'].split(' ')[1][:8] if ' ' in log['created_at'] else log['created_at']
+            
+            html += f"""
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0.3rem 0;">
+                <span style="color: #64748b;">[{ts}]</span> 
+                <strong style="color: {status_color};">[{log['event_type']}]</strong> 
+                <span style="color: #cbd5e1;">{log['message']}</span>
+            </div>"""
+        html += "</div>"
+        return html
+    except Exception as e:
+        return f"<p>{t('Error reading AI logs')}: {e}</p>"
+    finally:
+        conn.close()
 
 
 # --- GAME JAM ADMIN CRUD ---
