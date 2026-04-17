@@ -922,7 +922,7 @@ def get_ai_logs():
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM AI_System_Logs ORDER BY created_at DESC LIMIT 40")
+        cursor.execute("SELECT * FROM AI_System_Logs ORDER BY created_at DESC LIMIT 3")
         logs = cursor.fetchall()
         
         if not logs:
