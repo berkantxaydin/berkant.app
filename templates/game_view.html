@@ -16,17 +16,37 @@
                 placeholder="{{ t('Loading Godot Engine...') }}">
             </iframe>
         </div>
-        <footer style="padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <!-- HTMX Like Button -->
+        <footer style="padding: 1rem; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <!-- HTMX Like Button (Auth Locked) -->
+                {% if session.get('user_id') %}
                 <button hx-post="/api/games/{{ game.id }}/like" hx-swap="outerHTML"
-                    class="{% if is_liked %}secondary{% else %}outline{% endif %}">
-                    ❤️ {{ like_count }}
+                    class="{% if is_liked %}secondary{% else %}outline{% endif %}"
+                    style="margin: 0; padding: 0.5rem 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    ❤️ <span style="font-family: var(--font-mono);">{{ like_count }}</span>
                 </button>
+                {% else %}
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span title="{{ t('Login to like this game') }}" style="cursor: help; opacity: 0.8; font-family: var(--font-mono);">
+                        ❤️ {{ like_count }}
+                    </span>
+                    <a href="/login?next=/games/{{ game.id }}" style="font-size: 0.8rem; opacity: 0.6;">{{ t("Login to like") }}</a>
+                </div>
+                {% endif %}
+                
+                <!-- View Counter -->
+                <span id="view-count-display" style="color: #94a3b8; font-family: var(--font-mono); font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                    👁️ {{ game.views or 0 }}
+                </span>
             </div>
-            <a href="/games" role="button" class="outline full-width" hx-swap="outerHTML">{{ t("Back to Gallery") }}</a>
+            <div>
+                <a href="/games" role="button" class="outline" style="margin: 0; padding: 0.5rem 1.5rem;">{{ t("Back to Gallery") }}</a>
+            </div>
         </footer>
     </article>
+
+    <!-- Hidden trigger for view increment -->
+    <div hx-post="/api/games/{{ game.id }}/view" hx-trigger="load" hx-swap="none"></div>
 
     <div class="grid">
         <!-- Game Info -->

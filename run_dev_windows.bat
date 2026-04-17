@@ -6,9 +6,10 @@ IF NOT EXIST venv (
     python -m venv venv
 )
 
-call venv\Scripts\activate
+echo Using environment at venv\Scripts...
+
 echo Installing dependencies...
-pip install -r requirements.txt
+venv\Scripts\python.exe -m pip install -r requirements.txt
 
 echo Starting server on port 5000...
-waitress-serve --port=5000 --call app:create_app
+venv\Scripts\waitress-serve.exe --port=5000 --call app:create_app

@@ -95,6 +95,10 @@ game, and win.{% endblock %}
         <article class="glass-panel text-center" style="padding: 1.5rem;">
           <h4 class="accent-text" style="margin-bottom: 0.5rem;">{{ game.title }}</h4>
           <p style="color: #94a3b8; font-size: 0.9rem;">{{ t("by") }} <strong>@{{ game.username }}</strong></p>
+          <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #64748b;">
+            <span>❤️ {{ game.likes or 0 }}</span>
+            <span style="margin-left: 1rem;">👁️ {{ game.views or 0 }}</span>
+          </div>
           <a href="/games/{{ game.id }}" role="button" class="outline full-width" style="margin-top: 1rem;">{{ t("Play Entry") }}</a>
         </article>
         {% else %}
