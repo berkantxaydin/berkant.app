@@ -23,7 +23,7 @@ def ask_ai():
             <article class="thinking" aria-busy="true" style="border-color: var(--pico-primary);">
                 <header><strong>{t("AI Assistant")}</strong></header>
                 ⚡ {status_text}
-                <p><small>{t("The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.")}</small></p>
+                <p><small>{t("The model is loading into system RAM.")}</small></p>
             </article>
         </div>
         '''
