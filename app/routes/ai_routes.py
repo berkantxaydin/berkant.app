@@ -8,10 +8,34 @@ ai_bp = Blueprint('ai', __name__, url_prefix='/ai')
 
 def format_ai_message(text):
     """
-    Escapes HTML for security and ensures basic paragraph formatting.
-    No more <think> tags or dropdowns are needed for Gemma 4.
+    Renders basic markdown (bold, italic, lists, headers) to HTML.
+    Keeps it simple to stay under the 20KB JS/CSS payload limit.
     """
-    return html.escape(text)
+    import html
+    # 1. Escape HTML for security
+    text = html.escape(text)
+
+    # 2. Simple Markdown Regex-like rules (Server-side)
+    # Headers
+    text = re.sub(r'(?m)^### (.*)$', r'<h3>\1</h3>', text)
+    text = re.sub(r'(?m)^## (.*)$', r'<h2>\1</h2>', text)
+    text = re.sub(r'(?m)^# (.*)$', r'<h1>\1</h1>', text)
+    
+    # Bold
+    text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'__(.*?)__', r'<strong>\1</strong>', text)
+    
+    # Italic
+    text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', text)
+    text = re.sub(r'_(.*?)_', r'<em>\1</em>', text)
+    
+    # Unordered Lists
+    text = re.sub(r'(?m)^- (.*)$', r'<li>\1</li>', text)
+    text = re.sub(r'(?m)^\* (.*)$', r'<li>\1</li>', text)
+    # Wrap consecutive list items in <ul>
+    text = re.sub(r'(<li>.*</li>(?:[\s\S]*?<li>.*</li>)*)', r'<ul>\1</ul>', text)
+
+    return text
 
 @ai_bp.route('/ask', methods=['POST'])
 def ask_ai():
