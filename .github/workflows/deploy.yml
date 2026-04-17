@@ -10,13 +10,13 @@ jobs:
     runs-on: self-hosted
     
     steps:
-    - name: Pre-Deployment Cleanup (Release File Locks)
+    - name: Pre-Deployment Stage (Cleanup Locks)
       shell: cmd
       run: |
-        powershell -ExecutionPolicy Bypass -Command "Get-Process -Name git, git-remote-https, fsmonitor, node -ErrorAction SilentlyContinue | Stop-Process -Force"
+        powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\cleanup_runner.ps1
         powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\stop_server.ps1
 
-    - name: Native Git Checkout (Safe)
+    - name: Native Git Checkout (Surgical)
       uses: actions/checkout@v4
       with:
         ref: main
