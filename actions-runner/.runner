@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 2,
+  "agentName": "BOWIE",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus21.actions.githubusercontent.com/lNfrm3Ce3DjNeqWbSRDeFzLqnSdyLeEO0WrC4NPSdqnog6ulh0/",
+  "gitHubUrl": "https://github.com/berkantxaydin/berkant.app",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}

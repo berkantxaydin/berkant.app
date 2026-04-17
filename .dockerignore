@@ -1,0 +1,34 @@
+# Version Control
+.git
+.github
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+venv
+.env
+.pytest_cache
+
+# Database & Logs
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.log
+
+# Workspace / IDE
+.vscode
+.idea
+.gemini
+
+# Assets & Temp
+node_modules
+generated*.png
+uploads/
+bin/*.exe
+Proglem*.xlsx
+Sample_Project_Management.docx
+uml_dıagram.png
