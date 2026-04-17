@@ -19,17 +19,22 @@ jobs:
         git checkout -f main
         git config --local --unset http.https://github.com/.extraheader
 
+    - name: Stop Production Server (Release File Locks)
+      shell: cmd
+      run: |
+        powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\stop_server.ps1
+
     - name: Sync to Production
       shell: cmd
       run: |
-        robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github" "models" "uploads" "db" "logs"
+        robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github" "models" "uploads" "db" "logs" /R:2 /W:5
         if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
         exit /b 0
 
-    - name: Run Native Deployment Script
+    - name: Run MASTER Recovery Script
       shell: cmd
       run: |
-        powershell -ExecutionPolicy Bypass -File .\scripts\restart_server.ps1
+        powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\restart_server.ps1
 
     - name: Verify Health
       shell: cmd
