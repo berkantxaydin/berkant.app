@@ -28,7 +28,7 @@ jobs:
     - name: Sync to Production (Mirror)
       shell: cmd
       run: |
-        robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github" "models" "uploads" "db" "logs" /R:2 /W:5
+        robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" "*.db" "*.db-wal" "*.db-shm" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github" "models" "uploads" "db" "logs" "mock_s3" /R:2 /W:5
         if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
         exit /b 0
 
