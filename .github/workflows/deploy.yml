@@ -22,7 +22,7 @@ jobs:
     - name: Sync to Production
       shell: cmd
       run: |
-        robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github"
+        robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github" "models" "uploads" "db" "logs"
         if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
         exit /b 0
 
