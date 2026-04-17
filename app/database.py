@@ -7,6 +7,8 @@ DB_NAME = os.path.join(BASE_DIR, 'db', 'proglem.db')
 
 def get_db_connection():
     """Create a database connection to the SQLite database with strictly enforced PRAGMAs."""
+    # Ensure the directory for the database exists (required for CI/CD environments)
+    os.makedirs(os.path.dirname(DB_NAME), exist_ok=True)
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     
