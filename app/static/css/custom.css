@@ -127,11 +127,11 @@ body::before {
 }
 
 nav {
-  background: transparent;
-  backdrop-filter: none;
-  border-bottom: none;
-  position: sticky;
-  top: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
   z-index: 100;
 }
 

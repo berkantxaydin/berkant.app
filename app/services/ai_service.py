@@ -11,6 +11,7 @@ import psutil
 import sqlite3
 from datetime import datetime, timedelta
 import logging
+import socket
 from app.database import get_db_connection
 
 # App-wide logger for integrated logging
@@ -71,6 +72,11 @@ def log_ai_event(event_type, status, message):
         conn.close()
     except Exception as e:
         print(f"Failed to log AI event to DB: {e}")
+
+def is_port_in_use(port):
+    """Checks if a local TCP port is currently occupied."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
 
 def cleanup_orphans():
     """Forcefully kills any orphaned llama-server processes to free GPU/RAM."""
@@ -134,6 +140,9 @@ def terminate_ai_server():
     # Final sweep to ensure no ghosts remain on GPU
     cleanup_orphans()
     
+    # 1.0 second delay to allow the OS to fully release port/RAM
+    time.sleep(1)
+    
     ai_processes.clear()
     ai_ready = False
     ai_booting = False
@@ -150,8 +159,17 @@ def start_llama_server():
         
     # Ensure a clean slate before starting
     cleanup_orphans()
-    LAST_RESTART_TIME = now
     
+    # Port Guard: Check if the port is busy before trying to spawn
+    if is_port_in_use(AI_CONFIG['port']):
+        log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} is already in use. Attempting cleanup...")
+        cleanup_orphans()
+        time.sleep(1)
+        if is_port_in_use(AI_CONFIG['port']):
+            log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} still busy after cleanup. Aborting.")
+            return None
+
+    LAST_RESTART_TIME = now
     
     log_ai_event('STARTUP', 'INFO', f"Starting Gemma 4 server on port {AI_CONFIG['port']}...")
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
@@ -165,7 +183,13 @@ def start_llama_server():
     if os.name == 'nt' and os.path.exists(server_exe):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        cmd = [server_exe, "-m", model_path, "--port", str(AI_CONFIG['port']), "-c", str(AI_CONFIG['context'])]
+        cmd = [
+            server_exe, 
+            "-m", model_path, 
+            "--port", str(AI_CONFIG['port']), 
+            "--host", "127.0.0.1", 
+            "-c", str(AI_CONFIG['context'])
+        ]
     else:
         # Docker / Linux path: using python -m llama_cpp.server
         cmd = [
