@@ -10,14 +10,12 @@ jobs:
     runs-on: self-hosted
     
     steps:
-    - name: Native Git Checkout
-      shell: cmd
-      run: |
-        powershell -ExecutionPolicy Bypass -Command "Get-Process -Name git, git-remote-https, fsmonitor -ErrorAction SilentlyContinue | Stop-Process -Force"
-        powershell -ExecutionPolicy Bypass -Command "$auth = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(\"x-access-token:${{ secrets.GITHUB_TOKEN }}\")); git config --local http.https://github.com/.extraheader \"AUTHORIZATION: basic $auth\""
-        git fetch --no-tags --prune --depth=1 origin main
-        git checkout -f main
-        git config --local --unset http.https://github.com/.extraheader
+    - name: Native Git Checkout (Safe)
+      uses: actions/checkout@v4
+      with:
+        ref: main
+        clean: true
+        fetch-depth: 1
 
     - name: Stop Production Server (Release File Locks)
       shell: cmd
