@@ -59,18 +59,16 @@ Write-Output "Updating dependencies..."
 Write-Output "Starting Waitress server on port 5000..."
 Start-Process -FilePath "$ProjectDir\venv\Scripts\waitress-serve.exe" -ArgumentList "--port=5000 --call app:create_app" -WindowStyle Hidden -WorkingDirectory $ProjectDir
 
-# 4. Check/Restart Nginx
-Write-Output "Checking Nginx status..."
-$nginxProcess = Get-Process nginx -ErrorAction SilentlyContinue
-if ($nginxProcess) {
-    Write-Output "Reloading Nginx configuration..."
-    Set-Location $NginxDir
-    .\nginx.exe -s reload
-} else {
-    Write-Output "Starting Nginx..."
-    Set-Location $NginxDir
-    Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
-}
+# 4. Restart Nginx (Forceful restart is more reliable during deployment)
+Write-Output "Restarting Nginx..."
+# Ensure any previous instances are completely terminated
+Stop-Process -Name nginx -Force -ErrorAction SilentlyContinue
+# Fallback to taskkill for multi-process stubbornness
+& taskkill /F /IM nginx.exe /T 2>$null
+
+Start-Sleep -Seconds 1
+Set-Location $NginxDir
+Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
 
 # 5. Verify Health
 Start-Sleep -Seconds 2
