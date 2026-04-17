@@ -118,7 +118,7 @@ def background_initialization():
 
 def initialize_ai_system():
     """Initializes the background thread for AI boot if not already starting."""
-    global ai_boot_thread, ai_booting
+    global ai_boot_thread
     if ai_booting:
         return
     ai_boot_thread = threading.Thread(target=background_initialization, daemon=True)
@@ -137,7 +137,6 @@ def reset_activity_timer():
 
 def idle_monitor():
     """Background thread to monitor inactivity and free RAM."""
-    global ai_ready
     while True:
         time.sleep(60) # Heartbeat
         if ai_ready and not ai_queue.unfinished_tasks:
