@@ -34,6 +34,28 @@ AI_CONFIG = {
 ai_processes = {}
 ai_ready = False
 ai_boot_thread = None
+ai_booting = False
+
+# Configuration for RAM conservation (unloading after inactivity)
+IDLE_TIMEOUT = 10 * 60  # 10 minutes (in seconds)
+last_activity_time = time.time()
+
+def terminate_ai_server():
+    """Unloads the model from RAM by terminating the background process."""
+    global ai_ready, ai_booting
+    for name, proc in list(ai_processes.items()):
+        print(f"Terminating {name} AI server...")
+        try:
+            proc.terminate()
+            proc.wait(timeout=5)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+    ai_processes.clear()
+    ai_ready = False
+    ai_booting = False
 
 def start_llama_server():
     print(f"Starting Gemma 4 server on port {AI_CONFIG['port']}...")
@@ -71,7 +93,8 @@ def start_llama_server():
 
 def background_initialization():
     """Background task to start Gemma server and poll health."""
-    global ai_ready
+    global ai_ready, ai_booting
+    ai_booting = True
     try:
         start_llama_server()
         url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
@@ -82,16 +105,22 @@ def background_initialization():
                 with urllib.request.urlopen(url, timeout=2) as response: # nosec B310
                     if response.status == 200:
                         ai_ready = True
+                        ai_booting = False
                         print("DEBUG: AI Engine is ready.")
                         break
             except Exception:
                 time.sleep(2)
+        if not ai_ready:
+            ai_booting = False
     except Exception as e:
+        ai_booting = False
         print(f"CRITICAL: AI launch failed: {e}")
 
 def initialize_ai_system():
-    """Initializes the background thread for AI boot."""
-    global ai_boot_thread
+    """Initializes the background thread for AI boot if not already starting."""
+    global ai_boot_thread, ai_booting
+    if ai_booting:
+        return
     ai_boot_thread = threading.Thread(target=background_initialization, daemon=True)
     ai_boot_thread.start()
     print("AI Background initialization started...")
@@ -99,7 +128,26 @@ def initialize_ai_system():
 def is_ai_ready():
     return ai_ready
 
-# Start the background boot immediately
+def is_ai_booting():
+    return ai_booting
+
+def reset_activity_timer():
+    global last_activity_time
+    last_activity_time = time.time()
+
+def idle_monitor():
+    """Background thread to monitor inactivity and free RAM."""
+    global ai_ready
+    while True:
+        time.sleep(60) # Heartbeat
+        if ai_ready and not ai_queue.unfinished_tasks:
+            idle_time = time.time() - last_activity_time
+            if idle_time > IDLE_TIMEOUT:
+                print(f"AI Idle for {idle_time/60:.1f} minutes. Freeing system RAM...")
+                terminate_ai_server()
+
+# Start background monitor and initial boot
+threading.Thread(target=idle_monitor, daemon=True).start()
 initialize_ai_system()
 
 @atexit.register
@@ -210,6 +258,7 @@ def get_public_snapshot():
         print(f"AI Snapshot Error: {e}")
     return "\n\n".join(snapshot)
 
+
 def ai_worker():
     while True:
         task = ai_queue.get()
@@ -217,6 +266,14 @@ def ai_worker():
         
         task_id, user_prompt, user_id = task
         try:
+            # Ensure AI is ready before processing
+            if not ai_ready:
+                initialize_ai_system()
+                # Wait for bootup
+                while not ai_ready:
+                    time.sleep(1)
+
+            reset_activity_timer()
             # Platform Diagnostic Metrics
             cpu_load, ram_usage = "Unknown", "Unknown"
             total_users, total_games, active_jam = 0, 0, "None"
@@ -295,6 +352,7 @@ def ai_worker():
             
             with queue_lock:
                 ai_results[task_id] = {"status": "done", "answer": full_answer}
+            reset_activity_timer()
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -316,6 +374,12 @@ threading.Thread(target=ai_worker, daemon=True).start()
 def submit_prompt(user_id, prompt):
     cleanup_old_results() # Purge old memory
     
+    # Trigger boot if idle
+    if not ai_ready:
+        initialize_ai_system()
+
+    reset_activity_timer()
+
     with queue_lock:
         # Check if user already has an active task
         if user_id in active_user_tasks:

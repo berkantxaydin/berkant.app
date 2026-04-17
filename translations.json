@@ -211,7 +211,9 @@
     "Page Views": "Page Views",
     "Unique Devices": "Unique Devices",
     "Overall Traffic": "Overall Traffic",
-    "Avg Latency": "Avg Latency"
+    "Avg Latency": "Avg Latency",
+    "AI is idle (Waking up)...": "AI is idle (Waking up)...",
+    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware."
   },
   "tr": {
     "Metrics": "Metrikler",
@@ -391,6 +393,8 @@
     "Server rejected routing bindings.": "Sunucu yönlendirme bağlamalarını reddetti.",
     "Create Standardized CV - proglem": "Standartlaştırılmış CV Oluştur - proglem",
     "Build and publish your professional skills to the standard proglem talent pool, or inject your interactive raw HTMX resume.": "Profesyonel becerilerinizi standart proglem yetenek havuzuna yükleyin veya etkileşimli ham HTMX özgeçmişinizi enjekte edin.",
-    "This developer hasn't uploaded any Godot WebGL games yet.": "Bu geliştirici henüz herhangi bir Godot WebGL oyunu yüklememiştir."
+    "This developer hasn't uploaded any Godot WebGL games yet.": "Bu geliştirici henüz herhangi bir Godot WebGL oyunu yüklememiştir.",
+    "AI is idle (Waking up)...": "Yapay Zeka boşta (Uyandırılıyor)...",
+    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "Model sistem RAM'ine yükleniyor. Bu donanımda bu işlem genellikle 30-60 saniye sürer."
   }
 }

@@ -17,12 +17,13 @@ def format_ai_message(text):
 def ask_ai():
     # Check if the AI model is ready
     if not ai_service.is_ai_ready():
+        status_text = t("AI is waking up (Warm-up phase)...") if ai_service.is_ai_booting() else t("AI is idle (Waking up)...")
         return f'''
         <div id="chat-result" hx-post="/ai/ask" hx-trigger="every 5s" hx-include="[name='prompt']" hx-swap="outerHTML">
             <article class="thinking" aria-busy="true" style="border-color: var(--pico-primary);">
                 <header><strong>{t("AI Assistant")}</strong></header>
-                ⚡ {t("AI is warming up (loading 5GB Gemma model)...")}
-                <p><small>{t("The site is ready, but the AI engine is still loading into VRAM. Please wait.")}</small></p>
+                ⚡ {status_text}
+                <p><small>{t("The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.")}</small></p>
             </article>
         </div>
         '''
