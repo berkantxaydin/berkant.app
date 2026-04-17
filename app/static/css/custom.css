@@ -127,9 +127,9 @@ body::before {
 }
 
 nav {
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom: none;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -304,6 +304,14 @@ button.outline:hover,
 
 /* Mobile responsive refinements */
 @media (max-width: 768px) {
+  /* Prevent horizontal overflow on body */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
   body::after {
     background-size: 100px 50px, auto;
   }
@@ -312,6 +320,72 @@ button.outline:hover,
     background-size: 100px 50px, auto;
     -webkit-mask-size: 200px 100px;
     mask-size: 200px 100px;
+  }
+
+  /* Slider for Navigation Links */
+  nav.container {
+    overflow: hidden; /* Prevent container stretching */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  nav ul:first-child {
+    margin-right: 1rem;
+    flex-shrink: 0;
+  }
+
+  nav ul:last-child {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Hide scrollbar Firefox */
+    padding-bottom: 0.5rem;
+    width: auto;
+    max-width: calc(100% - 100px); /* Leave room for logo */
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+  
+  nav ul:last-child::-webkit-scrollbar {
+    display: none; /* Hide scrollbar Chrome/Safari */
+  }
+
+  nav ul:last-child li {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    flex: 0 0 auto;
+  }
+
+  /* Force grid stacking for sections with cards (metrics, hubs, etc) */
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem;
+  }
+
+  /* Adjust hero section for mobile */
+  .premium-hero {
+    padding: 2rem 1rem;
+    border-radius: 16px;
+  }
+
+  .hero-gradient {
+    font-size: 2.2rem;
+  }
+
+  /* Adjust button spacing on mobile */
+  .hero-actions .btn-play {
+    margin-left: 0;
+    margin-top: 1rem;
+    display: block;
+    width: 100%;
+  }
+
+  .btn-join {
+    display: block;
+    width: 100%;
   }
 }
 

@@ -202,7 +202,16 @@
     "No games have been submitted yet. Be the first!": "No games have been submitted yet. Be the first!",
     "No Game Jams Yet": "No Game Jams Yet",
     "An admin will announce the next jam soon. Check back for the upcoming challenge!": "An admin will announce the next jam soon. Check back for the upcoming challenge!",
-    "No error logs recorded.": "No error logs recorded."
+    "No error logs recorded.": "No error logs recorded.",
+    "Go to Admin Panel": "Go to Admin Panel",
+    "No jams yet. Create one below.": "No jams yet. Create one below.",
+    "off": "off",
+    "Game\n      Jams": "Game\n      Jams",
+    "hosted on\n      this platform": "hosted on\n      this platform",
+    "Page Views": "Page Views",
+    "Unique Devices": "Unique Devices",
+    "Overall Traffic": "Overall Traffic",
+    "Avg Latency": "Avg Latency"
   },
   "tr": {
     "Metrics": "Metrikler",
