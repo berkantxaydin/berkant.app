@@ -17,6 +17,11 @@ Write-Output "Staging: Cleaning up old processes..."
 # List of process names to terminate if they are locking the project directory
 $processesToKill = @("waitress-serve", "python", "nginx", "git", "node", "git-remote-https", "git-lfs")
 
+# Explicitly stop Git daemons before killing processes
+Write-Output "Stopping Git daemons..."
+& git fsmonitor--daemon stop 2>$null
+& git maintenance stop 2>$null
+
 foreach ($procName in $processesToKill) {
     $foundProcs = Get-Process -Name $procName -ErrorAction SilentlyContinue
     foreach ($proc in $foundProcs) {
