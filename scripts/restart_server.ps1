@@ -2,6 +2,9 @@
 # Master script for server startup, self-healing, and health verification.
 # 100% ASCII ONLY to prevent encoding-related CMD crashes.
 
+# Magic Fix: Detach processes from GitHub Actions runner cleanup
+$env:RUNNER_TRACKING_ID = ""
+
 $ConfirmPreference = 'None'
 $ProgressPreference = 'SilentlyContinue'
 $ErrorActionPreference = "Continue"
