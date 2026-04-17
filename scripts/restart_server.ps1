@@ -1,6 +1,9 @@
 # restart_server.ps1
 # This script is called by GitHub Actions to deploy the app on Windows.
 
+# Suppress all confirmation prompts globally for this script
+$ConfirmPreference = 'None'
+
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 $NginxDir = "$ProjectDir\nginx-1.30.0"
 
