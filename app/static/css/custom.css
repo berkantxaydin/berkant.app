@@ -60,11 +60,19 @@ body::before {
   pointer-events: none;
   z-index: -1;
 
+  /* 1. Added the exact same gradient below the Rebellion image */
   background-image:
-    url('/static/img/Rebellion2.png');
-  background-size: 500px 250px;
-  background-repeat: repeat;
-  background-blend-mode: overlay;
+    url('/static/img/Rebellion2.png'),
+    radial-gradient(circle at top, #1e1b4b 70%, var(--pico-background-color) 100%);
+  
+  /* 2. Matched the sizing for both the image and the gradient */
+  background-size: 500px 250px, auto;
+  
+  /* 3. Matched the repeat behavior */
+  background-repeat: repeat, no-repeat;
+  
+  /* 4. Added the overlay blend mode to mix the image with the gradient */
+  background-blend-mode: overlay, normal;
 
   /* The Mask that cuts alternating holes */
   -webkit-mask-image: conic-gradient(from 0deg,
@@ -157,7 +165,6 @@ nav strong.logo {
 
 .premium-hero {
   position: relative;
-  background-image: url('/static/img/Rebellion2.png');
   background-size: cover;
   background-position: center;
   border-radius: 24px;
