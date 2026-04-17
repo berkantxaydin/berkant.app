@@ -10,27 +10,26 @@ jobs:
     runs-on: self-hosted
     
     steps:
-    - name: Pre-Deployment Cleanup (Release File Locks)
+    - name: Pre-Deployment Stage (Consolidated Cleanup)
       shell: cmd
       run: |
-        powershell -ExecutionPolicy Bypass -Command "Get-Process -Name git, git-remote-https, fsmonitor, node -ErrorAction SilentlyContinue | Stop-Process -Force"
-        powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\stop_server.ps1
+        powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\cleanup_runner.ps1
 
-    - name: Native Git Checkout (Safe)
+    - name: Native Git Checkout (Surgical)
       uses: actions/checkout@v4
       with:
         ref: main
         clean: true
         fetch-depth: 1
 
-    - name: Sync to Production
+    - name: Sync to Production (Mirror)
       shell: cmd
       run: |
         robocopy "." "C:\Users\berka\Downloads\berkant.app" /MIR /XF ".env" /XD "venv" ".git" "actions-runner" "runner_work" ".venv" ".github" "models" "uploads" "db" "logs" /R:2 /W:5
         if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
         exit /b 0
 
-    - name: Run MASTER Recovery Script
+    - name: Post-Deployment Stage (Startup & Heal)
       shell: cmd
       run: |
         powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\restart_server.ps1
