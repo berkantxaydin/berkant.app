@@ -10,7 +10,11 @@ import queue
 import psutil
 import sqlite3
 from datetime import datetime, timedelta
+import logging
 from app.database import get_db_connection
+
+# App-wide logger for integrated logging
+logger = logging.getLogger('flask.app')
 
 # Global paths
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -43,6 +47,30 @@ RESTART_COOLDOWN = 10 # 10 seconds debounce to prevent rapid-fire spawn loops
 # Configuration for RAM conservation (unloading after inactivity)
 IDLE_TIMEOUT = 2 * 60  # 2 minutes (in seconds)
 last_activity_time = time.time()
+
+def log_ai_event(event_type, status, message):
+    """Logs an AI event to both the standard logger and the database."""
+    # 1. Standard Logger
+    log_msg = f"[AI {event_type}] ({status}) {message}"
+    if status == 'ERROR':
+        logger.error(log_msg)
+    elif status == 'WARNING':
+        logger.warning(log_msg)
+    else:
+        logger.info(log_msg)
+
+    # 2. Database Logger
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO AI_System_Logs (event_type, status, message) VALUES (?, ?, ?)",
+            (event_type, status, message)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Failed to log AI event to DB: {e}")
 
 def cleanup_orphans():
     """Forcefully kills any orphaned llama-server processes to free GPU/RAM."""
@@ -109,6 +137,7 @@ def terminate_ai_server():
     ai_processes.clear()
     ai_ready = False
     ai_booting = False
+    log_ai_event('SHUTDOWN', 'INFO', 'AI Engine unloaded from RAM.')
 
 def start_llama_server():
     global LAST_RESTART_TIME
@@ -123,7 +152,8 @@ def start_llama_server():
     cleanup_orphans()
     LAST_RESTART_TIME = now
     
-    print(f"Starting Gemma 4 server on port {AI_CONFIG['port']}...")
+    
+    log_ai_event('STARTUP', 'INFO', f"Starting Gemma 4 server on port {AI_CONFIG['port']}...")
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
     
     # Redirect errors to a log file for debugging
@@ -171,11 +201,11 @@ def background_initialization():
         start_llama_server()
         url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
         max_retries = 60 # Reduced from 90 to 2 minutes total
-        for _ in range(max_retries):
+        for i in range(max_retries):
             # 1. Check if the process has already crashed/exited
             proc = ai_processes.get('chat')
             if proc and proc.poll() is not None:
-                print("CRITICAL: AI Server exited immediately after launch.")
+                log_ai_event('STARTUP', 'ERROR', "AI Server exited immediately after launch. Check logs/llm_server_error.log.")
                 break
 
             try:
@@ -184,17 +214,28 @@ def background_initialization():
                     if response.status == 200:
                         ai_ready = True
                         ai_booting = False
-                        print("DEBUG: AI Engine is ready.")
+                        log_ai_event('HEALTH', 'INFO', "AI Engine is ready and responding.")
                         break
             except Exception:
+                if i % 10 == 0 and i > 0:
+                    log_ai_event('HEALTH', 'WARNING', f"Still waiting for AI health check... (Attempt {i})")
                 time.sleep(2)
         
         if not ai_ready:
-            print("ERROR: AI health check timed out or failed.")
+            # Capture last 10 lines of internal log for better tracing
+            error_snippet = "No error output captured."
+            log_file = os.path.join(BASE_DIR, 'logs', 'llm_server_error.log')
+            if os.path.exists(log_file):
+                try:
+                    with open(log_file, 'r', encoding='utf-8') as f:
+                        error_snippet = "".join(f.readlines()[-10:])
+                except Exception: pass
+                
+            log_ai_event('STARTUP', 'ERROR', f"AI health check timed out. Internal log tail:\n{error_snippet}")
             ai_booting = False
     except Exception as e:
         ai_booting = False
-        print(f"CRITICAL: AI launch failed: {e}")
+        log_ai_event('ERROR', 'ERROR', f"AI launch failed unexpectedly: {str(e)}")
 
 def initialize_ai_system():
     """Initializes the background thread for AI boot if not already starting."""
@@ -226,7 +267,7 @@ def idle_monitor():
         if ai_ready and not ai_queue.unfinished_tasks:
             idle_time = time.time() - last_activity_time
             if idle_time > IDLE_TIMEOUT:
-                print(f"AI Idle for {idle_time/60:.1f} minutes. Freeing system RAM...")
+                log_ai_event('SHUTDOWN', 'INFO', f"AI Idle for {idle_time/60:.1f} minutes. Freeing system RAM...")
                 terminate_ai_server()
 
 # Start background monitor and initial boot

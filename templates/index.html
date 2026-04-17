@@ -28,13 +28,32 @@
   </div>
 
   <div class="grid">
-    <!-- ERROR LOG TAIL -->
+    <!-- LOG TAIL & AI DIAGNOSTICS -->
     <article class="glass-panel" style="grid-column: span 1;">
-      <header>{{ t("Runtime Trace Logs") }}</header>
-      <div id="aspire-logs" hx-get="/api/metrics/logs" hx-trigger="load, every 15s" hx-swap="innerHTML"
-        style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px;">
+      <header style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5rem;">
+        <span>{{ t("Runtime Trace Logs") }}</span>
+        <div role="group" class="tab-group" style="margin-bottom: 0;">
+          <button class="outline" style="padding: 0.2rem 0.6rem; font-size: 0.7rem;"
+                  hx-get="/api/metrics/logs" hx-target="#aspire-logs" hx-swap="innerHTML"
+                  onclick="updateActiveTab(this)">{{ t("System") }}</button>
+          <button class="outline secondary" style="padding: 0.2rem 0.6rem; font-size: 0.7rem;"
+                  hx-get="/api/metrics/ai-logs" hx-target="#aspire-logs" hx-swap="innerHTML"
+                  onclick="updateActiveTab(this)">{{ t("AI Core") }}</button>
+        </div>
+      </header>
+      <div id="aspire-logs" hx-get="/api/metrics/logs" hx-trigger="load" hx-swap="innerHTML"
+        style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; min-height: 250px;">
         <p>{{ t("Reading log stream...") }}</p>
       </div>
+      <script>
+        function updateActiveTab(btn) {
+          const group = btn.parentElement;
+          group.querySelectorAll('button').forEach(b => {
+             b.classList.add('secondary');
+          });
+          btn.classList.remove('secondary');
+        }
+      </script>
     </article>
 
     <!-- LOCAL AI ASSISTANT -->
