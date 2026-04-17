@@ -1,10 +1,9 @@
 # cleanup_runner.ps1
 # Consistently stops all platform processes and clears runner locks.
-# 100% ASCII ONLY to prevent encoding-related CMD crashes.
+# Hardened to avoid the 'Suicide Bug' by only cleaning STALE temp files.
 
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
 $RunnerDir = "C:\Users\berka\runner_work"
-$CurrentTemp = $env:RUNNER_TEMP
 
 Write-Output "--- Starting Surgical Runner Cleanup ---"
 
@@ -29,10 +28,14 @@ foreach ($port in $ports) {
     } catch { }
 }
 
-# 3. Clear Stale Temp Folders (EXCEPT the current run)
+# 3. Clear STALE runner temp folders (Older than 5 minutes)
+# This prevents the script from deleting the current run's temp batch file.
 if (Test-Path "$RunnerDir\_temp") {
-    Write-Output "Clearing stale runner temp folders..."
-    Get-ChildItem -Path "$RunnerDir\_temp" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne $CurrentTemp } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Output "Clearing stale runner temp folders (Safety Window: 5m)..."
+    $staleLimit = (Get-Date).AddMinutes(-5)
+    Get-ChildItem -Path "$RunnerDir\_temp" -ErrorAction SilentlyContinue | 
+        Where-Object { $_.LastWriteTime -lt $staleLimit } | 
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # 4. Stop Git Daemons (Silent)
