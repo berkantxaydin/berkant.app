@@ -3,7 +3,7 @@
 # Run this if deployment continuously fails with EBUSY errors.
 
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
-$RunnerWorkDir = "$ProjectDir\actions-runner\_work"
+$RunnerWorkDir = "C:\Users\berka\runner_work"
 
 Write-Output "--- 🧹 Starting Emergency Runner Cleanup ---"
 
