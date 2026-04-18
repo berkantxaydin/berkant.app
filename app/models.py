@@ -54,6 +54,7 @@ class CVCatalog:
     custom_htmx: str = ""
     created_at: str = None
     username: str = None # Joined field
+    author_is_admin: bool = False # Joined field
 
     @classmethod
     def from_row(cls, row):

@@ -35,14 +35,16 @@ def get_cvs():
         if 'HX-Request' in request.headers:
             html = ""
             for cv in results:
-                # Truncate summary for card view
-                short_summary = cv.summary[:85] + '...' if len(cv.summary) > 85 else cv.summary
+                # Truncate and escape summary for card view
+                clean_title = escape(cv.title)
+                clean_username = escape(cv.username)
+                short_summary = escape(cv.summary[:85]) + '...' if len(cv.summary) > 85 else escape(cv.summary)
                 html += f"""
                 <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" 
                          style="cursor: pointer; display: flex; flex-direction: column; padding: 1.5rem 2rem; min-height: 220px; transition: transform 0.2s;">
                     <header style="margin-bottom: 0.8rem; border: 0; padding: 0 0 0 1.2rem; background: transparent;">
-                        <h4 class="accent-text" style="margin-bottom:0; font-size: 1.25rem;">{cv.title}</h4>
-                        <small style="opacity: 0.6; display: block; margin-top: 0.2rem;">@{cv.username}</small>
+                        <h4 class="accent-text" style="margin-bottom:0; font-size: 1.25rem;">{clean_title}</h4>
+                        <small style="opacity: 0.6; display: block; margin-top: 0.2rem;">@{clean_username}</small>
                     </header>
                     <p style="font-size:0.95rem; flex-grow: 1; padding-left: 1.2rem; opacity: 0.9; line-height: 1.4;">{short_summary}</p>
                     <footer style="margin-top: 1.2rem; border: 0; padding: 0; background: transparent; text-align: left;">
@@ -204,10 +206,10 @@ def get_cv_edit_form(cv_id):
     return f"""
     <form hx-put="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML">
         <label>{t('Title')}
-            <input type="text" name="title" value="{cv.title}" required>
+            <input type="text" name="title" value="{escape(cv.title)}" required>
         </label>
         <label>{t('Summary')}
-            <textarea name="summary" required>{cv.summary}</textarea>
+            <textarea name="summary" required>{escape(cv.summary)}</textarea>
         </label>
         <div class="grid">
             <button type="submit">{t('Save Changes')}</button>
@@ -227,11 +229,11 @@ def update_cv_htmx(cv_id):
         return f"""
         <article>
             <header>
-                <strong>{title}</strong>
+                <strong>{escape(title)}</strong>
                 <a href="#" hx-get="/api/cv/{cv_id}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">{t('Edit')}</a>
                 <a href="#" hx-delete="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">{t('Delete')}</a>
             </header>
-            <p>{summary}</p>
+            <p>{escape(summary)}</p>
         </article>
         """
     return t("Update failed"), 400
@@ -400,7 +402,7 @@ def _render_messages(room_id):
         <article class="chat-message {align_class}" style="margin-bottom: 0.8rem; animation: slideIn 0.3s ease-out forwards;">
             <div class="chat-bubble {bubble_class}" style="padding: 0.8rem 1rem; border-radius: 1rem; max-width: 85%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                 <header style="margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: transparent; border: 0; padding: 0;">
-                    <strong style="font-size: 0.85rem; color: {name_color};">{badge}{msg['username']}</strong>
+                    <strong style="font-size: 0.85rem; color: {name_color};">{badge}{escape(msg['username'])}</strong>
                 </header>
                 <div class="chat-content" style="font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; word-wrap: break-word;">
                     {msg['content']}
@@ -499,8 +501,8 @@ def _render_room_admin_table():
 
         rows += f"""
         <tr id="chat-room-row-{r['id']}">
-            <td>{r['name']}</td>
-            <td>{jam_label}</td>
+            <td>{escape(r['name'])}</td>
+            <td>{escape(jam_label)}</td>
             <td>{enabled_badge}</td>
             <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                 <button class="{toggle_class}" style="padding:0.3rem 0.7rem; font-size:0.8rem;"

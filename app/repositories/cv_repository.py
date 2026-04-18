@@ -39,7 +39,7 @@ class CVRepository(BaseRepository):
 
     def get_cv_by_id(self, cv_id) -> CVCatalog:
         query = """
-            SELECT c.*, u.username 
+            SELECT c.*, u.username, u.is_admin as author_is_admin
             FROM CV_Catalog c 
             JOIN Users u ON c.user_id = u.id 
             WHERE c.id = ?

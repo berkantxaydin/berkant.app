@@ -19,6 +19,9 @@ def create_app():
                 static_folder=os.path.join(base_dir, 'static'))
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-unsafe-dev-key')
     
+    if app.config['SECRET_KEY'] == 'default-unsafe-dev-key':
+        app.logger.warning("SECURITY ALERT: Using default SECRET_KEY. Ensure a strong key is set via environment variables in production.")
+    
     # Configure robust logging handling for error.log
     # Ensure the logs directory exists before initializing the file handler
     os.makedirs('logs', exist_ok=True)
