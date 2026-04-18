@@ -35,17 +35,20 @@ def get_cvs():
         if 'HX-Request' in request.headers:
             html = ""
             for cv in results:
-                # Truncate summary for card view
-                short_summary = cv.summary[:85] + '...' if len(cv.summary) > 85 else cv.summary
+                # Truncate and escape summary for card view
+                clean_title = escape(cv.title)
+                clean_username = escape(cv.username)
+                short_summary = escape(cv.summary[:85]) + '...' if len(cv.summary) > 85 else escape(cv.summary)
                 html += f"""
-                <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" style="cursor: pointer; display: flex; flex-direction: column;">
-                    <header style="margin-bottom: 0.5rem; border: 0; padding: 0; background: transparent;">
-                        <h4 class="accent-text" style="margin-bottom:0;">{cv.title}</h4>
-                        <small style="opacity: 0.6;">@{cv.username}</small>
+                <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" 
+                         style="cursor: pointer; display: flex; flex-direction: column; padding: 1.5rem 2rem; min-height: 220px; transition: transform 0.2s;">
+                    <header style="margin-bottom: 0.8rem; border: 0; padding: 0 0 0 1.2rem; background: transparent;">
+                        <h4 class="accent-text" style="margin-bottom:0; font-size: 1.25rem;">{clean_title}</h4>
+                        <small style="opacity: 0.6; display: block; margin-top: 0.2rem;">@{clean_username}</small>
                     </header>
-                    <p style="font-size:0.9rem; flex-grow: 1;">{short_summary}</p>
-                    <footer style="margin-top: 1rem; border: 0; padding: 0; background: transparent; text-align: right;">
-                        <button class="outline" style="padding: 0.2rem 0.8rem; font-size: 0.75rem;">{t('View Profile')}</button>
+                    <p style="font-size:0.95rem; flex-grow: 1; padding-left: 1.2rem; opacity: 0.9; line-height: 1.4;">{short_summary}</p>
+                    <footer style="margin-top: 1.2rem; border: 0; padding: 0; background: transparent; text-align: left;">
+                        <button class="outline" style="padding: 0.3rem 1rem; font-size: 0.8rem; border-radius: 4px;">{t('View Profile')}</button>
                     </footer>
                 </article>"""
             return html
@@ -53,6 +56,19 @@ def get_cvs():
     except Exception as e:
         current_app.logger.error(f"Error querying CVs: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+@api_bp.route('/cv/<int:cv_id>/htmx', methods=['GET'])
+def get_cv_htmx(cv_id):
+    """Returns the custom interactive HTMX content for a specific CV profile."""
+    try:
+        cv = cv_repo.get_cv_by_id(cv_id)
+        if not cv:
+            return f"<p>{t('CV not found')}</p>", 404
+        # Return the custom HTMX or a fallback if empty
+        return cv.custom_htmx or f"<p>{t('This developer has not added an interactive resume yet.')}</p>"
+    except Exception as e:
+        current_app.logger.error(f"Error fetching CV HTMX: {e}")
+        return f"<p>{t('Internal Server Error')}</p>", 500
 
 @api_bp.route('/cv/create', methods=['POST'])
 @login_required
@@ -91,7 +107,7 @@ def create_ecom_cv():
 @api_bp.route('/jam/get-upload-url', methods=['GET'])
 @api_bp.route('/jam/get_upload_url', methods=['GET'])
 def get_upload_url():
-    """Generates a secure S3/R2 upload URL with explicitly locked MIME assignments to bypass local bandwidth limits."""
+    """Generates a secure S3/R2 upload URL to bypass local server bandwidth constraints."""
     filename = request.args.get('filename', 'default.bin')
     mime_type = request.args.get('content_type', 'application/octet-stream')
     
@@ -190,10 +206,10 @@ def get_cv_edit_form(cv_id):
     return f"""
     <form hx-put="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML">
         <label>{t('Title')}
-            <input type="text" name="title" value="{cv.title}" required>
+            <input type="text" name="title" value="{escape(cv.title)}" required>
         </label>
         <label>{t('Summary')}
-            <textarea name="summary" required>{cv.summary}</textarea>
+            <textarea name="summary" required>{escape(cv.summary)}</textarea>
         </label>
         <div class="grid">
             <button type="submit">{t('Save Changes')}</button>
@@ -213,11 +229,11 @@ def update_cv_htmx(cv_id):
         return f"""
         <article>
             <header>
-                <strong>{title}</strong>
+                <strong>{escape(title)}</strong>
                 <a href="#" hx-get="/api/cv/{cv_id}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">{t('Edit')}</a>
                 <a href="#" hx-delete="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">{t('Delete')}</a>
             </header>
-            <p>{summary}</p>
+            <p>{escape(summary)}</p>
         </article>
         """
     return t("Update failed"), 400
@@ -386,10 +402,10 @@ def _render_messages(room_id):
         <article class="chat-message {align_class}" style="margin-bottom: 0.8rem; animation: slideIn 0.3s ease-out forwards;">
             <div class="chat-bubble {bubble_class}" style="padding: 0.8rem 1rem; border-radius: 1rem; max-width: 85%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                 <header style="margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: transparent; border: 0; padding: 0;">
-                    <strong style="font-size: 0.85rem; color: {name_color};">{badge}{msg['username']}</strong>
+                    <strong style="font-size: 0.85rem; color: {name_color};">{badge}{escape(msg['username'])}</strong>
                 </header>
                 <div class="chat-content" style="font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; word-wrap: break-word;">
-                    {msg['content']}
+                    {escape(msg['content'])}
                 </div>
                 <div style="display:flex; justify-content:flex-end; align-items:center; margin-top: 0.4rem; gap: 0.5rem;">
                     <small style="color: #94a3b8; font-size: 0.7rem;">
@@ -485,8 +501,8 @@ def _render_room_admin_table():
 
         rows += f"""
         <tr id="chat-room-row-{r['id']}">
-            <td>{r['name']}</td>
-            <td>{jam_label}</td>
+            <td>{escape(r['name'])}</td>
+            <td>{escape(jam_label)}</td>
             <td>{enabled_badge}</td>
             <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                 <button class="{toggle_class}" style="padding:0.3rem 0.7rem; font-size:0.8rem;"
@@ -853,14 +869,16 @@ def get_ai_logs():
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM AI_System_Logs ORDER BY created_at DESC LIMIT 3")
+        # Fetch latest 3 system logs
+        cursor.execute("SELECT * FROM AI_System_Logs ORDER BY id DESC LIMIT 3")
         logs = cursor.fetchall()
         
         if not logs:
             return f"<p style='color: grey; text-align: center; margin-top: 1rem;'><em>{t('No AI lifecycle events recorded yet.')}</em></p>"
         
         html = "<div style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; white-space: pre;'>"
-        for log in logs:
+        # Display in chronological order (newest at bottom)
+        for log in reversed(logs):
             status_color = "var(--pico-del-color)" if log['status'] == 'ERROR' else ("#eab308" if log['status'] == 'WARNING' else "var(--pico-primary)")
             # Strip date for brevity
             ts = log['created_at'].split(' ')[1][:8] if ' ' in log['created_at'] else log['created_at']

@@ -10,9 +10,11 @@
     
     <div id="resume-container">
         {% if cv.custom_htmx %}
-            <div hx-get="/api/cv/{{ cv.id }}/htmx" hx-trigger="load">
-                <p aria-busy="true">{{ t("Loading interactive HTMX resume...") }}</p>
-            </div>
+            <iframe src="/api/cv/{{ cv.id }}/htmx" 
+                    sandbox="allow-scripts" 
+                    style="width:100%; height:800px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: white;"
+                    title="{{ t('Custom Resume') }}">
+            </iframe>
         {% else %}
             <!-- Default Standard JSON rendering -->
             <h5>{{ t("Summary") }}</h5>

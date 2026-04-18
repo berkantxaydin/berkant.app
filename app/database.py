@@ -32,7 +32,9 @@ def safe_execute(cursor, sql, params=None):
         return False
 
 def ensure_column(cursor, table, column, definition):
-    """Add a column to a table only if it does not already exist."""
+    """
+    Add a column to a table if it doesn't exist. Use with trusted internal schema identifiers.
+    """
     try:
         cursor.execute(f"PRAGMA table_info({table})")
         columns = [row[1] for row in cursor.fetchall()]
@@ -45,7 +47,9 @@ def ensure_column(cursor, table, column, definition):
     return False
 
 def ensure_index(cursor, index_name, table, column):
-    """Create an index only if it does not already exist."""
+    """
+    Create an index if it doesn't exist. Use with trusted internal schema identifiers.
+    """
     try:
         cursor.execute(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})")
         return True

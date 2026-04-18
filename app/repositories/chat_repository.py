@@ -46,7 +46,7 @@ class ChatRepository(BaseRepository):
 
     def add_message(self, user_id, room_id, content):
         query = "INSERT INTO Chat_Messages (user_id, room_id, content) VALUES (?, ?, ?)"
-        return self.execute(query, (user_id, room_id, str(escape(content))), commit=True)
+        return self.execute(query, (user_id, room_id, content), commit=True)
 
     def delete_message(self, msg_id, user_id=None, is_admin=False):
         if is_admin:
