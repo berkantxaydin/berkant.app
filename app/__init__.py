@@ -1,5 +1,6 @@
 import os
 import logging
+import sqlite3
 from flask import Flask
 from dotenv import load_dotenv
 
@@ -10,8 +11,12 @@ def create_app():
     import logging
     from logging.handlers import RotatingFileHandler
 
-    # Specify templates directory relative to the app package (root/templates)
-    app = Flask(__name__, template_folder='../templates', static_folder='../app/static')
+    # Specify absolute paths for high-reliability resolution on Windows
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(base_dir)
+    app = Flask(__name__, 
+                template_folder=os.path.join(project_root, 'templates'), 
+                static_folder=os.path.join(base_dir, 'static'))
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-unsafe-dev-key')
     
     # Configure robust logging handling for error.log
@@ -114,21 +119,23 @@ def create_app():
             duration_ms = int((time.time() - g.start_time) * 1000)
             
             # Log non-static traffic. 
-            # We record both IP and Visitor ID (cookie) for maximum data resilience.
             if not request.path.startswith('/static/'):
-                from app.database import get_db_connection
+                from app.repositories.analytics_repository import AnalyticsRepository
                 try:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
+                    analytics_repo = AnalyticsRepository()
                     is_htmx = 1 if 'HX-Request' in request.headers else 0
-                    cursor.execute(
-                        "INSERT INTO Analytics_Logs (method, path, ip_address, visitor_id, is_htmx, status_code, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (request.method, request.path, request.remote_addr, g.visitor_id, is_htmx, response.status_code, duration_ms)
+                    analytics_repo.log_request(
+                        method=request.method,
+                        path=request.path,
+                        ip_address=request.remote_addr,
+                        visitor_id=g.visitor_id,
+                        is_htmx=is_htmx,
+                        status_code=response.status_code,
+                        duration_ms=duration_ms
                     )
-                    conn.commit()
-                    conn.close()
                 except Exception as e:
-                    app.logger.error(f"Analytics logging failed: {e}")
+                    app.logger.error(f"Analytics storage failure: {e}")
+
             
             # Set the persistent visitor cookie if it's new
             if getattr(g, 'new_visitor', False):

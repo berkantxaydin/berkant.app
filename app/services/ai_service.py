@@ -225,13 +225,18 @@ def background_initialization():
     global ai_ready, ai_booting
     ai_booting = True
     try:
-        start_llama_server()
+        proc = start_llama_server()
+        if proc is None:
+            # If server didn't start (cooldown or port busy), we should not wait 2 minutes
+            log_ai_event('STARTUP', 'WARNING', "AI Server startup suppressed or failed. Aborting health check.")
+            ai_booting = False
+            return
+
         url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
-        max_retries = 60 # Reduced from 90 to 2 minutes total
+        max_retries = 90 # 3 minutes total for slow cold starts
         for i in range(max_retries):
-            # 1. Check if the process has already crashed/exited
-            proc = ai_processes.get('chat')
-            if proc and proc.poll() is not None:
+            # Check if the process has already crashed/exited
+            if proc.poll() is not None:
                 log_ai_event('STARTUP', 'ERROR', "AI Server exited immediately after launch. Check logs/llm_server_error.log.")
                 break
 
@@ -422,11 +427,20 @@ def ai_worker():
                 with queue_lock:
                     ai_results[task_id] = {"status": "waking_up"}
                 initialize_ai_system()
-                # Wait for bootup
+                # Wait for bootup - strict timeout to prevent "stuck" assistant
+                max_wait = 180 # 3 minutes total
+                start_wait = time.time()
                 while not ai_ready:
+                    if time.time() - start_wait > max_wait:
+                        raise Exception("AI Engine wakeup timed out (3 minute limit reached).")
+                    
                     # Heartbeat check: ensure we didn't fail and stop booting
                     if not ai_booting and not ai_ready:
-                        raise Exception("AI Engine failed to initialize during wakeup.")
+                        # Attempt one last re-initialization if something died
+                        initialize_ai_system()
+                        time.sleep(2)
+                        if not ai_booting and not ai_ready:
+                            raise Exception("AI Engine failed to initialize during wakeup.")
                     time.sleep(1)
 
             reset_activity_timer()

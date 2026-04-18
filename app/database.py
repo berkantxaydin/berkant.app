@@ -18,14 +18,79 @@ def get_db_connection():
     
     return conn
 
+def safe_execute(cursor, sql, params=None):
+    """Executes a SQL statement and catches common SQLite errors without rolling back the entire transaction context."""
+    try:
+        cursor.execute(sql, params or ())
+        return True
+    except sqlite3.OperationalError as e:
+        # We specifically log these as warnings because they often occur during harmless migration checks
+        logging.warning(f"Database operation warning (safe to ignore if already exists): {e}")
+        return False
+    except Exception as e:
+        logging.error(f"Database operation failure: {e}")
+        return False
+
+def ensure_column(cursor, table, column, definition):
+    """Add a column to a table only if it does not already exist."""
+    try:
+        cursor.execute(f"PRAGMA table_info({table})")
+        columns = [row[1] for row in cursor.fetchall()]
+        if column not in columns:
+            logging.info(f"Migration: Adding column {column} to {table}...")
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+            return True
+    except Exception as e:
+        logging.error(f"Failed to ensure column {column} in {table}: {e}")
+    return False
+
+def ensure_index(cursor, index_name, table, column):
+    """Create an index only if it does not already exist."""
+    try:
+        cursor.execute(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to ensure index {index_name} on {table}({column}): {e}")
+    return False
+
 def init_db():
-    """Initialize the database schema."""
+    """Initialize the database schema with high resilience and per-component commit blocks."""
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         
-        # Create Users table (IAM strict constraints)
-        cursor.execute('''
+        # 1. CORE ANALYTICS (Highest Priority)
+        # We ensure this table first because the layout depends on it immediately
+        safe_execute(cursor, '''
+            CREATE TABLE IF NOT EXISTS Analytics_Logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                method TEXT,
+                path TEXT,
+                ip_address TEXT,
+                visitor_id TEXT,
+                is_htmx BOOLEAN DEFAULT 0,
+                status_code INTEGER,
+                duration_ms INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        ensure_column(cursor, "Analytics_Logs", "visitor_id", "TEXT")
+        ensure_column(cursor, "Analytics_Logs", "is_htmx", "BOOLEAN DEFAULT 0")
+        ensure_index(cursor, "idx_analytics_path", "Analytics_Logs", "path")
+        ensure_index(cursor, "idx_analytics_created", "Analytics_Logs", "created_at")
+
+        # 2. SYSTEM & USER MANAGEMENT
+        safe_execute(cursor, '''
+            CREATE TABLE IF NOT EXISTS AI_System_Logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT, 
+                status TEXT,     
+                message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -36,9 +101,9 @@ def init_db():
                 preferences JSON DEFAULT '{}'
             )
         ''')
-        
-        # Create CV_Catalog table
-        cursor.execute('''
+
+        # 3. CONTENT & SOCIAL TABLES
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS CV_Catalog (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -51,8 +116,7 @@ def init_db():
             )
         ''')
         
-        # Create Game_Jams table
-        cursor.execute('''
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Game_Jams (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
@@ -63,9 +127,7 @@ def init_db():
             )
         ''')
 
-        # Create Godot_Games table (Sprint enhancements)
-        # Note: jam_id added for jam submissions
-        cursor.execute('''
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Godot_Games (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -81,8 +143,7 @@ def init_db():
             )
         ''')
 
-        # Game Social Features: Likes (One-time per user per game)
-        cursor.execute('''
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Game_Likes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -94,8 +155,7 @@ def init_db():
             )
         ''')
 
-        # Game Social Features: Comments
-        cursor.execute('''
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Game_Comments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -107,8 +167,8 @@ def init_db():
             )
         ''')
 
-        # Create Chat_Rooms table (multi-room support)
-        cursor.execute('''
+        # 4. CHAT SYSTEM
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Chat_Rooms (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -119,13 +179,15 @@ def init_db():
             )
         ''')
 
-        # Seed the default General room if it doesn't exist yet
-        cursor.execute("SELECT id FROM Chat_Rooms WHERE name = '💬 General'")
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO Chat_Rooms (name, jam_id, is_enabled) VALUES ('💬 General', NULL, 1)")
+        # Seed default room if missing
+        try:
+            cursor.execute("SELECT id FROM Chat_Rooms WHERE name = '💬 General'")
+            if not cursor.fetchone():
+                cursor.execute("INSERT INTO Chat_Rooms (name, jam_id, is_enabled) VALUES ('💬 General', NULL, 1)")
+        except Exception:
+            pass
 
-        # Create Chat_Messages table
-        cursor.execute('''
+        safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Chat_Messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -135,53 +197,13 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES Users (id) ON DELETE CASCADE
             )
         ''')
-
-        # Safe migration: add room_id to pre-existing Chat_Messages tables
-        try:
-            cursor.execute("ALTER TABLE Chat_Messages ADD COLUMN room_id INTEGER NOT NULL DEFAULT 1")
-        except Exception:
-            pass  # Column already exists — no-op
-        
-        # Create Analytics_Logs table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS Analytics_Logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                method TEXT,
-                path TEXT,
-                ip_address TEXT,
-                visitor_id TEXT,
-                is_htmx BOOLEAN DEFAULT 0,
-                status_code INTEGER,
-                duration_ms INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Migration: Add visitor_id to Analytics_Logs if it doesn't exist
-        try:
-            cursor.execute("ALTER TABLE Analytics_Logs ADD COLUMN visitor_id TEXT")
-        except Exception:
-            pass
-        try:
-            cursor.execute("ALTER TABLE Analytics_Logs ADD COLUMN is_htmx BOOLEAN DEFAULT 0")
-        except Exception:
-            pass
-
-        # Create AI_System_Logs table for observability
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS AI_System_Logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                event_type TEXT, -- 'STARTUP', 'HEALTH', 'SHUTDOWN', 'ERROR'
-                status TEXT,     -- 'INFO', 'WARNING', 'ERROR'
-                message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+        ensure_column(cursor, "Chat_Messages", "room_id", "INTEGER NOT NULL DEFAULT 1")
 
         conn.commit()
-        logging.info("Database initialized successfully.")
+        logging.info("Database schema verified/initialized successfully.")
     except Exception as e:
-        logging.error(f"Failed to initialize database: {e}")
-        conn.rollback()
+        logging.error(f"Critical failure during database initialization: {e}")
     finally:
         conn.close()
+
+

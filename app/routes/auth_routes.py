@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from app.database import get_db_connection
+from app.repositories.user_repository import UserRepository
 from app.i18n import t
 
 auth_bp = Blueprint('auth', __name__)
+user_repo = UserRepository()
+
 
 def login_required(f):
     @wraps(f)
@@ -34,29 +36,24 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        conn = get_db_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, username, password_hash, is_admin FROM Users WHERE username = ?", (username,))
-            user = cursor.fetchone()
+        user = user_repo.get_by_username(username)
+        
+        if user and check_password_hash(user.password_hash, password):
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['is_admin'] = bool(user.is_admin)
             
-            if user and check_password_hash(user['password_hash'], password):
-                session['user_id'] = user['id']
-                session['username'] = user['username']
-                session['is_admin'] = bool(user['is_admin'])
-                
-                if request.form.get('remember'):
-                    session.permanent = True
-                else:
-                    session.permanent = False
-                    
-                return redirect(url_for('main.landing_page'))
+            if request.form.get('remember'):
+                session.permanent = True
             else:
-                return render_template('login.html', error=t("Invalid username or password."))
-        finally:
-            conn.close()
+                session.permanent = False
+                
+            return redirect(url_for('main.landing_page'))
+        else:
+            return render_template('login.html', error=t("Invalid username or password."))
             
     return render_template('login.html')
+
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -70,24 +67,17 @@ def register():
             return render_template('register.html', error=t("All fields are required."))
             
         hashed_pw = generate_password_hash(password)
-        is_admin = 1 if admin_code == "77" else 0
+        is_admin = (admin_code == "77")
         
-        conn = get_db_connection()
         try:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO Users (username, email, password_hash, is_admin) VALUES (?, ?, ?, ?)",
-                (username, email, hashed_pw, is_admin)
-            )
-            conn.commit()
+            user_repo.create_user(username, email, hashed_pw, is_admin)
             return redirect(url_for('auth.login'))
         except Exception as e:
             current_app.logger.error(f"Registration error: {e}")
             return render_template('register.html', error=t("Username or email already exists."))
-        finally:
-            conn.close()
 
     return render_template('register.html')
+
 
 @auth_bp.route('/logout')
 def logout():

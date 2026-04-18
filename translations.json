@@ -221,7 +221,26 @@
     "AI is waking up (Warm-up phase)...": "AI is waking up (Warm-up phase)...",
     "AI Engine": "AI Engine",
     "Waking up from idle...": "Waking up from idle...",
-    "The model is loading into system RAM. This may take 30-60 seconds.": "The model is loading into system RAM. This may take 30-60 seconds."
+    "The model is loading into system RAM. This may take 30-60 seconds.": "The model is loading into system RAM. This may take 30-60 seconds.",
+    "Play\n            Entry": "Play\n            Entry",
+    "Request Blocked": "Request Blocked",
+    "You already have an active AI request in progress. Please wait for the previous one to finish before sending another.": "You already have an active AI request in progress. Please wait for the previous one to finish before sending another.",
+    "Username or email already exists.": "Username or email already exists.",
+    "The Ecosystem": "The Ecosystem",
+    "A high-performance hub for developers who build and play without limits.": "A high-performance hub for developers who build and play without limits.",
+    "1. Join & Sync": "1. Join & Sync",
+    "Register your account to unlock personalized metrics and secure game tracking.": "Register your account to unlock personalized metrics and secure game tracking.",
+    "2. Create & Submit": "2. Create & Submit",
+    "Build interactive resumes using HTMX or upload your Godot WebGL binaries directly to our S3 cloud.": "Build interactive resumes using HTMX or upload your Godot WebGL binaries directly to our S3 cloud.",
+    "3. Play & Grow": "3. Play & Grow",
+    "Engage with the community through live chats, game jams, and a live-filtered talent pool.": "Engage with the community through live chats, game jams, and a live-filtered talent pool.",
+    "Optimized for the Edge": "Optimized for the Edge",
+    "Proglem is built on a strict 8GB RAM budget and 22Mbps bandwidth. By using raw HTMX and SQLite WAL mode, we achieve massive scale on minimal resources.": "Proglem is built on a strict 8GB RAM budget and 22Mbps bandwidth. By using raw HTMX and SQLite WAL mode, we achieve massive scale on minimal resources.",
+    "Monitor real-time site health and infrastructure efficiency live from the source.": "Monitor real-time site health and infrastructure efficiency live from the source.",
+    "The Unified Ecosystem": "The Unified Ecosystem",
+    "Empowering developers to build and showcase Godot games and professional CVs on a high-efficiency platform.": "Empowering developers to build and showcase Godot games and professional CVs on a high-efficiency platform.",
+    "Interactive developer resumes utilizing raw HTMX speed. Stand out with native performance.": "Interactive developer resumes utilizing raw HTMX speed. Stand out with native performance.",
+    "Explore massive Godot WebGL apps distributed safely. Participated in community Jams.": "Explore massive Godot WebGL apps distributed safely. Participated in community Jams."
   },
   "tr": {
     "Metrics": "Metrikler",
@@ -403,6 +422,19 @@
     "Build and publish your professional skills to the standard proglem talent pool, or inject your interactive raw HTMX resume.": "Profesyonel becerilerinizi standart proglem yetenek havuzuna yükleyin veya etkileşimli ham HTMX özgeçmişinizi enjekte edin.",
     "This developer hasn't uploaded any Godot WebGL games yet.": "Bu geliştirici henüz herhangi bir Godot WebGL oyunu yüklememiştir.",
     "AI is idle (Waking up)...": "Yapay Zeka boşta (Uyandırılıyor)...",
-    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "Model sistem RAM'ine yükleniyor. Bu donanımda bu işlem genellikle 30-60 saniye sürer."
+    "The model is loading into system RAM. This typically takes 30-60 seconds on this hardware.": "Model sistem RAM'ine yükleniyor. Bu donanımda bu işlem genellikle 30-60 saniye sürer.",
+    "The Ecosystem": "Ekosistem",
+    "A high-performance hub for developers who build and play without limits.": "Sınır tanımadan inşa eden ve oynayan geliştiriciler için yüksek performanslı bir merkez.",
+    "1. Join & Sync": "1. Katıl ve Senkronize Et",
+    "Register your account to unlock personalized metrics and secure game tracking.": "Kişiselleştirilmiş metriklerin ve güvenli oyun takibinin kilidini açmak için hesabınızı kaydedin.",
+    "2. Create & Submit": "2. Oluştur ve Gönder",
+    "Build interactive resumes using HTMX or upload your Godot WebGL binaries directly to our S3 cloud.": "HTMX kullanarak etkileşimli özgeçmişler oluşturun veya Godot WebGL ikili dosyalarınızı doğrudan S3 bulutumuza yükleyin.",
+    "3. Play & Grow": "3. Oyna ve Büyü",
+    "Engage with the community through live chats, game jams, and a live-filtered talent pool.": "Canlı sohbetler, game jam'ler ve canlı filtrelenmiş bir yetenek havuzu aracılığıyla toplulukla etkileşim kurun.",
+    "Optimized for the Edge": "Uç Nokta İçin Optimize Edildi",
+    "Proglem is built on a strict 8GB RAM budget and 22Mbps bandwidth. By using raw HTMX and SQLite WAL mode, we achieve massive scale on minimal resources.": "Proglem, katı bir 8GB RAM bütçesi ve 22Mbps bant genişliği üzerine inşa edilmiştir. Ham HTMX ve SQLite WAL modunu kullanarak, minimum kaynakla devasa ölçek elde ediyoruz.",
+    "Monitor real-time site health and infrastructure efficiency live from the source.": "Gerçek zamanlı site sağlığını ve altyapı verimliliğini doğrudan kaynağından canlı olarak izleyin.",
+    "The Unified Ecosystem": "Birleşik Ekosistem",
+    "Empowering developers to build and showcase Godot games and professional CVs on a high-efficiency platform.": "Geliştiricilerin Godot oyunlarını ve profesyonel CV'lerini yüksek verimlilikli bir platformda oluşturmalarını ve sergilemelerini güçlendiriyoruz."
   }
 }
