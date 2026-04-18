@@ -46,7 +46,7 @@ LAST_RESTART_TIME = 0.0
 RESTART_COOLDOWN = 10 # 10 seconds debounce to prevent rapid-fire spawn loops
 
 # Configuration for RAM conservation (unloading after inactivity)
-IDLE_TIMEOUT = 2 * 60  # 2 minutes for user testing (can be increased to 2*60*60 for production)
+IDLE_TIMEOUT = 7 * 60  # 7 minutes (increased from 2 minutes)
 last_activity_time = time.time()
 
 def log_ai_event(event_type, status, message):
