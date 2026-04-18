@@ -33,9 +33,7 @@ def safe_execute(cursor, sql, params=None):
 
 def ensure_column(cursor, table, column, definition):
     """
-    Add a column to a table only if it does not already exist.
-    SECURITY NOTE: Table and column names are injected via f-strings as SQLite doesn't support 
-    parameterized schema identifiers. Ensure all arguments are from trusted internal sources.
+    Add a column to a table if it doesn't exist. Use with trusted internal schema identifiers.
     """
     try:
         cursor.execute(f"PRAGMA table_info({table})")
@@ -50,9 +48,7 @@ def ensure_column(cursor, table, column, definition):
 
 def ensure_index(cursor, index_name, table, column):
     """
-    Create an index only if it does not already exist.
-    SECURITY NOTE: Schema identifiers are injected via f-strings. Ensure all arguments 
-    are from trusted internal sources to avoid SQL injection.
+    Create an index if it doesn't exist. Use with trusted internal schema identifiers.
     """
     try:
         cursor.execute(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})")

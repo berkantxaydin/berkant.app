@@ -107,7 +107,7 @@ def create_ecom_cv():
 @api_bp.route('/jam/get-upload-url', methods=['GET'])
 @api_bp.route('/jam/get_upload_url', methods=['GET'])
 def get_upload_url():
-    """Generates a secure S3/R2 upload URL with explicitly locked MIME assignments to bypass local bandwidth limits."""
+    """Generates a secure S3/R2 upload URL to bypass local server bandwidth constraints."""
     filename = request.args.get('filename', 'default.bin')
     mime_type = request.args.get('content_type', 'application/octet-stream')
     
@@ -869,7 +869,7 @@ def get_ai_logs():
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Fetch the LATEST 3 logs in descending order first
+        # Fetch latest 3 system logs
         cursor.execute("SELECT * FROM AI_System_Logs ORDER BY id DESC LIMIT 3")
         logs = cursor.fetchall()
         
@@ -877,7 +877,7 @@ def get_ai_logs():
             return f"<p style='color: grey; text-align: center; margin-top: 1rem;'><em>{t('No AI lifecycle events recorded yet.')}</em></p>"
         
         html = "<div style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; white-space: pre;'>"
-        # Reverse the 3 latest logs so they appear in chronological order (newest at bottom)
+        # Display in chronological order (newest at bottom)
         for log in reversed(logs):
             status_color = "var(--pico-del-color)" if log['status'] == 'ERROR' else ("#eab308" if log['status'] == 'WARNING' else "var(--pico-primary)")
             # Strip date for brevity
