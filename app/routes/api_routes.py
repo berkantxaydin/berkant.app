@@ -869,14 +869,16 @@ def get_ai_logs():
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM AI_System_Logs ORDER BY created_at DESC LIMIT 3")
+        # Fetch the LATEST 3 logs in descending order first
+        cursor.execute("SELECT * FROM AI_System_Logs ORDER BY id DESC LIMIT 3")
         logs = cursor.fetchall()
         
         if not logs:
             return f"<p style='color: grey; text-align: center; margin-top: 1rem;'><em>{t('No AI lifecycle events recorded yet.')}</em></p>"
         
         html = "<div style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; white-space: pre;'>"
-        for log in logs:
+        # Reverse the 3 latest logs so they appear in chronological order (newest at bottom)
+        for log in reversed(logs):
             status_color = "var(--pico-del-color)" if log['status'] == 'ERROR' else ("#eab308" if log['status'] == 'WARNING' else "var(--pico-primary)")
             # Strip date for brevity
             ts = log['created_at'].split(' ')[1][:8] if ' ' in log['created_at'] else log['created_at']
