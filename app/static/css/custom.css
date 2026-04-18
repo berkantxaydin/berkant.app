@@ -471,3 +471,48 @@ header strong[aria-busy='true'] {
   border: 1px dashed var(--pico-primary);
   background: rgba(168, 85, 247, 0.05) !important;
 }
+
+/* --- CHAT SYSTEM ENHANCEMENTS --- */
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.chat-message.self {
+  align-items: flex-end;
+}
+
+.chat-bubble {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.chat-bubble.primary {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.1);
+}
+
+.chat-bubble:hover {
+  transform: scale(1.01);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom scrollbar for chat area */
+#chat-messages::-webkit-scrollbar {
+  width: 5px;
+}
+#chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.3);
+  border-radius: 10px;
+}
