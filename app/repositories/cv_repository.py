@@ -3,31 +3,53 @@ from app.database import get_db_connection
 
 class CVRepository:
     @staticmethod
-    def get_all_cvs(search_term=None):
+    def get_all_cvs(search_term=None, city=None, department=None, skill=None):
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
+
+            base_query = '''
+                SELECT c.id, c.title, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
+                FROM CV_Catalog c
+                JOIN Users u ON c.user_id = u.id
+            '''
+            conditions = []
+            params = []
+
             if search_term:
-                query = '''
-                    SELECT c.id, c.title, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
-                    FROM CV_Catalog c
-                    JOIN Users u ON c.user_id = u.id
-                    WHERE c.title LIKE ? OR c.cv_data LIKE ? OR u.username LIKE ?
-                '''
                 liketerm = f'%{search_term}%'
-                cursor.execute(query, (liketerm, liketerm, liketerm))
-            else:
-                query = '''
-                    SELECT c.id, c.title, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
-                    FROM CV_Catalog c
-                    JOIN Users u ON c.user_id = u.id
-                '''
-                cursor.execute(query)
-            
+                conditions.append('(c.title LIKE ? OR c.summary LIKE ? OR c.cv_data LIKE ? OR u.username LIKE ?)')
+                params.extend([liketerm, liketerm, liketerm, liketerm])
+
+            if conditions:
+                base_query += ' WHERE ' + ' AND '.join(conditions)
+
+            cursor.execute(base_query, params)
+
             results = []
             for row in cursor.fetchall():
                 row_dict = dict(row)
                 row_dict['cv_data'] = json.loads(row_dict['cv_data'])
+                cv_data = row_dict['cv_data']
+
+                # Şehir filtresi
+                if city:
+                    cv_city = cv_data.get('city', '')
+                    if city.lower() not in cv_city.lower():
+                        continue
+
+                # Departman filtresi
+                if department:
+                    cv_dept = cv_data.get('department', '')
+                    if department.lower() not in cv_dept.lower():
+                        continue
+
+                # Yetkinlik filtresi
+                if skill:
+                    cv_skills = [s.lower() for s in cv_data.get('skills', [])]
+                    if skill.lower() not in cv_skills:
+                        continue
+
                 results.append(row_dict)
             return results
         finally:
