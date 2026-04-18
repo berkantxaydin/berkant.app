@@ -54,3 +54,8 @@ node_modules/
 # Local Infrastructure & Runners
 actions-runner/
 nginx-1.30.0/
+
+# Runtime Artifacts
+*.pid
+.ai_pid
+logs/

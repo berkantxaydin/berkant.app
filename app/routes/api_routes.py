@@ -405,7 +405,7 @@ def _render_messages(room_id):
                     <strong style="font-size: 0.85rem; color: {name_color};">{badge}{escape(msg['username'])}</strong>
                 </header>
                 <div class="chat-content" style="font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; word-wrap: break-word;">
-                    {msg['content']}
+                    {escape(msg['content'])}
                 </div>
                 <div style="display:flex; justify-content:flex-end; align-items:center; margin-top: 0.4rem; gap: 0.5rem;">
                     <small style="color: #94a3b8; font-size: 0.7rem;">
