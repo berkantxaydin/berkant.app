@@ -30,21 +30,26 @@ analytics_repo = AnalyticsRepository()
 def get_cvs():
     search = request.args.get('search', '')
     try:
-        results = game_repo.get_all_games()
+        results = cv_repo.get_all_cvs(search)
         # If HTMX, return grid partial
         if 'HX-Request' in request.headers:
             html = ""
-            for g in results:
+            for cv in results:
+                # Truncate summary for card view
+                short_summary = cv.summary[:85] + '...' if len(cv.summary) > 85 else cv.summary
                 html += f"""
-                <article class="game-card glass-panel" onclick="window.location.href='/games/{g.id}'" style="cursor: pointer;">
-                    <h4 class="accent-text" style="margin-bottom:0.5rem;">{g.title}</h4>
-                    <p style="font-size:0.9rem;">{g.description[:60]}...</p>
-                    <footer style="margin-top:auto;">
-                        <small>❤️ {g.likes} | 👁️ {g.views}</small>
+                <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" style="cursor: pointer; display: flex; flex-direction: column;">
+                    <header style="margin-bottom: 0.5rem; border: 0; padding: 0; background: transparent;">
+                        <h4 class="accent-text" style="margin-bottom:0;">{cv.title}</h4>
+                        <small style="opacity: 0.6;">@{cv.username}</small>
+                    </header>
+                    <p style="font-size:0.9rem; flex-grow: 1;">{short_summary}</p>
+                    <footer style="margin-top: 1rem; border: 0; padding: 0; background: transparent; text-align: right;">
+                        <button class="outline" style="padding: 0.2rem 0.8rem; font-size: 0.75rem;">{t('View Profile')}</button>
                     </footer>
                 </article>"""
             return html
-        return jsonify({"status": "success", "count": len(results), "data": [vars(g) for g in results]}), 200
+        return jsonify({"status": "success", "count": len(results), "data": [vars(cv) for cv in results]}), 200
     except Exception as e:
         current_app.logger.error(f"Error querying CVs: {e}")
         return jsonify({"error": "Internal server error"}), 500
