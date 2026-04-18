@@ -9,7 +9,9 @@ from app.repositories.chat_repository import ChatRepository
 from app.repositories.jam_repository import JamRepository
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.routes.auth_routes import login_required, admin_required
+from app.database import get_db_connection
 from app.i18n import t
+from markupsafe import escape
 from datetime import datetime, timedelta
 import logging
 
@@ -229,7 +231,6 @@ def delete_game_htmx(game_id):
 def like_game(game_id):
     """Toggles a like on a game."""
     uid = session['user_id']
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -258,7 +259,6 @@ def like_game(game_id):
 @login_required
 def post_game_comment(game_id):
     """Saves a comment and returns the new comment list snippet for HTMX."""
-    from app.database import get_db_connection
     from flask import render_template_string
     uid = session['user_id']
     content = request.form.get('content', '').strip()
@@ -311,7 +311,6 @@ def post_game_comment(game_id):
 @login_required
 def delete_game_comment(comment_id):
     """Deletes a comment if the user is an admin or the author."""
-    from app.database import get_db_connection
     uid = session['user_id']
     is_admin = session.get('is_admin', False)
     
@@ -334,8 +333,6 @@ def delete_game_comment(comment_id):
 
 def _render_messages(room_id):
     """Shared helper: renders message list HTML for a given room_id."""
-    from app.database import get_db_connection
-    from markupsafe import escape
     conn = get_db_connection()
     try:
         c = conn.cursor()
@@ -360,9 +357,17 @@ def _render_messages(room_id):
     is_admin = session.get('is_admin', False)
 
     for msg in messages:
-        can_delete = is_admin or msg['user_id'] == current_user_id
+        is_self = (msg['user_id'] == current_user_id)
+        can_delete = is_admin or is_self
+        
+        # Define classes for orientation and styling
+        align_class = "self" if is_self else ""
+        bubble_class = "primary" if is_self else ""
+        
         name_color = "var(--pico-primary)" if msg['is_admin'] else "#e2e8f0"
         badge = "&#x1F468;&#x200D;&#x1F4BB; " if msg['is_admin'] else ""
+        
+        # Format time
         time_str = msg['created_at'].split(' ')[1][:5] if ' ' in msg['created_at'] else msg['created_at'][:5]
 
         delete_btn = ""
@@ -373,21 +378,17 @@ def _render_messages(room_id):
                 title="{t('Delete')}">&#x2A2F;</a>"""
 
         html += f"""
-        <article style="padding: 0.4rem 0.8rem; margin-bottom: 0;
-                        background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);
-                        border-radius: 8px; transition: background 0.15s;">
-            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
         <article class="chat-message {align_class}" style="margin-bottom: 0.8rem; animation: slideIn 0.3s ease-out forwards;">
             <div class="chat-bubble {bubble_class}" style="padding: 0.8rem 1rem; border-radius: 1rem; max-width: 85%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                <header style="margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
-                    <strong style="font-size: 0.85rem; color: #1e293b;">{msg.username}</strong>
+                <header style="margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: transparent; border: 0; padding: 0;">
+                    <strong style="font-size: 0.85rem; color: {name_color};">{badge}{msg['username']}</strong>
                 </header>
-                <div class="chat-content" style="font-size: 0.95rem; line-height: 1.5; color: #334155; word-wrap: break-word;">
-                    {msg.content}
+                <div class="chat-content" style="font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; word-wrap: break-word;">
+                    {msg['content']}
                 </div>
-                <div style="display:flex; justify-content:flex-end; align-items:center;">
-                    <small style="color: #475569; font-size: 0.7rem;">
-                        <time datetime="{msg.created_at}Z" class="chat-time">{time_str}</time>
+                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top: 0.4rem; gap: 0.5rem;">
+                    <small style="color: #94a3b8; font-size: 0.7rem;">
+                        <time datetime="{msg['created_at']}Z" class="chat-time">{time_str}</time>
                     </small>
                     {delete_btn}
                 </div>
@@ -422,8 +423,6 @@ def get_chat_messages():
 @login_required
 def post_chat_message():
     """Posts a message to a specific room and returns the updated list."""
-    from app.database import get_db_connection
-    from markupsafe import escape
     uid = session['user_id']
     content = request.form.get('content', '').strip()
     try:
@@ -727,7 +726,6 @@ def get_system_resources():
 
 @api_bp.route('/metrics/analytics', methods=['GET'])
 def get_core_analytics():
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -792,7 +790,6 @@ def get_core_analytics():
 @api_bp.route('/metrics/analytics', methods=['DELETE'])
 @admin_required
 def clear_analytics():
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         cursor = conn.cursor()

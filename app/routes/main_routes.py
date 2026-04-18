@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, abort, current_app, send_from_directory, make_response, session, request, redirect
+import os
 from app.repositories.game_repository import GameRepository
 from app.repositories.cv_repository import CVRepository
+from app.database import get_db_connection
 from app.i18n import t
 
 main_bp = Blueprint('main', __name__)
@@ -17,7 +19,6 @@ def landing_page():
 @main_bp.route('/health')
 def health_check():
     """Real healthcheck for CI/CD and deployment monitoring."""
-    from app.database import get_db_connection
     try:
         conn = get_db_connection()
         conn.execute("SELECT 1").fetchone()
@@ -48,7 +49,6 @@ def cv_create():
 
 @main_bp.route('/chat')
 def chat_room():
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -110,7 +110,6 @@ def jam_page():
 @main_bp.route('/games/<int:game_id>')
 def view_game(game_id):
     """Detailed game page with Godot embed and social features."""
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         game = game_repo.get_game_by_id(game_id)
