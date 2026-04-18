@@ -9,19 +9,265 @@
     <h2 class="accent-text">{{ t("CV Talent Pool") }}</h2>
     <p>{{ t("Live filter through candidates via purely HTMX (No JavaScript Required)") }}</p>
   </hgroup>
-  
-  <input type="search" 
-         name="search" 
-         placeholder="{{ t('Search by skills, title, or summary (e.g. Python, Godot, React)') }}"
-         hx-get="/api/cv"
-         hx-trigger="keyup changed delay:500ms, search"
-         hx-target="#search-results"
+
+  <input type="search"
+         id="search-input"
+         placeholder="{{ t('İsim, başlık veya özet ara...') }}"
          class="glass-panel"
          aria-label="Search CV Catalog"
-         style="margin-bottom: 2rem;">
-         
+         style="margin-bottom: 1.5rem;">
+
+  <div style="display:flex; flex-direction:column; gap:0; margin-bottom:2rem; border-radius:.75rem; overflow:hidden; border:1px solid var(--pico-muted-border-color);">
+
+    <!-- ADIM 1: Şehir -->
+    <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--pico-muted-border-color);">
+      <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem;">
+        <span class="step-num active-step">1</span>
+        <strong style="font-size:.9rem;">🏙️ {{ t("Şehir Seçin") }}</strong>
+        <span id="city-selected-label" class="selected-label"></span>
+      </div>
+      <div id="city-buttons" style="display:flex; flex-wrap:wrap; gap:.5rem;">
+        {% for city in ["İstanbul","Ankara","İzmir","Bursa","Antalya","Adana","Konya","Gaziantep","Uzaktan","Diğer"] %}
+        <button class="filter-btn outline secondary" data-group="city" data-value="{{ city }}"
+                style="padding:.3rem .9rem; font-size:.85rem; border-radius:999px;">{{ city }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ADIM 2: Departman -->
+    <div id="dept-section" class="cascade-section locked" style="padding:1rem 1.25rem; border-bottom:1px solid var(--pico-muted-border-color);">
+      <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem;">
+        <span class="step-num" id="dept-step-num">2</span>
+        <strong style="font-size:.9rem;">🗂️ {{ t("Departman Seçin") }}</strong>
+        <span id="dept-selected-label" class="selected-label"></span>
+      </div>
+      <div id="dept-buttons" style="display:flex; flex-wrap:wrap; gap:.5rem;">
+        <span class="hint-text">{{ t("Önce şehir seçin") }}</span>
+      </div>
+    </div>
+
+    <!-- ADIM 3: Yetkinlik -->
+    <div id="skill-section" class="cascade-section locked" style="padding:1rem 1.25rem;">
+      <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem;">
+        <span class="step-num" id="skill-step-num">3</span>
+        <strong style="font-size:.9rem;">🛠️ {{ t("Yetkinlik Seçin") }}</strong>
+        <span id="skill-selected-label" class="selected-label"></span>
+      </div>
+      <div id="skill-buttons" style="display:flex; flex-wrap:wrap; gap:.5rem;">
+        <span class="hint-text">{{ t("Önce departman seçin") }}</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Aktif filtre pill'leri -->
+  <div id="active-filters" style="display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.25rem; min-height:2rem;"></div>
+
+  <!-- Sonuçlar -->
   <div id="search-results" class="grid" hx-get="/api/cv" hx-trigger="load">
-     <p aria-busy="true">{{ t('Loading CVs from Database...') }}</p>
+    <p aria-busy="true">{{ t('Loading CVs from Database...') }}</p>
   </div>
 </section>
+
+<style>
+.cascade-section.locked { opacity: .35; pointer-events: none; transition: opacity .25s; }
+.cascade-section.unlocked { opacity: 1; pointer-events: auto; }
+.step-num {
+  background: var(--pico-muted-color); color: #fff;
+  border-radius: 50%; width: 1.5rem; height: 1.5rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 700; flex-shrink: 0;
+}
+.step-num.active-step { background: var(--pico-primary-background); color: var(--pico-primary-inverse); }
+.selected-label { margin-left: auto; font-size: .82rem; color: var(--pico-primary); font-weight: 600; display: none; }
+.hint-text { color: var(--pico-muted-color); font-size: .85rem; }
+.filter-btn.selected { background: var(--pico-primary-background) !important; color: var(--pico-primary-inverse) !important; border-color: var(--pico-primary-background) !important; }
+</style>
+
+<script>
+(function () {
+
+  const CITY_DEPTS = {
+    "İstanbul":  ["Backend","Frontend","Fullstack","Oyun Geliştirme","DevOps","UI/UX","Mobil","Veri Bilimi"],
+    "Ankara":    ["Backend","Frontend","Fullstack","DevOps","Veri Bilimi"],
+    "İzmir":     ["Backend","Frontend","Fullstack","Mobil","UI/UX"],
+    "Bursa":     ["Backend","Frontend","Fullstack","Oyun Geliştirme"],
+    "Antalya":   ["Backend","Frontend","Mobil","UI/UX"],
+    "Adana":     ["Backend","Frontend","Fullstack"],
+    "Konya":     ["Backend","Frontend","Fullstack","DevOps"],
+    "Gaziantep": ["Backend","Frontend","Fullstack"],
+    "Uzaktan":   ["Backend","Frontend","Fullstack","Oyun Geliştirme","DevOps","UI/UX","Mobil","Veri Bilimi"],
+    "Diğer":     ["Backend","Frontend","Fullstack","Oyun Geliştirme","DevOps","UI/UX","Mobil","Veri Bilimi"],
+  };
+
+  const DEPT_SKILLS = {
+    "Backend":         ["Python","Go","Rust","Java","Node.js","FastAPI","Flask","Django","PostgreSQL","SQLite","Redis","Docker"],
+    "Frontend":        ["JavaScript","TypeScript","React","Vue","HTMX","HTML","CSS","Tailwind","Next.js","Svelte"],
+    "Fullstack":       ["JavaScript","TypeScript","Python","React","Node.js","HTMX","Docker","PostgreSQL","GraphQL"],
+    "Oyun Geliştirme": ["Godot","GDScript","Unity","C#","C++","Blender","Unreal","Lua"],
+    "DevOps":          ["Docker","Kubernetes","Terraform","AWS","GCP","Azure","Linux","CI/CD","Ansible"],
+    "UI/UX":           ["Figma","Adobe XD","Sketch","CSS","Tailwind","User Research","Prototyping"],
+    "Mobil":           ["Flutter","Dart","Swift","Kotlin","React Native","Android","iOS"],
+    "Veri Bilimi":     ["Python","R","Pandas","NumPy","TensorFlow","PyTorch","SQL","Tableau","Jupyter"],
+  };
+
+  const state = { city: '', department: '', skill: '', search: '' };
+
+  function fetchResults() {
+    const params = new URLSearchParams();
+    if (state.city)       params.set('city',       state.city);
+    if (state.department) params.set('department', state.department);
+    if (state.skill)      params.set('skill',      state.skill);
+    if (state.search)     params.set('search',     state.search);
+    htmx.ajax('GET', '/api/cv?' + params.toString(), { target: '#search-results', swap: 'innerHTML' });
+  }
+
+  function makeButtons(containerId, items, group, onSelect) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    items.forEach(val => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn outline secondary';
+      btn.dataset.group = group;
+      btn.dataset.value = val;
+      btn.textContent = val;
+      btn.style.cssText = 'padding:.3rem .9rem; font-size:.85rem; border-radius:999px;';
+      btn.addEventListener('click', () => onSelect(val, btn));
+      container.appendChild(btn);
+    });
+  }
+
+  function clearGroup(containerId) {
+    document.querySelectorAll('#' + containerId + ' .filter-btn').forEach(b => {
+      b.classList.remove('selected');
+      b.classList.add('outline','secondary');
+    });
+  }
+
+  function setLabel(id, text) {
+    const el = document.getElementById(id);
+    if (text) { el.textContent = '✓ ' + text; el.style.display = 'inline'; }
+    else       { el.textContent = '';           el.style.display = 'none';   }
+  }
+
+  function unlock(sectionId, stepNumId) {
+    document.getElementById(sectionId).classList.replace('locked','unlocked');
+    const n = document.getElementById(stepNumId);
+    if (n) n.classList.add('active-step');
+  }
+  function lock(sectionId, stepNumId) {
+    document.getElementById(sectionId).classList.replace('unlocked','locked');
+    const n = document.getElementById(stepNumId);
+    if (n) n.classList.remove('active-step');
+  }
+
+  function renderPills() {
+    const box = document.getElementById('active-filters');
+    box.innerHTML = '';
+    const cfg = [
+      { key: 'city', icon: '🏙️', clearFn: () => clearFrom('city') },
+      { key: 'department', icon: '🗂️', clearFn: () => clearFrom('department') },
+      { key: 'skill', icon: '🛠️', clearFn: () => clearFrom('skill') },
+    ];
+    let hasAny = false;
+    cfg.forEach(({ key, icon, clearFn }) => {
+      if (!state[key]) return;
+      hasAny = true;
+      const pill = document.createElement('span');
+      pill.style.cssText = 'display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .8rem;border-radius:999px;background:var(--pico-primary-background);color:var(--pico-primary-inverse);font-size:.82rem;cursor:pointer;';
+      pill.innerHTML = icon + ' ' + state[key] + ' <strong>✕</strong>';
+      pill.addEventListener('click', clearFn);
+      box.appendChild(pill);
+    });
+    if (hasAny) {
+      const clr = document.createElement('button');
+      clr.className = 'outline secondary';
+      clr.style.cssText = 'padding:.2rem .8rem;font-size:.8rem;border-radius:999px;';
+      clr.textContent = '✕ Tümünü Temizle';
+      clr.addEventListener('click', () => clearFrom('city'));
+      box.appendChild(clr);
+    }
+  }
+
+  /* ── Seçim fonksiyonları ── */
+  function onCitySelect(val, btn) {
+    state.city = val; state.department = ''; state.skill = '';
+    clearGroup('city-buttons');
+    btn.classList.add('selected'); btn.classList.remove('outline','secondary');
+    setLabel('city-selected-label', val);
+    setLabel('dept-selected-label', '');
+    setLabel('skill-selected-label', '');
+
+    const depts = CITY_DEPTS[val] || Object.keys(DEPT_SKILLS);
+    makeButtons('dept-buttons', depts, 'department', onDeptSelect);
+    unlock('dept-section', 'dept-step-num');
+
+    lock('skill-section', 'skill-step-num');
+    document.getElementById('skill-buttons').innerHTML = '<span class="hint-text">Önce departman seçin</span>';
+
+    renderPills(); fetchResults();
+  }
+
+  function onDeptSelect(val, btn) {
+    state.department = val; state.skill = '';
+    clearGroup('dept-buttons');
+    btn.classList.add('selected'); btn.classList.remove('outline','secondary');
+    setLabel('dept-selected-label', val);
+    setLabel('skill-selected-label', '');
+
+    const skills = DEPT_SKILLS[val] || [];
+    if (skills.length) {
+      makeButtons('skill-buttons', skills, 'skill', onSkillSelect);
+      unlock('skill-section', 'skill-step-num');
+    } else {
+      document.getElementById('skill-buttons').innerHTML = '<span class="hint-text">Yetkinlik bulunamadı</span>';
+    }
+
+    renderPills(); fetchResults();
+  }
+
+  function onSkillSelect(val, btn) {
+    state.skill = val;
+    clearGroup('skill-buttons');
+    btn.classList.add('selected'); btn.classList.remove('outline','secondary');
+    setLabel('skill-selected-label', val);
+    renderPills(); fetchResults();
+  }
+
+  function clearFrom(key) {
+    if (key === 'city') {
+      state.city = ''; clearGroup('city-buttons'); setLabel('city-selected-label','');
+      lock('dept-section','dept-step-num');
+      document.getElementById('dept-buttons').innerHTML = '<span class="hint-text">Önce şehir seçin</span>';
+      key = 'department';
+    }
+    if (key === 'department') {
+      state.department = ''; clearGroup('dept-buttons'); setLabel('dept-selected-label','');
+      lock('skill-section','skill-step-num');
+      document.getElementById('skill-buttons').innerHTML = '<span class="hint-text">Önce departman seçin</span>';
+      key = 'skill';
+    }
+    if (key === 'skill') {
+      state.skill = ''; clearGroup('skill-buttons'); setLabel('skill-selected-label','');
+    }
+    renderPills(); fetchResults();
+  }
+
+  /* ── Şehir butonlarına event bağla ── */
+  document.querySelectorAll('#city-buttons .filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => onCitySelect(btn.dataset.value, btn));
+  });
+
+  /* ── Metin arama ── */
+  let searchTimer;
+  document.getElementById('search-input').addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.search = this.value.trim();
+      renderPills(); fetchResults();
+    }, 400);
+  });
+
+})();
+</script>
 {% endblock %}
