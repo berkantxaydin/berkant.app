@@ -13,32 +13,49 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 # --- CV CATALOG ---
 @api_bp.route('/cv', methods=['GET'])
 def get_cvs():
-    search = request.args.get('search', '')
+    search     = request.args.get('search', '').strip()
+    city       = request.args.get('city', '').strip()
+    department = request.args.get('department', '').strip()
+    skill      = request.args.get('skill', '').strip()
     try:
-        results = CVRepository.get_all_cvs(search_term=search)
-        
-        # If the request comes from HTMX, return an HTML partial instead of JSON
+        results = CVRepository.get_all_cvs(
+            search_term=search or None,
+            city=city or None,
+            department=department or None,
+            skill=skill or None,
+        )
+
+        # HTMX isteği ise HTML partial döndür
         if 'HX-Request' in request.headers:
+            if not results:
+                return f'<p style="color:var(--pico-muted-color);">{t("No CVs found matching that query.")}</p>'
             html = ""
             for cv in results:
-                skills = ", ".join(cv['cv_data'].get('skills', []))
+                cv_data  = cv['cv_data']
+                skills   = ", ".join(cv_data.get('skills', []))
+                city_tag = cv_data.get('city', '')
+                dept_tag = cv_data.get('department', '')
+                badges   = ""
+                if city_tag:
+                    badges += f'<span style="padding:.15rem .6rem;border-radius:999px;background:var(--pico-secondary-background);font-size:.78rem;">🏙️ {city_tag}</span> '
+                if dept_tag:
+                    badges += f'<span style="padding:.15rem .6rem;border-radius:999px;background:var(--pico-secondary-background);font-size:.78rem;">🗂️ {dept_tag}</span>'
                 html += f"""
-                <article class="cv-card glass-panel" onclick="window.location.href='/cv/{cv['id']}'" style="cursor: pointer; transition: transform 0.2s ease;">
+                <article class="cv-card glass-panel" onclick="window.location.href='/cv/{cv['id']}'" style="cursor:pointer;transition:transform .2s ease;">
                     <header>
                         <hgroup>
                             <h3 class="accent-text">{cv['title']}</h3>
                             <p>{t('by')} <strong>{cv['username']}</strong></p>
                         </hgroup>
+                        <div style="margin-top:.3rem;">{badges}</div>
                     </header>
                     <p>{cv['summary']}</p>
                     <footer>
                         <small>{t('Skills:')} <em>{skills}</em></small>
                     </footer>
                 </article>"""
-            if not results:
-                html = f"<p>{t('No CVs found matching that query.')}</p>"
             return html
-            
+
         return jsonify({"status": "success", "count": len(results), "data": results}), 200
     except Exception as e:
         current_app.logger.error(f"Error querying CVs: {e}")
@@ -49,17 +66,21 @@ def get_cvs():
 def create_ecom_cv():
     from flask import session
     user_id = session['user_id']  # Always use the authenticated session user
-    title = request.form.get('title')
-    summary = request.form.get('summary')
-    skills = [s.strip() for s in request.form.get('skills', '').split(',') if s.strip()]
-    exp_role = request.form.get('exp_role')
-    
+    title      = request.form.get('title')
+    summary    = request.form.get('summary')
+    skills     = [s.strip() for s in request.form.get('skills', '').split(',') if s.strip()]
+    exp_role   = request.form.get('exp_role')
+    city       = request.form.get('city', '').strip()
+    department = request.form.get('department', '').strip()
+
     if not title or not summary:
         return jsonify({"error": "Missing required e-commerce fields"}), 400
-        
+
     cv_data = {
         "skills": skills,
-        "experience": [{"role": exp_role}]
+        "experience": [{"role": exp_role}],
+        "city": city,
+        "department": department,
     }
     
     custom_htmx = None
@@ -1137,4 +1158,5 @@ def delete_jam(jam_id):
         conn.close()
 
     return ""  # HTMX removes the row
+
 
