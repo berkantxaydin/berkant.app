@@ -5,7 +5,7 @@
   <hgroup>
     <h1 class="hero-gradient brand-title">proglem</h1>
     <h2 class="hero-subtitle">
-      {{ t("The unified ecosystem for robust developer CVs and boundless Godot WebGL experiences.") }}
+      {{ t("Empowering developers to build and showcase Godot games and professional CVs on a high-efficiency platform.") }}
     </h2>
   </hgroup>
   <div class="hero-actions">
@@ -14,13 +14,38 @@
   </div>
 </section>
 
-<section class="grid" style="margin-top: 5vh; gap: 2.5rem;">
+<!-- THE ECOSYSTEM GUIDE -->
+<section style="margin-bottom: 4rem;">
+  <article class="glass-panel" style="padding: 2rem; border-left: 4px solid var(--pico-primary);">
+    <hgroup>
+      <h2 style="margin-bottom: 0.5rem;">{{ t("The Ecosystem") }}</h2>
+      <p style="color: #94a3b8;">{{ t("A high-performance hub for developers who build and play without limits.") }}</p>
+    </hgroup>
+    
+    <div class="grid" style="margin-top: 2rem;">
+      <div>
+        <h4 class="accent-text">{{ t("1. Join & Sync") }}</h4>
+        <p style="font-size: 0.9rem;">{{ t("Register your account to unlock personalized metrics and secure game tracking.") }}</p>
+      </div>
+      <div>
+        <h4 class="accent-text">{{ t("2. Create & Submit") }}</h4>
+        <p style="font-size: 0.9rem;">{{ t("Build interactive resumes using HTMX or upload your Godot WebGL binaries directly to our S3 cloud.") }}</p>
+      </div>
+      <div>
+        <h4 class="accent-text">{{ t("3. Play & Grow") }}</h4>
+        <p style="font-size: 0.9rem;">{{ t("Engage with the community through live chats, game jams, and a live-filtered talent pool.") }}</p>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="grid" style="gap: 2.5rem;">
   <!-- Dashboard Portal -->
   <article class="glass-panel text-center" style="padding: 2.5rem 1.5rem;">
     <div style="font-size: 3.5rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.4));">📊</div>
     <hgroup>
       <h3 class="accent-text" style="margin-bottom: 0.5rem;">{{ t("Live Dashboard") }}</h3>
-      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Real-time metrics of the platform infrastructure.") }}</p>
+      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Monitor real-time site health and infrastructure efficiency live from the source.") }}</p>
     </hgroup>
     <a href="/dashboard" role="button" class="outline full-width" style="margin-top: 1rem;">{{ t("Open Metrics") }}</a>
   </article>
@@ -30,7 +55,7 @@
     <div style="font-size: 3.5rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.4));">💼</div>
     <hgroup>
       <h3 class="accent-text" style="margin-bottom: 0.5rem;">{{ t("Talent Pool") }}</h3>
-      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Interactive developer resumes utilizing raw HTMX speed.") }}
+      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Interactive developer resumes utilizing raw HTMX speed. Stand out with native performance.") }}
       </p>
     </hgroup>
     <div class="grid" style="margin-top: 1rem;">
@@ -44,13 +69,25 @@
     <div style="font-size: 3.5rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.4));">🎮</div>
     <hgroup>
       <h3 class="accent-text" style="margin-bottom: 0.5rem;">{{ t("Game Hub") }}</h3>
-      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Explore massive Godot WebGL apps distributed safely.") }}</p>
+      <p style="font-size: 0.95rem; color: #94a3b8;">{{ t("Explore massive Godot WebGL apps distributed safely. Participated in community Jams.") }}</p>
     </hgroup>
     <div class="grid" style="margin-top: 1rem;">
       <a href="/games" role="button" class="outline" style="padding: 0.6rem;">{{ t("Play") }}</a>
       <a href="/upload" role="button" style="padding: 0.6rem;">{{ t("Upload") }}</a>
     </div>
   </article>
+</section>
+
+<!-- HARDWARE PHILOSOPHY -->
+<section style="margin-top: 4rem; opacity: 0.8;">
+  <div style="text-align: center; max-width: 800px; margin: 0 auto;">
+    <h4 style="font-family: var(--font-mono); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8;">
+      {{ t("Optimized for the Edge") }}
+    </h4>
+    <p style="font-size: 0.85rem; color: #64748b;">
+      {{ t("Proglem is built on a strict 8GB RAM budget and 22Mbps bandwidth. By using raw HTMX and SQLite WAL mode, we achieve massive scale on minimal resources.") }}
+    </p>
+  </div>
 </section>
 
 <style>

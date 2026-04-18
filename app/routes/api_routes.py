@@ -1,45 +1,55 @@
 import os
+import json
 import boto3
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, session, redirect
+
 from app.repositories.cv_repository import CVRepository
 from app.repositories.game_repository import GameRepository
+from app.repositories.chat_repository import ChatRepository
+from app.repositories.jam_repository import JamRepository
+from app.repositories.analytics_repository import AnalyticsRepository
 from app.routes.auth_routes import login_required, admin_required
+from app.database import get_db_connection
 from app.i18n import t
+from markupsafe import escape
 from datetime import datetime, timedelta
 import logging
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# Instantiate repositories for DAL access
+cv_repo = CVRepository()
+game_repo = GameRepository()
+chat_repo = ChatRepository()
+jam_repo = JamRepository()
+analytics_repo = AnalyticsRepository()
+
 
 # --- CV CATALOG ---
 @api_bp.route('/cv', methods=['GET'])
 def get_cvs():
     search = request.args.get('search', '')
     try:
-        results = CVRepository.get_all_cvs(search_term=search)
-        
-        # If the request comes from HTMX, return an HTML partial instead of JSON
+        results = cv_repo.get_all_cvs(search)
+        # If HTMX, return grid partial
         if 'HX-Request' in request.headers:
             html = ""
             for cv in results:
-                skills = ", ".join(cv['cv_data'].get('skills', []))
+                # Truncate summary for card view
+                short_summary = cv.summary[:85] + '...' if len(cv.summary) > 85 else cv.summary
                 html += f"""
-                <article class="cv-card glass-panel" onclick="window.location.href='/cv/{cv['id']}'" style="cursor: pointer; transition: transform 0.2s ease;">
-                    <header>
-                        <hgroup>
-                            <h3 class="accent-text">{cv['title']}</h3>
-                            <p>{t('by')} <strong>{cv['username']}</strong></p>
-                        </hgroup>
+                <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" style="cursor: pointer; display: flex; flex-direction: column;">
+                    <header style="margin-bottom: 0.5rem; border: 0; padding: 0; background: transparent;">
+                        <h4 class="accent-text" style="margin-bottom:0;">{cv.title}</h4>
+                        <small style="opacity: 0.6;">@{cv.username}</small>
                     </header>
-                    <p>{cv['summary']}</p>
-                    <footer>
-                        <small>{t('Skills:')} <em>{skills}</em></small>
+                    <p style="font-size:0.9rem; flex-grow: 1;">{short_summary}</p>
+                    <footer style="margin-top: 1rem; border: 0; padding: 0; background: transparent; text-align: right;">
+                        <button class="outline" style="padding: 0.2rem 0.8rem; font-size: 0.75rem;">{t('View Profile')}</button>
                     </footer>
                 </article>"""
-            if not results:
-                html = f"<p>{t('No CVs found matching that query.')}</p>"
             return html
-            
-        return jsonify({"status": "success", "count": len(results), "data": results}), 200
+        return jsonify({"status": "success", "count": len(results), "data": [vars(cv) for cv in results]}), 200
     except Exception as e:
         current_app.logger.error(f"Error querying CVs: {e}")
         return jsonify({"error": "Internal server error"}), 500
@@ -68,28 +78,17 @@ def create_ecom_cv():
         custom_htmx = file.read().decode('utf-8', errors='ignore')
         
     try:
-        from flask import redirect
-        cv_id = CVRepository.add_cv(user_id, title, summary, cv_data, custom_htmx=custom_htmx)
+        cv_id = cv_repo.add_cv(user_id, title, summary, cv_data, custom_htmx=custom_htmx)
         return redirect(f'/cv/{cv_id}')
+
+
     except Exception as e:
         current_app.logger.error(f"Database error while saving CV: {e}")
         return jsonify({"error": "Failed to create CV"}), 500
 
-@api_bp.route('/cv/<int:cv_id>/htmx', methods=['GET'])
-def get_custom_htmx(cv_id):
-    from app.database import get_db_connection
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT custom_htmx FROM CV_Catalog WHERE id = ?", (cv_id,))
-        row = cursor.fetchone()
-        if row and row['custom_htmx']:
-            return row['custom_htmx']
-        return "<p><em>No custom HTTP/HTMX interactive resume uploaded by this developer.</em></p>"
-    finally:
-        conn.close()
 
 # --- GAME JAM / UPLOADS ---
+@api_bp.route('/jam/get-upload-url', methods=['GET'])
 @api_bp.route('/jam/get_upload_url', methods=['GET'])
 def get_upload_url():
     """Generates a secure S3/R2 upload URL with explicitly locked MIME assignments to bypass local bandwidth limits."""
@@ -154,7 +153,7 @@ def submit_game():
     data = request.json
     try:
         from app.services.game_validator import submit_validation_job
-        game_id = GameRepository.add_game(session['user_id'], data['title'], data.get('description', ''), data['game_url'], data.get('jam_id'))
+        game_id = game_repo.add_game(session['user_id'], data['title'], data.get('description', ''), data['game_url'], data.get('jam_id'))
         
         # Fire and forget our Mutex UUID validation background task
         job_uid = submit_validation_job(game_id, data['game_url'])
@@ -164,13 +163,11 @@ def submit_game():
         current_app.logger.error(f"Game pipeline failure: {e}")
         return jsonify({"error": "Failed to track game"}), 500
 
-@api_bp.route('/games/<int:game_id>/view', methods=['POST'])
-def increment_game_view(game_id):
-    """Increments the view count for a game via HTMX load trigger."""
-    success = GameRepository.increment_view(game_id)
-    if success:
-        return jsonify({"status": "success"}), 200
-    return jsonify({"status": "error"}), 500
+@api_bp.route('/games/view/<int:game_id>', methods=['POST'])
+def increment_view(game_id):
+    """Silent view incrementer via htmx load trigger."""
+    game_repo.increment_view(game_id)
+    return "", 204
 
 
 # --- ACCOUNT CRUD (HTMX NATIVE PORTALS) ---
@@ -180,23 +177,23 @@ from flask import session
 @api_bp.route('/cv/<int:cv_id>', methods=['DELETE'])
 @login_required
 def delete_cv_htmx(cv_id):
-    success = CVRepository.delete_cv(cv_id, session['user_id'], is_admin=session.get('is_admin'))
+    success = cv_repo.delete_cv(cv_id, session['user_id'], is_admin=session.get('is_admin'))
     if success: return "" 
     return "Error deleting CV. Unauthorized.", 403
 
 @api_bp.route('/cv/<int:cv_id>/edit', methods=['GET'])
 @login_required
 def get_cv_edit_form(cv_id):
-    cv = CVRepository.get_cv_by_id(cv_id)
-    if not cv or (cv['user_id'] != session['user_id'] and not session.get('is_admin')):
+    cv = cv_repo.get_cv_by_id(cv_id)
+    if not cv or (cv.user_id != session['user_id'] and not session.get('is_admin')):
         return "Unauthorized", 403
     return f"""
     <form hx-put="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML">
         <label>{t('Title')}
-            <input type="text" name="title" value="{cv['title']}" required>
+            <input type="text" name="title" value="{cv.title}" required>
         </label>
         <label>{t('Summary')}
-            <textarea name="summary" required>{cv['summary']}</textarea>
+            <textarea name="summary" required>{cv.summary}</textarea>
         </label>
         <div class="grid">
             <button type="submit">{t('Save Changes')}</button>
@@ -205,12 +202,13 @@ def get_cv_edit_form(cv_id):
     </form>
     """
 
+
 @api_bp.route('/cv/<int:cv_id>', methods=['PUT'])
 @login_required
 def update_cv_htmx(cv_id):
     title = request.form.get('title')
     summary = request.form.get('summary')
-    success = CVRepository.update_cv(cv_id, session['user_id'], title, summary, is_admin=session.get('is_admin'))
+    success = cv_repo.update_cv(cv_id, session['user_id'], title, summary, is_admin=session.get('is_admin'))
     if success:
         return f"""
         <article>
@@ -227,54 +225,45 @@ def update_cv_htmx(cv_id):
 @api_bp.route('/jam/<int:game_id>', methods=['DELETE'])
 @login_required
 def delete_game_htmx(game_id):
-    success = GameRepository.delete_game(game_id, session['user_id'], is_admin=session.get('is_admin'))
+    success = game_repo.delete_game(game_id, session['user_id'], is_admin=session.get('is_admin'))
     if success: return ""
     return "Unauthorized", 403
 
 # --- SOCIAL FEATURES: LIKES & COMMENTS ---
 
-@api_bp.route('/games/<int:game_id>/like', methods=['POST'])
+@api_bp.route('/games/like/<int:game_id>', methods=['POST'])
 @login_required
-def toggle_game_like(game_id):
-    """Toggles a like for the current user and returns the new count as an HTMX snippet."""
-    from app.database import get_db_connection
+def like_game(game_id):
+    """Toggles a like on a game."""
     uid = session['user_id']
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Check if already liked
         cursor.execute("SELECT id FROM Game_Likes WHERE user_id = ? AND game_id = ?", (uid, game_id))
         existing = cursor.fetchone()
         
         if existing:
             cursor.execute("DELETE FROM Game_Likes WHERE id = ?", (existing['id'],))
+            conn.commit()
+            icon = "🤍"
         else:
-            try:
-                cursor.execute("INSERT INTO Game_Likes (user_id, game_id) VALUES (?, ?)", (uid, game_id))
-            except:
-                # Unique constraint fail - shouldn't happen with the select check but safe and RAM friendly
-                pass
-        conn.commit()
-        
-        # Get new count
+            cursor.execute("INSERT INTO Game_Likes (user_id, game_id) VALUES (?, ?)", (uid, game_id))
+            conn.commit()
+            icon = "❤️"
+            
         cursor.execute("SELECT COUNT(*) as cnt FROM Game_Likes WHERE game_id = ?", (game_id,))
         count = cursor.fetchone()['cnt']
-        
-        # Determine if current user likes it now
-        cursor.execute("SELECT 1 FROM Game_Likes WHERE user_id = ? AND game_id = ?", (uid, game_id))
-        is_liked = cursor.fetchone() is not None
-        
-        # Return mini HTMX snippet for the button
-        btn_class = "secondary" if is_liked else "outline"
-        return f'<button hx-post="/api/games/{game_id}/like" hx-swap="outerHTML" class="{btn_class}">❤️ {count}</button>'
+        is_now_liked = (existing is None)
+        btn_class = "secondary" if is_now_liked else "outline"
+        return f'<button hx-post="/api/games/like/{game_id}" hx-swap="outerHTML" class="{btn_class}">❤️ {count}</button>'
     finally:
         conn.close()
+
 
 @api_bp.route('/games/<int:game_id>/comments', methods=['POST'])
 @login_required
 def post_game_comment(game_id):
     """Saves a comment and returns the new comment list snippet for HTMX."""
-    from app.database import get_db_connection
     from flask import render_template_string
     uid = session['user_id']
     content = request.form.get('content', '').strip()
@@ -327,7 +316,6 @@ def post_game_comment(game_id):
 @login_required
 def delete_game_comment(comment_id):
     """Deletes a comment if the user is an admin or the author."""
-    from app.database import get_db_connection
     uid = session['user_id']
     is_admin = session.get('is_admin', False)
     
@@ -350,8 +338,6 @@ def delete_game_comment(comment_id):
 
 def _render_messages(room_id):
     """Shared helper: renders message list HTML for a given room_id."""
-    from app.database import get_db_connection
-    from markupsafe import escape
     conn = get_db_connection()
     try:
         c = conn.cursor()
@@ -376,9 +362,17 @@ def _render_messages(room_id):
     is_admin = session.get('is_admin', False)
 
     for msg in messages:
-        can_delete = is_admin or msg['user_id'] == current_user_id
+        is_self = (msg['user_id'] == current_user_id)
+        can_delete = is_admin or is_self
+        
+        # Define classes for orientation and styling
+        align_class = "self" if is_self else ""
+        bubble_class = "primary" if is_self else ""
+        
         name_color = "var(--pico-primary)" if msg['is_admin'] else "#e2e8f0"
         badge = "&#x1F468;&#x200D;&#x1F4BB; " if msg['is_admin'] else ""
+        
+        # Format time
         time_str = msg['created_at'].split(' ')[1][:5] if ' ' in msg['created_at'] else msg['created_at'][:5]
 
         delete_btn = ""
@@ -389,19 +383,16 @@ def _render_messages(room_id):
                 title="{t('Delete')}">&#x2A2F;</a>"""
 
         html += f"""
-        <article style="padding: 0.4rem 0.8rem; margin-bottom: 0;
-                        background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);
-                        border-radius: 8px; transition: background 0.15s;">
-            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
-                <div style="min-width: 0;">
-                    <a href="/u/{msg['username']}" style="color: {name_color}; font-weight: 600; text-decoration: none;"
-                       onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-                        {badge}@{msg['username']}
-                    </a>
-                    <span style="margin-left: 0.5rem; word-break: break-word; color: #cbd5e1;">{escape(msg['content'])}</span>
+        <article class="chat-message {align_class}" style="margin-bottom: 0.8rem; animation: slideIn 0.3s ease-out forwards;">
+            <div class="chat-bubble {bubble_class}" style="padding: 0.8rem 1rem; border-radius: 1rem; max-width: 85%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <header style="margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: transparent; border: 0; padding: 0;">
+                    <strong style="font-size: 0.85rem; color: {name_color};">{badge}{msg['username']}</strong>
+                </header>
+                <div class="chat-content" style="font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; word-wrap: break-word;">
+                    {msg['content']}
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
-                    <small style="color: #475569; font-size: 0.7rem;">
+                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top: 0.4rem; gap: 0.5rem;">
+                    <small style="color: #94a3b8; font-size: 0.7rem;">
                         <time datetime="{msg['created_at']}Z" class="chat-time">{time_str}</time>
                     </small>
                     {delete_btn}
@@ -418,18 +409,9 @@ def _render_messages(room_id):
 @api_bp.route('/chat/rooms', methods=['GET'])
 def get_chat_rooms():
     """Returns all enabled rooms as an HTMX tab snippet."""
-    from app.database import get_db_connection
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        if session.get('is_admin'):
-            cursor.execute("SELECT * FROM Chat_Rooms ORDER BY id ASC")
-        else:
-            cursor.execute("SELECT * FROM Chat_Rooms WHERE is_enabled = 1 ORDER BY id ASC")
-        rooms = [dict(r) for r in cursor.fetchall()]
-    finally:
-        conn.close()
+    rooms = chat_repo.get_rooms(admin_view=session.get('is_admin', False))
     return jsonify(rooms)
+
 
 
 @api_bp.route('/chat/messages', methods=['GET'])
@@ -446,8 +428,6 @@ def get_chat_messages():
 @login_required
 def post_chat_message():
     """Posts a message to a specific room and returns the updated list."""
-    from app.database import get_db_connection
-    from markupsafe import escape
     uid = session['user_id']
     content = request.form.get('content', '').strip()
     try:
@@ -459,20 +439,14 @@ def post_chat_message():
         return f"{t('Message cannot be empty')}", 400
 
     # Verify room exists and is enabled
-    conn = get_db_connection()
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT is_enabled FROM Chat_Rooms WHERE id = ?", (room_id,))
-        row = cursor.fetchone()
-        if not row or (not row['is_enabled'] and not session.get('is_admin')):
+        if not chat_repo.get_room_by_id(room_id).get('is_enabled') and not session.get('is_admin'):
             return f"{t('This room is currently disabled.')}", 403
-        cursor.execute(
-            "INSERT INTO Chat_Messages (user_id, room_id, content) VALUES (?, ?, ?)",
-            (uid, room_id, str(escape(content)))
-        )
-        conn.commit()
-    finally:
-        conn.close()
+        chat_repo.add_message(uid, room_id, str(escape(content)))
+    except Exception as e:
+        current_app.logger.error(f"Chat error: {e}")
+        return f"{t('Failed to send message')}", 500
+
 
     return _render_messages(room_id)
 
@@ -481,41 +455,19 @@ def post_chat_message():
 @login_required
 def delete_chat_message(msg_id):
     """Deletes a chat message if the user is the author or an admin."""
-    from app.database import get_db_connection
     uid = session['user_id']
     is_admin = session.get('is_admin', False)
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        if not is_admin:
-            cursor.execute("SELECT user_id FROM Chat_Messages WHERE id = ?", (msg_id,))
-            msg = cursor.fetchone()
-            if not msg or msg['user_id'] != uid:
-                return "Unauthorized", 403
-        cursor.execute("DELETE FROM Chat_Messages WHERE id = ?", (msg_id,))
-        conn.commit()
-        return ""  # HTMX removes the element
-    finally:
-        conn.close()
+    chat_repo.delete_message(msg_id, user_id=uid, is_admin=is_admin)
+    return ""  # HTMX removes the element
+
 
 
 # --- CHAT ROOM ADMIN CRUD ---
 
 def _render_room_admin_table():
     """Renders the room management table for the admin panel."""
-    from app.database import get_db_connection
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT r.*, j.title as jam_title
-            FROM Chat_Rooms r
-            LEFT JOIN Game_Jams j ON r.jam_id = j.id
-            ORDER BY r.id ASC
-        """)
-        rooms = [dict(r) for r in cursor.fetchall()]
-    finally:
-        conn.close()
+    rooms = chat_repo.get_rooms(admin_view=True)
+
 
     rows = ""
     for r in rooms:
@@ -564,32 +516,19 @@ def list_chat_rooms_admin():
 @admin_required
 def create_chat_room():
     """Creates a new standalone chat room."""
-    from app.database import get_db_connection
     name = request.form.get('name', '').strip()
     if not name:
         return f"<p style='color:var(--pico-del-color);'>{t('Room name is required.')}</p>", 400
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO Chat_Rooms (name, jam_id, is_enabled) VALUES (?, NULL, 1)", (name,))
-        conn.commit()
-    finally:
-        conn.close()
+    chat_repo.create_room(name)
     return _render_room_admin_table()
+
 
 
 @api_bp.route('/chat/rooms/<int:room_id>/toggle', methods=['PATCH'])
 @admin_required
 def toggle_chat_room(room_id):
     """Flips the is_enabled flag on a room."""
-    from app.database import get_db_connection
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE Chat_Rooms SET is_enabled = NOT is_enabled WHERE id = ?", (room_id,))
-        conn.commit()
-    finally:
-        conn.close()
+    chat_repo.toggle_room(room_id)
     return _render_room_admin_table()
 
 
@@ -597,15 +536,7 @@ def toggle_chat_room(room_id):
 @admin_required
 def delete_chat_room(room_id):
     """Deletes a room and all its messages."""
-    from app.database import get_db_connection
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM Chat_Messages WHERE room_id = ?", (room_id,))
-        cursor.execute("DELETE FROM Chat_Rooms WHERE id = ?", (room_id,))
-        conn.commit()
-    finally:
-        conn.close()
+    chat_repo.delete_room(room_id)
     return _render_room_admin_table()
 
 @api_bp.route('/admin/translate_missing', methods=['POST'])
@@ -800,7 +731,6 @@ def get_system_resources():
 
 @api_bp.route('/metrics/analytics', methods=['GET'])
 def get_core_analytics():
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -865,7 +795,6 @@ def get_core_analytics():
 @api_bp.route('/metrics/analytics', methods=['DELETE'])
 @admin_required
 def clear_analytics():
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         cursor = conn.cursor()

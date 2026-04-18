@@ -1,11 +1,16 @@
+from flask import Blueprint, render_template, abort, current_app, send_from_directory, make_response, session, request, redirect
 import os
-import json
-from flask import Blueprint, render_template, abort, current_app, send_from_directory, make_response, session, request
-from app.database import get_db_connection
 from app.repositories.game_repository import GameRepository
+from app.repositories.cv_repository import CVRepository
+from app.database import get_db_connection
 from app.i18n import t
 
 main_bp = Blueprint('main', __name__)
+
+# Instantiate repositories for use in routes
+game_repo = GameRepository()
+cv_repo = CVRepository()
+
 
 @main_bp.route('/')
 def landing_page():
@@ -22,7 +27,6 @@ def health_check():
     except Exception as e:
         return f"{t('Database Error')}: {str(e)}", 503
 
-from flask import redirect
 @main_bp.route('/set-lang/<lang>')
 def set_lang(lang):
     if lang in ['en', 'tr']:
@@ -35,7 +39,9 @@ def dashboard():
 
 @main_bp.route('/cv')
 def cv_pool():
-    return render_template('cv_pool.html')
+    search_term = request.args.get('search')
+    cvs = cv_repo.get_all_cvs(search_term)
+    return render_template('cv_pool.html', cvs=cvs)
 
 @main_bp.route('/cv/create')
 def cv_create():
@@ -43,7 +49,6 @@ def cv_create():
 
 @main_bp.route('/chat')
 def chat_room():
-    from app.database import get_db_connection
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -58,23 +63,14 @@ def chat_room():
 
 @main_bp.route('/cv/<int:cv_id>')
 def view_cv(cv_id):
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT c.*, u.username FROM CV_Catalog c JOIN Users u ON c.user_id = u.id WHERE c.id = ?", (cv_id,))
-        row = cursor.fetchone()
-        if not row:
-            abort(404)
-        
-        cv = dict(row)
-        cv['cv_data'] = json.loads(cv['cv_data'])
-        
-        # User id from CV to fetch games
-        user_games = GameRepository.get_games_by_user(cv['user_id'])
-                
-        return render_template('cv_view.html', cv=cv, games=user_games)
-    finally:
-        conn.close()
+    cv = cv_repo.get_cv_by_id(cv_id)
+    if not cv:
+        abort(404)
+    
+    # User id from CV to fetch games
+    user_games = game_repo.get_games_by_user(cv.user_id)
+            
+    return render_template('cv_view.html', cv=cv, games=user_games)
 
 @main_bp.route('/upload')
 def upload_page():
@@ -116,17 +112,14 @@ def view_game(game_id):
     """Detailed game page with Godot embed and social features."""
     conn = get_db_connection()
     try:
-        cursor = conn.cursor()
-        # Fetch game details
-        cursor.execute("SELECT g.*, u.username FROM Godot_Games g JOIN Users u ON g.user_id = u.id WHERE g.id = ?", (game_id,))
-        row = cursor.fetchone()
-        if not row:
+        game = game_repo.get_game_by_id(game_id)
+        if not game:
             abort(404)
-        game = dict(row)
 
         # Check if current user liked it
         is_liked = False
         uid = session.get('user_id')
+        cursor = conn.cursor()
         if uid:
             cursor.execute("SELECT 1 FROM Game_Likes WHERE user_id = ? AND game_id = ?", (uid, game_id))
             is_liked = cursor.fetchone() is not None
@@ -156,7 +149,7 @@ def view_game(game_id):
 def games_list():
     """Shows the list of games (randomized for visitors)."""
     import random
-    games = GameRepository.get_all_games()
+    games = game_repo.get_all_games()
     random.shuffle(games)
     return render_template('game_list.html', games=games)
 
@@ -177,42 +170,29 @@ from app.routes.auth_routes import login_required, admin_required
 @main_bp.route('/account')
 @login_required
 def account_dashboard():
-    from app.repositories.cv_repository import CVRepository
-    
     uid = session['user_id']
-    my_cvs = CVRepository.get_cvs_by_user(uid)
-    my_games = GameRepository.get_games_by_user(uid)
+    my_cvs = cv_repo.get_cvs_by_user(uid)
+    my_games = game_repo.get_games_by_user(uid)
     return render_template('account.html', my_cvs=my_cvs, my_games=my_games)
 
 
 @main_bp.route('/u/<username>')
 def user_profile(username):
     """Public profile page for any registered user."""
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, username, is_admin, created_at FROM Users WHERE username = ?",
-            (username,)
-        )
-        user = cursor.fetchone()
-        if not user:
-            abort(404)
-        user = dict(user)
-    finally:
-        conn.close()
+    from app.repositories.user_repository import UserRepository
+    user_repo = UserRepository()
+    user = user_repo.get_by_username(username)
+    if not user:
+        abort(404)
 
-    from app.repositories.cv_repository import CVRepository
-    user_cvs = CVRepository.get_cvs_by_user(user['id'])
-    user_games = GameRepository.get_games_by_user(user['id'])
+    user_cvs = cv_repo.get_cvs_by_user(user.id)
+    user_games = game_repo.get_games_by_user(user.id)
     return render_template('profile.html', profile_user=user, user_cvs=user_cvs, user_games=user_games)
 
 
 @main_bp.route('/admin')
 @admin_required
 def admin_dashboard():
-    from app.repositories.cv_repository import CVRepository
-    
-    all_cvs = CVRepository.get_all_cvs()
-    all_games = GameRepository.get_all_games()
+    all_cvs = cv_repo.get_all_cvs()
+    all_games = game_repo.get_all_games()
     return render_template('admin.html', all_cvs=all_cvs, all_games=all_games)
