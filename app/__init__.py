@@ -127,7 +127,6 @@ def create_app():
                     analytics_repo.log_request(
                         method=request.method,
                         path=request.path,
-                        ip_address=request.remote_addr,
                         visitor_id=g.visitor_id,
                         is_htmx=is_htmx,
                         status_code=response.status_code,

@@ -38,14 +38,15 @@ def get_cvs():
                 # Truncate summary for card view
                 short_summary = cv.summary[:85] + '...' if len(cv.summary) > 85 else cv.summary
                 html += f"""
-                <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" style="cursor: pointer; display: flex; flex-direction: column;">
-                    <header style="margin-bottom: 0.5rem; border: 0; padding: 0; background: transparent;">
-                        <h4 class="accent-text" style="margin-bottom:0;">{cv.title}</h4>
-                        <small style="opacity: 0.6;">@{cv.username}</small>
+                <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" 
+                         style="cursor: pointer; display: flex; flex-direction: column; padding: 1.5rem 2rem; min-height: 220px; transition: transform 0.2s;">
+                    <header style="margin-bottom: 0.8rem; border: 0; padding: 0 0 0 1.2rem; background: transparent;">
+                        <h4 class="accent-text" style="margin-bottom:0; font-size: 1.25rem;">{cv.title}</h4>
+                        <small style="opacity: 0.6; display: block; margin-top: 0.2rem;">@{cv.username}</small>
                     </header>
-                    <p style="font-size:0.9rem; flex-grow: 1;">{short_summary}</p>
-                    <footer style="margin-top: 1rem; border: 0; padding: 0; background: transparent; text-align: right;">
-                        <button class="outline" style="padding: 0.2rem 0.8rem; font-size: 0.75rem;">{t('View Profile')}</button>
+                    <p style="font-size:0.95rem; flex-grow: 1; padding-left: 1.2rem; opacity: 0.9; line-height: 1.4;">{short_summary}</p>
+                    <footer style="margin-top: 1.2rem; border: 0; padding: 0; background: transparent; text-align: left;">
+                        <button class="outline" style="padding: 0.3rem 1rem; font-size: 0.8rem; border-radius: 4px;">{t('View Profile')}</button>
                     </footer>
                 </article>"""
             return html
@@ -53,6 +54,19 @@ def get_cvs():
     except Exception as e:
         current_app.logger.error(f"Error querying CVs: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+@api_bp.route('/cv/<int:cv_id>/htmx', methods=['GET'])
+def get_cv_htmx(cv_id):
+    """Returns the custom interactive HTMX content for a specific CV profile."""
+    try:
+        cv = cv_repo.get_cv_by_id(cv_id)
+        if not cv:
+            return f"<p>{t('CV not found')}</p>", 404
+        # Return the custom HTMX or a fallback if empty
+        return cv.custom_htmx or f"<p>{t('This developer has not added an interactive resume yet.')}</p>"
+    except Exception as e:
+        current_app.logger.error(f"Error fetching CV HTMX: {e}")
+        return f"<p>{t('Internal Server Error')}</p>", 500
 
 @api_bp.route('/cv/create', methods=['POST'])
 @login_required
