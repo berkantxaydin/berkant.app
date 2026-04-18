@@ -25,8 +25,26 @@
         <textarea name="summary" rows="3" required></textarea>
       </label>
 
-      <label>{{ t("Recent Experience Role") }}
-          <input type="text" name="exp_role" placeholder="{{ t('Lead Developer at TechCorp') }}" required>
+      <div class="grid">
+        <label>{{ t("Recent Experience Role") }}
+            <input type="text" name="exp_role" placeholder="{{ t('Lead Developer at TechCorp') }}" required>
+        </label>
+        <label>{{ t("Şehir") }}
+            <select name="city">
+              <option value="">{{ t("Şehir Seçin") }}</option>
+              {% for city in ["İstanbul","Ankara","İzmir","Bursa","Antalya","Adana","Konya","Gaziantep","Uzaktan","Diğer"] %}
+              <option value="{{ city }}">{{ city }}</option>
+              {% endfor %}
+            </select>
+        </label>
+      </div>
+      <label>{{ t("Departman") }}
+          <select name="department">
+            <option value="">{{ t("Departman Seçin") }}</option>
+            {% for dept in ["Backend","Frontend","Fullstack","Oyun Geliştirme","DevOps","UI/UX","Mobil","Veri Bilimi"] %}
+            <option value="{{ dept }}">{{ dept }}</option>
+            {% endfor %}
+          </select>
       </label>
 
       <!-- Advanced Feature: HTMX file injection -->
@@ -43,3 +61,4 @@
   </article>
 </section>
 {% endblock %}
+
