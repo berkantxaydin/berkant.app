@@ -65,7 +65,7 @@ def log_ai_event(event_type, status, message):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO AI_System_Logs (event_type, status, message) VALUES (?, ?, ?)",
+            "INSERT INTO AI_System_Logs (event_type, status, message, created_at) VALUES (?, ?, ?, datetime('now', 'localtime'))",
             (event_type, status, message)
         )
         conn.commit()

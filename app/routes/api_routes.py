@@ -876,21 +876,29 @@ def get_ai_logs():
         if not logs:
             return f"<p style='color: grey; text-align: center; margin-top: 1rem;'><em>{t('No AI lifecycle events recorded yet.')}</em></p>"
         
-        html = "<div style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; white-space: pre;'>"
-        # Display in chronological order (newest at bottom)
+        # Build clean HTML without 'white-space: pre' to avoid indentation gaps
+        html_lines = []
         for log in reversed(logs):
             status_color = "var(--pico-del-color)" if log['status'] == 'ERROR' else ("#eab308" if log['status'] == 'WARNING' else "var(--pico-primary)")
             # Strip date for brevity
             ts = log['created_at'].split(' ')[1][:8] if ' ' in log['created_at'] else log['created_at']
             
-            html += f"""
-            <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0.3rem 0;">
-                <span style="color: #64748b;">[{ts}]</span> 
-                <strong style="color: {status_color};">[{log['event_type']}]</strong> 
-                <span style="color: #cbd5e1;">{log['message']}</span>
-            </div>"""
-        html += "</div>"
-        return html
+            line = (
+                f'<div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0.3rem 0; line-height: 1.2;">'
+                f'<span style="color: #64748b; font-family: var(--font-mono); margin-right: 8px;">[{ts}]</span>'
+                f'<strong style="color: {status_color}; font-family: var(--font-mono); margin-right: 8px;">[{log["event_type"]}]</strong>'
+                f'<span style="color: #cbd5e1;">{escape(log["message"])}</span>'
+                f'</div>'
+            )
+            html_lines.append(line)
+        
+        return f"""
+        <div style="display: flex; flex-direction: column;">
+            <div style="font-size: 0.75rem; overflow-x: auto;">
+                {"".join(html_lines)}
+            </div>
+        </div>
+        """
     except Exception as e:
         return f"<p>{t('Error reading AI logs')}: {e}</p>"
     finally:
