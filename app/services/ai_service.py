@@ -35,6 +35,70 @@ AI_CONFIG = {
     "context": 4096
 }
 
+def validate_ai_sql(sql):
+    """Strict security validator for AI-generated SQL queries."""
+    sql_lower = sql.lower().strip()
+    
+    # 1. Start check
+    if not sql_lower.startswith('select'):
+        return False, "Only SELECT queries are permitted."
+    
+    # 2. Forbidden keywords (DML/DDL)
+    forbidden = ['insert', 'update', 'delete', 'drop', 'alter', 'truncate', 'grant', 'revoke', 'replace', 'exec', 'attach']
+    for word in forbidden:
+        if f" {word} " in f" {sql_lower} " or sql_lower.startswith(word):
+            return False, f"Forbidden SQL keyword detected: {word}"
+            
+    # 3. Forbidden columns/sensitive data
+    sensitive = ['password_hash', 'email', 'ip_address', 'visitor_id']
+    for col in sensitive:
+        if col in sql_lower:
+            return False, f"Access to sensitive column '{col}' is blocked."
+            
+    # 4. Table whitelist
+    whitelist = ['godot_games', 'game_jams', 'users', 'cv_catalog', 'game_likes', 'game_comments', 'chat_rooms', 'ai_system_logs']
+    # Extract potential table names (simplified check)
+    import re
+    tables_found = re.findall(r'from\s+([a-zA-Z0-9_]+)', sql_lower)
+    # Also check joins
+    tables_found += re.findall(r'join\s+([a-zA-Z0-9_]+)', sql_lower)
+    
+    for table in tables_found:
+        if table not in whitelist:
+            return False, f"Access to table '{table}' is blocked."
+            
+    return True, "OK"
+
+def execute_ai_read_query(sql):
+    """Executes a validated read-only query and returns the results as a string."""
+    is_valid, error = validate_ai_sql(sql)
+    if not is_valid:
+        return f"ERROR: {error}"
+        
+    # Ensure LIMIT is present to prevent resource exhaustion
+    if "limit" not in sql.lower():
+        sql = sql.rstrip(';') + " LIMIT 15"
+        
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute(sql)
+        rows = c.fetchall()
+        column_names = [description[0] for description in c.description]
+        
+        if not rows:
+            return "No results found."
+            
+        # Format as readable list of dicts
+        results = []
+        for row in rows:
+            results.append(dict(zip(column_names, row)))
+            
+        conn.close()
+        return json.dumps(results, indent=2)
+    except Exception as e:
+        return f"DATABASE ERROR: {str(e)}"
+
 
 ai_processes = {}
 ai_ready = False
@@ -370,7 +434,7 @@ def get_public_snapshot():
             FROM Godot_Games g 
             LEFT JOIN Game_Likes gl ON gl.game_id = g.id
             LEFT JOIN Game_Comments gc ON gc.game_id = g.id
-            WHERE g.validation_status = 'Validated' 
+            WHERE g.validation_status = 'Approved' 
             GROUP BY g.id
             ORDER BY likes DESC, comments DESC
             LIMIT 5
@@ -384,23 +448,12 @@ def get_public_snapshot():
             snapshot.append("### TOP GAMES BY POPULARITY\n- " + "\n- ".join(game_texts))
 
         # 3. Latest CV profiles
-        c.execute("""
-            SELECT cv.title, u.username,
-                   (SELECT GROUP_CONCAT(skill) FROM (
-                       SELECT json_each.value as skill
-                       FROM json_each(cv.cv_data, '$.skills')
-                       LIMIT 4
-                   )) as top_skills
-            FROM CV_Catalog cv
-            JOIN Users u ON cv.user_id = u.id
-            ORDER BY cv.id DESC LIMIT 5
-        """)
+        c.execute("SELECT title, user_id FROM CV_Catalog ORDER BY id DESC LIMIT 5")
         cvs = c.fetchall()
         if cvs:
             cv_texts = []
             for cv in cvs:
-                skills = cv['top_skills'] or 'N/A'
-                cv_texts.append(f"'{cv['title']}' by {cv['username']} (Skills: {skills})")
+                cv_texts.append(f"'{cv['title']}'")
             snapshot.append("### RECENT CVs\n- " + "\n- ".join(cv_texts))
 
         # 4. Public Channels
@@ -412,17 +465,29 @@ def get_public_snapshot():
         # 5. Platform totals
         c.execute("SELECT COUNT(*) FROM Users")
         total_users = (c.fetchone() or [0])[0]
-        c.execute("SELECT COUNT(*) FROM Godot_Games WHERE validation_status='Validated'")
+        c.execute("SELECT COUNT(*) FROM Godot_Games WHERE validation_status='Approved'")
         total_games = (c.fetchone() or [0])[0]
-        c.execute("SELECT COUNT(*) FROM CV_Catalog")
-        total_cvs = (c.fetchone() or [0])[0]
-        snapshot.append(f"### PLATFORM STATS\n- Registered Developers: {total_users}\n- Validated Games: {total_games}\n- Published CVs: {total_cvs}")
+        snapshot.append(f"### PLATFORM STATS\n- Registered Developers: {total_users}\n- Validated Games: {total_games}")
 
         conn.close()
     except Exception as e:
         print(f"AI Snapshot Error: {e}")
     return "\n\n".join(snapshot)
 
+def get_platform_schema():
+    """Provides a concise schema overview for AI query generation."""
+    return """
+--- CORE DATABASE SCHEMA ---
+- Table: Godot_Games (id, user_id, jam_id, title, description, game_url, validation_status, views, created_at)
+- Table: Game_Jams (id, title, theme, start_time, end_time, youtube_url)
+- Table: Users (id, username, created_at)
+- Table: CV_Catalog (id, user_id, title, summary, cv_data [JSON], created_at)
+- Table: Game_Likes (id, user_id, game_id, created_at)
+- Table: Game_Comments (id, user_id, game_id, content, created_at)
+- Table: Chat_Rooms (id, name, is_enabled, created_at)
+- Table: AI_System_Logs (id, event_type, status, message, created_at)
+---------------------------
+"""
 
 def ai_worker():
     while True:
@@ -453,71 +518,75 @@ def ai_worker():
                     time.sleep(1)
 
             reset_activity_timer()
-            total_users, total_games, active_jam = 0, 0, "None"
-            try:
-                conn = get_db_connection()
-                conn.row_factory = None
-                c = conn.cursor()
-                
-                c.execute("SELECT COUNT(*) FROM Users")
-                total_users = (c.fetchone() or [0])[0]
-                
-                c.execute("SELECT COUNT(*) FROM Godot_Games")
-                total_games = (c.fetchone() or [0])[0]
-                
-                c.execute("SELECT title FROM Game_Jams WHERE end_time > datetime('now')")
-                active_jam = (c.fetchone() or ["None"])[0]
-                
-                conn.close()
-            except Exception:
-                pass 
             
-            # Community Knowledge Snapshot
+            # PHASE 1: Thinking Pass (Determine if we need more data)
             community_data = get_public_snapshot()
-
+            platform_schema = get_platform_schema()
+            
             sys_msg = (
-                "You are the proglem System & Community Assistant. "
-                "Provide brief, helpful, and technically accurate answers based on the system logs and community pulse provided. "
-                "Do not explain your reasoning. Keep responses concise. Use following platform data strictly:\n\n"
-                f"{community_data}\n"
+                "You are the proglem Data-Aware Assistant. "
+                "You have access to a live SQLite database. "
+                f"{platform_schema}"
+                "You also have a snapshot of recent activity:\n"
+                f"{community_data}\n\n"
+                "INSTRUCTIONS:\n"
+                "1. If the user asks for information NOT in the snapshot (e.g., specific game details, user profiles, or deep histories), "
+                "you MUST respond with a SQL query wrapped in <sql>SELECT ...</sql> tags.\n"
+                "2. If you have enough info, respond normally.\n"
+                "3. Keep SQL queries efficient and read-only. Avoid emails or passwords.\n"
+                "4. Be concise and technically accurate."
             )
 
-            payload = {
-                "model": "local-model",
-                "messages": [
-                    {"role": "system", "content": sys_msg},
+            def call_ai(msgs):
+                payload = {
+                    "model": "local-model",
+                    "messages": msgs,
+                    "max_tokens": 512,
+                    "temperature": 0.3,
+                    "stream": False
+                }
+                server_url = f"http://127.0.0.1:{AI_CONFIG['port']}/v1/chat/completions"
+                data = json.dumps(payload).encode('utf-8')
+                req = urllib.request.Request(server_url, data=data, headers={"Content-Type": "application/json", "Authorization": "Bearer local"})
+                with urllib.request.urlopen(req, timeout=300) as response: # nosec B310
+                    return json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content']
+
+            # First Pass
+            initial_response = call_ai([
+                {"role": "system", "content": sys_msg},
+                {"role": "user", "content": user_prompt}
+            ])
+            
+            # Check for SQL tag
+            import re
+            sql_match = re.search(r'<sql>(.*?)</sql>', initial_response, re.DOTALL | re.IGNORECASE)
+            
+            if sql_match:
+                sql_query = sql_match.group(1).strip()
+                with queue_lock:
+                    ai_results[task_id] = {"status": "generating", "answer": f"🔍 Searching database for: `{sql_query}`..."}
+                
+                query_results = execute_ai_read_query(sql_query)
+                
+                # Second Pass: Final Answer
+                final_sys_msg = (
+                    "You are the proglem Data-Aware Assistant. Use these search results to answer the user.\n"
+                    f"SEARCH RESULTS:\n{query_results}\n\n"
+                    "Provide a brief, helpful answer. Do not show the raw JSON if not helpful."
+                )
+                
+                # Update status for the stream simulation
+                with queue_lock:
+                    ai_results[task_id] = {"status": "generating", "answer": "Analysing data..."}
+                
+                # Note: We simulate a stream for the UI by doing a non-stream call and then updating
+                full_answer = call_ai([
+                    {"role": "system", "content": final_sys_msg},
                     {"role": "user", "content": user_prompt}
-                ],
-                "max_tokens": 512,
-                "temperature": 0.7,
-                "stream": True
-            }
-            
-            # Use the optimized Gemma server
-            server_port = AI_CONFIG['port']
-            server_url = f"http://127.0.0.1:{server_port}/v1/chat/completions"
-            
-            data = json.dumps(payload).encode('utf-8')
-            req = urllib.request.Request(server_url, data=data, headers={"Content-Type": "application/json", "Authorization": "Bearer local"})
-            
-            full_answer = ""
-            with urllib.request.urlopen(req, timeout=300) as response: # nosec B310
-                for line in response:
-                    line = line.decode('utf-8').strip()
-                    if line.startswith("data: "):
-                        data_chunk = line[6:]
-                        if data_chunk == "[DONE]":
-                            break
-                        try:
-                            chunk_json = json.loads(data_chunk)
-                            content_piece = chunk_json['choices'][0]['delta'].get('content', '')
-                            full_answer += content_piece
-                            
-                            with queue_lock:
-                                ai_results[task_id] = {"status": "generating", "answer": full_answer}
-                        except (KeyError, ValueError, TypeError):
-                            pass 
-            
+                ])
+            else:
+                full_answer = initial_response
+
             with queue_lock:
                 ai_results[task_id] = {"status": "done", "answer": full_answer}
             reset_activity_timer()
