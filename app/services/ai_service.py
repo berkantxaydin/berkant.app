@@ -28,9 +28,9 @@ else:
     # On Linux/Docker, llama-cpp-python[server] provides the command
     server_exe = "python3" # We will use -m llama_cpp.server
 
-# Configuration for the primary Gemma 4 model
+# Configuration for the primary Qwen 2.5 7B model
 AI_CONFIG = {
-    "file": "gemma-4-E4B-it-Q4_K_M.gguf",
+    "file": "qwen2.5-7b-instruct-q3_k_m.gguf",
     "port": 8082,
     "context": 4096
 }
@@ -171,7 +171,7 @@ def start_llama_server():
 
     LAST_RESTART_TIME = now
     
-    log_ai_event('STARTUP', 'INFO', f"Starting Gemma 4 server on port {AI_CONFIG['port']}...")
+    log_ai_event('STARTUP', 'INFO', f"Starting {AI_CONFIG['file']} AI server on port {AI_CONFIG['port']}...")
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
     
     # Redirect errors to a log file for debugging
@@ -221,7 +221,7 @@ def start_llama_server():
     return proc
 
 def background_initialization():
-    """Background task to start Gemma server and poll health."""
+    """Background task to start AI server and poll health."""
     global ai_ready, ai_booting
     ai_booting = True
     try:
@@ -338,13 +338,22 @@ def cleanup_old_results():
 
 def get_public_snapshot():
     """Gathers enriched community metadata for AI context with social metrics."""
-    snapshot = []
+    snapshot = [f"### PLATFORM TIME: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"]
     try:
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         
-        # 1. Recent Game Jams (with schedules)
+        # 1. System Logs (Latest Activity)
+        c.execute("SELECT event_type, status, message, created_at FROM AI_System_Logs ORDER BY created_at DESC LIMIT 15")
+        logs = c.fetchall()
+        if logs:
+            log_texts = []
+            for l in logs:
+                log_texts.append(f"[{l['created_at']}] {l['event_type']} ({l['status']}): {l['message']}")
+            snapshot.append("### RECENT SYSTEM LOGS\n- " + "\n- ".join(log_texts))
+
+        # 2. Recent Game Jams (with schedules)
         c.execute("SELECT title, theme, start_time, end_time FROM Game_Jams ORDER BY id DESC LIMIT 3")
         jams = c.fetchall()
         if jams:
@@ -444,15 +453,6 @@ def ai_worker():
                     time.sleep(1)
 
             reset_activity_timer()
-            # Platform Diagnostic Metrics
-            cpu_load, ram_usage = "Unknown", "Unknown"
-            total_users, total_games, active_jam = 0, 0, "None"
-            
-            try:
-                cpu_load = psutil.cpu_percent()
-                ram_info = psutil.virtual_memory()
-                ram_usage = f"{ram_info.percent}% ({int(ram_info.used / (1024*1024))}MB used)"
-
                 conn = get_db_connection()
                 conn.row_factory = None
                 c = conn.cursor()
@@ -474,13 +474,9 @@ def ai_worker():
             community_data = get_public_snapshot()
 
             sys_msg = (
-                "You are the proglem Community Assistant. "
-                "Provide brief, helpful, and community-aware answers. "
-                "Do not explain your reasoning. Use following public data strictly:\n\n"
-                f"--- SITE VITALS ---\n"
-                f"- CPU Load: {cpu_load}%\n"
-                f"- RAM Usage: {ram_usage}\n\n"
-                f"--- COMMUNITY PULSE ---\n"
+                "You are the proglem System & Community Assistant. "
+                "Provide brief, helpful, and technically accurate answers based on the system logs and community pulse provided. "
+                "Do not explain your reasoning. Keep responses concise. Use following platform data strictly:\n\n"
                 f"{community_data}\n"
             )
 
