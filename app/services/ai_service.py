@@ -453,6 +453,8 @@ def ai_worker():
                     time.sleep(1)
 
             reset_activity_timer()
+            total_users, total_games, active_jam = 0, 0, "None"
+            try:
                 conn = get_db_connection()
                 conn.row_factory = None
                 c = conn.cursor()
