@@ -15,7 +15,12 @@ from markupsafe import escape
 from datetime import datetime, timedelta
 import logging
 
+import threading
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# Global state for background translation tracking
+translation_state = {"status": "idle", "current": 0, "total": 0, "progress_pct": 0, "message": ""}
+translation_lock = threading.Lock()
 
 # Instantiate repositories for DAL access
 cv_repo = CVRepository()
@@ -564,23 +569,27 @@ def translate_missing():
     if not missing_keys:
         return f"<p style='color:var(--pico-primary);'>{t('All keys are already translated!')}</p>"
     
-    def background_translation_job(all_keys):
+    def background_translation_job(all_keys, total_chunks):
         import urllib.request
         import json
         import time
         from app.i18n import save_translations
         import app.i18n
 
-        # Break into chunks of 15 to avoid model context/timeout limits
         chunk_size = 15
         chunks = [all_keys[i:i + chunk_size] for i in range(0, len(all_keys), chunk_size)]
         
-        print(f"Starting background translation for {len(all_keys)} keys in {len(chunks)} batches.")
-
         for idx, keys_chunk in enumerate(chunks):
-            print(f"Processing batch {idx+1}/{len(chunks)} ({len(keys_chunk)} keys)...")
-            
+            # Update state with current progress
+            with translation_lock:
+                translation_state.update({
+                    "current": idx + 1,
+                    "progress_pct": int(((idx) / total_chunks) * 100),
+                    "message": f"{t('Processing batch')} {idx+1}/{total_chunks}..."
+                })
+
             prompt = "Translate the following UI English strings exactly to Turkish. Respond ONLY with a valid JSON object mapping the English key to the Turkish translation. No code blocks, no markdown, just RAW JSON.\nKeys:\n" + json.dumps(keys_chunk)
+            # ... process batch ...
             
             payload = {
                 "model": "local-model",
@@ -618,17 +627,58 @@ def translate_missing():
                     save_translations()
                     print(f"Batch {idx+1} saved successfully.")
                     
-            except Exception as e:
                 print(f"Error in batch {idx+1}: {e}")
-                # Brief sleep before retry or next batch
                 time.sleep(2)
                 
-        print("Background translation job complete.")
+        with translation_lock:
+            translation_state.update({"status": "complete", "progress_pct": 100, "message": "Done!"})
             
-    import threading
-    threading.Thread(target=background_translation_job, args=(missing_keys,), daemon=True).start()
+    # Calculate total chunks beforehand
+    chunk_count = (len(missing_keys) + 14) // 15
+    with translation_lock:
+        translation_state.update({
+            "status": "running",
+            "current": 0,
+            "total": chunk_count,
+            "progress_pct": 0,
+            "message": t("Starting AI Core...")
+        })
+
+    threading.Thread(target=background_translation_job, args=(missing_keys, chunk_count), daemon=True).start()
     
-    return f"<p style='color:var(--pico-primary);'><i>{t('Translation job sent to AI Core in background. Progress will be saved incrementally. Refresh later!')}</i></p>"
+    return f'''
+    <div hx-get="/api/admin/translation_status" hx-trigger="load, every 1.5s" hx-swap="outerHTML">
+        <label>{t("AI Core is initializing...")}</label>
+        <progress></progress>
+    </div>
+    '''
+
+@api_bp.route('/admin/translation_status', methods=['GET'])
+@admin_required
+def get_translation_status():
+    """Returns an HTMX partial with the current translation progress bar."""
+    with translation_lock:
+        state = translation_state.copy()
+    
+    if state['status'] == 'idle':
+        return ""
+    
+    if state['status'] == 'complete':
+        # Reset to idle after returning this success message to allow new scans
+        with translation_lock:
+            translation_state['status'] = 'idle'
+        return f'<p style="color:var(--pico-primary);">✅ {t("All strings translated successfully! Refresh to see changes.")}</p>'
+        
+    if state['status'] == 'error':
+        return f'<p style="color:var(--pico-del-color);">❌ {t("Translation Error")}: {state.get("message")}</p>'
+
+    pct = state['progress_pct']
+    return f'''
+    <div hx-get="/api/admin/translation_status" hx-trigger="every 1.5s" hx-swap="outerHTML">
+        <label>{state["message"]} ({pct}%)</label>
+        <progress value="{pct}" max="100"></progress>
+    </div>
+    '''
 
 # --- SYSTEM METRICS (DASHBOARD) ---
 @api_bp.route('/metrics/resources', methods=['GET'])
