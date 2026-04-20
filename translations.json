@@ -242,7 +242,8 @@
     "Interactive developer resumes utilizing raw HTMX speed. Stand out with native performance.": "Interactive developer resumes utilizing raw HTMX speed. Stand out with native performance.",
     "Explore massive Godot WebGL apps distributed safely. Participated in community Jams.": "Explore massive Godot WebGL apps distributed safely. Participated in community Jams.",
     "View Profile": "View Profile",
-    "Custom Resume": "Custom Resume"
+    "Custom Resume": "Custom Resume",
+    "AI Assistant (Qwen 2.5 7B)": "AI Assistant (Qwen 2.5 7B)"
   },
   "tr": {
     "Metrics": "Metrikler",
@@ -437,6 +438,13 @@
     "Proglem is built on a strict 8GB RAM budget and 22Mbps bandwidth. By using raw HTMX and SQLite WAL mode, we achieve massive scale on minimal resources.": "Proglem, katı bir 8GB RAM bütçesi ve 22Mbps bant genişliği üzerine inşa edilmiştir. Ham HTMX ve SQLite WAL modunu kullanarak, minimum kaynakla devasa ölçek elde ediyoruz.",
     "Monitor real-time site health and infrastructure efficiency live from the source.": "Gerçek zamanlı site sağlığını ve altyapı verimliliğini doğrudan kaynağından canlı olarak izleyin.",
     "The Unified Ecosystem": "Birleşik Ekosistem",
-    "Empowering developers to build and showcase Godot games and professional CVs on a high-efficiency platform.": "Geliştiricilerin Godot oyunlarını ve profesyonel CV'lerini yüksek verimlilikli bir platformda oluşturmalarını ve sergilemelerini güçlendiriyoruz."
+    "Empowering developers to build and showcase Godot games and professional CVs on a high-efficiency platform.": "Geliştiricilerin Godot oyunlarını ve profesyonel CV'lerini yüksek verimlilikli bir platformda oluşturmalarını ve sergilemelerini güçlendiriyoruz.",
+    "Analysing data...": "Veriler analiz ediliyor...",
+    "Waking up from idle...": "Yapay Zeka uyandırılıyor...",
+    "Searching database for:": "Veritabanında aranıyor:",
+    "Adding to queue...": "Kuyruğa ekleniyor...",
+    "Analysing data": "Veriler analiz ediliyor",
+    "Waking up from idle": "Yapay Zeka uyandırılıyor",
+    "AI is waking up (Warm-up phase)...": "Yapay Zeka uyanıyor (Isınma aşaması)..."
   }
 }

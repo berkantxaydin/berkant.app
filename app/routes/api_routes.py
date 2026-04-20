@@ -590,7 +590,8 @@ def translate_missing():
             }
             
             try:
-                req = urllib.request.Request(f"http://127.0.0.1:8082/v1/chat/completions",
+                from app.services.ai_service import AI_CONFIG
+                req = urllib.request.Request(f"http://127.0.0.1:{AI_CONFIG['port']}/v1/chat/completions",
                     data=json.dumps(payload).encode('utf-8'),
                     headers={"Content-Type": "application/json", "Authorization": "Bearer admin"})
                 
