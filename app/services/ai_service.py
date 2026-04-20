@@ -533,8 +533,14 @@ def ai_worker():
                 "1. If the user asks for information NOT in the snapshot (e.g., specific game details, user profiles, or deep histories), "
                 "you MUST respond with a SQL query wrapped in <sql>SELECT ...</sql> tags.\n"
                 "2. If you have enough info, respond normally.\n"
-                "3. Keep SQL queries efficient and read-only. Avoid emails or passwords.\n"
-                "4. Be concise and technically accurate."
+                "3. Use Markdown for links to platform resources:\n"
+                "   - Games: [Title](/games/{id})\n"
+                "   - CV Profiles: [Title](/cv/{id})\n"
+                "   - Chat Rooms: [Name](/chat?room_id={id})\n"
+                "   - Users: [Username](/u/{username})\n"
+                "4. NEVER share raw file paths like '/play_mock/...' or internal S3 URLs. Always link to the detail pages mentioned above.\n"
+                "5. Keep SQL queries efficient and read-only. Avoid emails or passwords.\n"
+                "6. Be concise and technically accurate."
             )
 
             def call_ai(msgs):
@@ -572,7 +578,10 @@ def ai_worker():
                 final_sys_msg = (
                     "You are the proglem Data-Aware Assistant. Use these search results to answer the user.\n"
                     f"SEARCH RESULTS:\n{query_results}\n\n"
-                    "Provide a brief, helpful answer. Do not show the raw JSON if not helpful."
+                    "INSTRUCTIONS:\n"
+                    "1. Provide a brief, helpful answer.\n"
+                    "2. Use Markdown links for platform resources: [Title](/games/{id}), [Title](/cv/{id}), [Name](/chat?room_id={id}), [Username](/u/{username}).\n"
+                    "3. DO NOT show raw JSON or raw file paths (/play_mock/...). Link to the feature pages instead."
                 )
                 
                 # Update status for the stream simulation

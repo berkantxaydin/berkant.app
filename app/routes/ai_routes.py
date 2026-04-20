@@ -32,6 +32,9 @@ def format_ai_message(text):
     # Unordered Lists
     text = re.sub(r'(?m)^- (.*)$', r'<li>\1</li>', text)
     text = re.sub(r'(?m)^\* (.*)$', r'<li>\1</li>', text)
+    # Links: [text](url) -> <a href="url">text</a>
+    text = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" class="accent-link">\1</a>', text)
+
     # Wrap consecutive list items in <ul>
     text = re.sub(r'(<li>.*</li>(?:[\s\S]*?<li>.*</li>)*)', r'<ul>\1</ul>', text)
 
@@ -81,6 +84,18 @@ def ai_status(task_id):
         formatted_answer = format_ai_message(result.get('answer', ''))
         return f'''
         <div id="chat-result">
+            <style>
+                .accent-link {{
+                    color: var(--pico-primary);
+                    font-weight: bold;
+                    text-decoration: underline;
+                    transition: opacity 0.2s;
+                }}
+                .accent-link:hover {{
+                    opacity: 0.8;
+                    text-decoration: none;
+                }}
+            </style>
             <article>
                 <header><strong>{t("AI Answer")}</strong></header>
                 <div style="white-space: pre-wrap;">{formatted_answer}</div>
