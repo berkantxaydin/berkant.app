@@ -548,7 +548,7 @@ def ai_worker():
                 server_url = f"http://127.0.0.1:{AI_CONFIG['port']}/v1/chat/completions"
                 data = json.dumps(payload).encode('utf-8')
                 req = urllib.request.Request(server_url, data=data, headers={"Content-Type": "application/json", "Authorization": "Bearer local"})
-                with urllib.request.urlopen(req, timeout=300) as response:
+                with urllib.request.urlopen(req, timeout=300) as response: # nosec B310
                     return json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content']
 
             # First Pass
