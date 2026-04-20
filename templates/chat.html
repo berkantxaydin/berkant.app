@@ -52,8 +52,9 @@ endblock %}
         </header>
 
         <div id="chat-messages" hx-get="/api/chat/messages?room_id={{ rooms[0].id }}"
-          hx-trigger="load, every 3s[document.visibilityState === 'visible']" hx-swap="innerHTML"
-          style="flex-grow: 1; overflow-y: auto; padding: 1.5rem 1rem; scroll-behavior: smooth;">
+          hx-trigger="load, every 3s[document.visibilityState === 'visible']" 
+          hx-ext="morph" hx-swap="morph:innerHTML"
+          style="flex-grow: 1; overflow-y: auto; padding: 1rem; scroll-behavior: smooth;">
           <div style="display:flex; justify-content:center; padding:2rem;">
             <span aria-busy="true">{{ t("Connecting to secure tunnel...") }}</span>
           </div>
@@ -61,7 +62,8 @@ endblock %}
 
         <footer style="padding: 1rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05);">
           {% if session.get('user_id') %}
-          <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-swap="innerHTML"
+          <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" 
+            hx-ext="morph" hx-swap="morph:innerHTML"
             hx-on::after-request="this.reset(); scrollToBottom();" style="margin-bottom: 0;">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
             <fieldset role="group" style="margin-bottom: 0;">

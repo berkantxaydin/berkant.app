@@ -394,27 +394,27 @@ def _render_messages(room_id):
         delete_btn = ""
         if can_delete:
             delete_btn = f"""<a href="#" hx-delete="/api/chat/messages/{msg['id']}"
-                hx-target="closest article" hx-swap="outerHTML"
+                hx-target="closest .chat-message" hx-swap="outerHTML"
                 style="color: var(--pico-del-color); cursor: pointer; text-decoration: none; font-weight: bold; font-size: 1rem;"
                 title="{t('Delete')}">&#x2A2F;</a>"""
 
         html += f"""
-        <article class="chat-message {align_class}" style="margin-bottom: 0.8rem; animation: slideIn 0.3s ease-out forwards;">
-            <div class="chat-bubble {bubble_class}" style="padding: 0.8rem 1rem; border-radius: 1rem; max-width: 85%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                <header style="margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: transparent; border: 0; padding: 0;">
-                    <strong style="font-size: 0.85rem; color: {name_color};">{badge}{escape(msg['username'])}</strong>
+        <div id="chat-msg-{msg['id']}" class="chat-message {align_class}" style="margin-bottom: 0.3rem; animation: slideIn 0.3s ease-out forwards;">
+            <div class="chat-bubble {bubble_class}" style="padding: 0.5rem 0.8rem; border-radius: 0.8rem; max-width: 85%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <header style="margin-bottom: 0.2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: transparent; border: 0; padding: 0;">
+                    <strong style="font-size: 0.8rem; color: {name_color};">{badge}{escape(msg['username'])}</strong>
                 </header>
-                <div class="chat-content" style="font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; word-wrap: break-word;">
+                <div class="chat-content" style="font-size: 0.9rem; line-height: 1.4; color: #f1f5f9; word-wrap: break-word;">
                     {escape(msg['content'])}
                 </div>
-                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top: 0.4rem; gap: 0.5rem;">
-                    <small style="color: #94a3b8; font-size: 0.7rem;">
+                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top: 0.2rem; gap: 0.4rem;">
+                    <small style="color: #94a3b8; font-size: 0.65rem;">
                         <time datetime="{msg['created_at']}Z" class="chat-time">{time_str}</time>
                     </small>
                     {delete_btn}
                 </div>
             </div>
-        </article>"""
+        </div>"""
 
     from flask import make_response
     resp = make_response(html)
@@ -740,7 +740,7 @@ def get_system_resources():
         </div>
         
         <small style="font-size: 0.75rem; opacity: 0.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.8rem; margin-top: 0.2rem; display: block;">
-            {t("Live Telemetry")} &bull; {t("Response")}: {int((_time.monotonic() - _t0) * 1000)}ms &bull; Gemma 4 {t("Active")}
+            {t("Live Telemetry")} &bull; {t("Response")}: {int((_time.monotonic() - _t0) * 1000)}ms &bull; Qwen 2.5 7B {t("Active")}
         </small>
     </div>
     """
