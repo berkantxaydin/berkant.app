@@ -85,16 +85,16 @@ def ai_status(task_id):
         return f'''
         <div id="chat-result">
             <style>
-                .accent-link {
+                .accent-link {{
                     color: var(--pico-primary);
                     font-weight: bold;
                     text-decoration: underline;
                     transition: opacity 0.2s;
-                }
-                .accent-link:hover {
+                }}
+                .accent-link:hover {{
                     opacity: 0.8;
                     text-decoration: none;
-                }
+                }}
             </style>
             <article>
                 <header><strong>{t("AI Answer")}</strong></header>
