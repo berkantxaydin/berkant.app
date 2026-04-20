@@ -627,6 +627,7 @@ def translate_missing():
                     save_translations()
                     print(f"Batch {idx+1} saved successfully.")
                     
+            except Exception as e:
                 print(f"Error in batch {idx+1}: {e}")
                 time.sleep(2)
                 
