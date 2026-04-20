@@ -138,8 +138,8 @@
             <td>{{ game.title }}</td>
             <td>{{ 'Jam #' ~ game.jam_id if game.jam_id else '—' }}</td>
             <td>
-              {% if game.validation_status == 'Valid' %}
-                <span class="badge badge-active">Valid</span>
+              {% if game.validation_status == 'Approved' %}
+                <span class="badge badge-active">Approved</span>
               {% elif game.validation_status == 'Pending' %}
                 <span class="badge badge-upcoming">Pending</span>
               {% else %}
