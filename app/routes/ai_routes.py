@@ -33,7 +33,16 @@ def format_ai_message(text):
     text = re.sub(r'(?m)^- (.*)$', r'<li>\1</li>', text)
     text = re.sub(r'(?m)^\* (.*)$', r'<li>\1</li>', text)
     # Links: [text](url) -> <a href="url">text</a>
-    text = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" class="accent-link">\1</a>', text)
+    # Safeguard: Filter out links with placeholders like {id} or ? or curly braces
+    def link_replacer(match):
+        label, url = match.groups()
+        if '?' in url and 'room_id=' not in url: # Allow chat room queries but block things like /games/?
+            if url.endswith('?'): return label
+        if '{' in url or '}' in url or 'ID' in url: # Block literals like /games/ID or {id}
+            return label
+        return f'<a href="{url}" class="accent-link">{label}</a>'
+
+    text = re.sub(r'\[(.*?)\]\((.*?)\)', link_replacer, text)
 
     # Wrap consecutive list items in <ul>
     text = re.sub(r'(<li>.*</li>(?:[\s\S]*?<li>.*</li>)*)', r'<ul>\1</ul>', text)

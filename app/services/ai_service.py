@@ -43,8 +43,12 @@ def validate_ai_sql(sql):
     if not sql_lower.startswith('select'):
         return False, "Only SELECT queries are permitted."
     
-    # 2. Forbidden keywords (DML/DDL)
-    forbidden = ['insert', 'update', 'delete', 'drop', 'alter', 'truncate', 'grant', 'revoke', 'replace', 'exec', 'attach']
+    # 2. Forbidden characters and keywords (DML/DDL/Bypass)
+    # We forbid '*' to prevent bypassing column-level blocks.
+    if '*' in sql_lower:
+        return False, "Wildcard (*) selection is forbidden. Please list columns explicitly."
+        
+    forbidden = ['insert', 'update', 'delete', 'drop', 'alter', 'truncate', 'grant', 'revoke', 'replace', 'exec', 'attach', 'union']
     for word in forbidden:
         if f" {word} " in f" {sql_lower} " or sql_lower.startswith(word):
             return False, f"Forbidden SQL keyword detected: {word}"
@@ -63,6 +67,9 @@ def validate_ai_sql(sql):
     # Also check joins
     tables_found += re.findall(r'join\s+([a-zA-Z0-9_]+)', sql_lower)
     
+    if not tables_found:
+        return False, "No source table detected in query."
+        
     for table in tables_found:
         if table not in whitelist:
             return False, f"Access to table '{table}' is blocked."
@@ -428,7 +435,7 @@ def get_public_snapshot():
 
         # 2. Top Games by Likes (most popular first)
         c.execute("""
-            SELECT g.title, g.description, 
+            SELECT g.id, g.title, g.description, 
                    COUNT(DISTINCT gl.id) as likes,
                    COUNT(DISTINCT gc.id) as comments
             FROM Godot_Games g 
@@ -444,23 +451,23 @@ def get_public_snapshot():
             game_texts = []
             for g in games:
                 desc = (g['description'][:60] + "...") if g['description'] and len(g['description']) > 60 else (g['description'] or "No description")
-                game_texts.append(f"'{g['title']}': {desc} [{g['likes']} likes, {g['comments']} comments]")
+                game_texts.append(f"ID {g['id']} - '{g['title']}': {desc} [{g['likes']} likes, {g['comments']} comments]")
             snapshot.append("### TOP GAMES BY POPULARITY\n- " + "\n- ".join(game_texts))
 
         # 3. Latest CV profiles
-        c.execute("SELECT title, user_id FROM CV_Catalog ORDER BY id DESC LIMIT 5")
+        c.execute("SELECT id, title, user_id FROM CV_Catalog ORDER BY id DESC LIMIT 5")
         cvs = c.fetchall()
         if cvs:
             cv_texts = []
             for cv in cvs:
-                cv_texts.append(f"'{cv['title']}'")
+                cv_texts.append(f"ID {cv['id']} - '{cv['title']}'")
             snapshot.append("### RECENT CVs\n- " + "\n- ".join(cv_texts))
 
         # 4. Public Channels
-        c.execute("SELECT name FROM Chat_Rooms WHERE is_enabled = 1")
+        c.execute("SELECT id, name FROM Chat_Rooms WHERE is_enabled = 1")
         rooms = c.fetchall()
         if rooms:
-            snapshot.append("### ACTIVE CHANNELS: " + ", ".join([r['name'] for r in rooms]))
+            snapshot.append("### ACTIVE CHANNELS: " + ", ".join([f"{r['name']} (ID {r['id']})" for r in rooms]))
 
         # 5. Platform totals
         c.execute("SELECT COUNT(*) FROM Users")
@@ -529,18 +536,18 @@ def ai_worker():
                 f"{platform_schema}"
                 "You also have a snapshot of recent activity:\n"
                 f"{community_data}\n\n"
-                "INSTRUCTIONS:\n"
-                "1. If the user asks for information NOT in the snapshot (e.g., specific game details, user profiles, or deep histories), "
+                "STRICT INSTRUCTIONS:\n"
+                "1. If the user asks for info NOT in the snapshot (e.g., specific game IDs/details, user records, or platform history), "
                 "you MUST respond with a SQL query wrapped in <sql>SELECT ...</sql> tags.\n"
-                "2. If you have enough info, respond normally.\n"
-                "3. Use Markdown for links to platform resources:\n"
-                "   - Games: [Title](/games/{id})\n"
-                "   - CV Profiles: [Title](/cv/{id})\n"
-                "   - Chat Rooms: [Name](/chat?room_id={id})\n"
-                "   - Users: [Username](/u/{username})\n"
-                "4. NEVER share raw file paths like '/play_mock/...' or internal S3 URLs. Always link to the detail pages mentioned above.\n"
-                "5. Keep SQL queries efficient and read-only. Avoid emails or passwords.\n"
-                "6. Be concise and technically accurate."
+                "2. LINKING: Use Markdown for platform resources ONLY if you have a valid numerical ID. Replace the ID in these patterns:\n"
+                "   - Games: [Title](/games/123)\n"
+                "   - CV Profiles: [Title](/cv/45)\n"
+                "   - Chat Rooms: [Name](/chat?room_id=7)\n"
+                "   - Users: [Username](/u/alice)\n"
+                "3. IMPORTANT: NEVER use '?' or '{id}' or any placeholder in a link. If you don't have the ID, use <sql> to find it first.\n"
+                "4. PERSONA: Do NOT give tutorials or examples of how to ask (e.g., don't say 'You might say something like...') unless the user specifically asks how you work.\n"
+                "5. NO HALLUCINATION: Never share raw file paths like '/play_mock/...' or internal S3 URLs. Only use the patterns in rule #2.\n"
+                "6. Be concise, technical, and directly answer the user."
             )
 
             def call_ai(msgs):
@@ -579,9 +586,10 @@ def ai_worker():
                     "You are the proglem Data-Aware Assistant. Use these search results to answer the user.\n"
                     f"SEARCH RESULTS:\n{query_results}\n\n"
                     "INSTRUCTIONS:\n"
-                    "1. Provide a brief, helpful answer.\n"
-                    "2. Use Markdown links for platform resources: [Title](/games/{id}), [Title](/cv/{id}), [Name](/chat?room_id={id}), [Username](/u/{username}).\n"
-                    "3. DO NOT show raw JSON or raw file paths (/play_mock/...). Link to the feature pages instead."
+                    "1. Provide a direct, helpful answer based on the search results.\n"
+                    "2. Use Markdown links for platform resources: [Title](/games/ID), [Title](/cv/ID), [Name](/chat?room_id=ID), [Username](/u/name).\n"
+                    "3. Replace 'ID' with the actual numerical ID from the search results. NEVER use placeholders or '?' in links.\n"
+                    "4. If no results were found, state that you couldn't find the resource and ask for clarification WITHOUT giving tutorial examples."
                 )
                 
                 # Update status for the stream simulation
