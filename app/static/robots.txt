@@ -1,0 +1,39 @@
+User-agent: *
+# ==========================================================
+# PROGLEM PLATFORM: RADICAL ARCHITECTURE
+# ==========================================================
+
+# 1. CORE INDEXING POLICY
+# Allow discovery of public developer CVs and Game Jam entries
+Allow: /
+Allow: /cv
+Allow: /jam
+Allow: /games
+
+# 2. MACHINE BLACKLIST
+# Protect internal logic, admin panels, and private user zones
+Disallow: /api/
+Disallow: /admin/
+Disallow: /login
+Disallow: /dashboard
+Disallow: /account
+Disallow: /play_mock/
+Disallow: /set-lang/
+Disallow: /health
+
+# 3. RESOURCE PRESERVATION
+# Strict Bandwidth & RAM Rule enforced. 
+# Aggressive crawling is throttled to preserve node performance.
+Crawl-delay: 5
+
+# 4. AI DATA SCRAPING PROTECTION
+# We protect our community's work from unauthorized training
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+# ==========================================================
+# SYSTEM STATUS: SECURE / OPTIMIZED / RADICAL
+# ==========================================================

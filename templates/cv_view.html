@@ -4,7 +4,10 @@
     <header>
         <hgroup>
             <h2 class="accent-text">{{ cv.title }}</h2>
-            <p>{{ t("Developer:") }} <strong>{{ cv.username }}</strong></p>
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                <p>{{ t("Developer:") }} <strong>{{ cv.username }}</strong></p>
+                <p>📍 {{ cv.location or t("Global / Remote") }}</p>
+            </div>
         </hgroup>
     </header>
     

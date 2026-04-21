@@ -49,6 +49,7 @@ class CVCatalog:
     id: int = None
     user_id: int = None
     title: str = ""
+    location: str = ""
     summary: str = ""
     cv_data: dict = field(default_factory=dict)
     custom_htmx: str = ""
