@@ -37,10 +37,12 @@ class AnalyticsRepository(BaseRepository):
         stats = dict(row)
         total = stats['total_traffic'] or 0
         errors = stats['errors'] or 0
-        stats['error_rate'] = (errors / total * 100) if total > 0 else 0
-        # Ensure values are not None
+
         for key in ['total_traffic', 'page_views', 'errors', 'unique_devices', 'avg_ms']:
             if stats[key] is None: stats[key] = 0
+
+        stats['error_rate'] = round((errors / total * 100) if total > 0 else 0, 2)
+        stats['avg_ms'] = round(float(stats['avg_ms']), 2)
             
         return stats
 
