@@ -1,51 +1,44 @@
 import sqlite3
 import logging
-from typing import Any, Optional
-from flask import has_app_context
-from app.database import get_db
+from app.database import get_db_connection
 
 class BaseRepository:
     """
     Abstract Base Class for all Data Access Layer (DAL) components.
     Provides shared connection handling and transaction support.
     """
-    def _get_conn(self) -> sqlite3.Connection:
-        return get_db()
+    def __init__(self):
+        self._db_path = None # Loaded from config if needed, usually uses get_db_connection helper
 
-    def execute(self, query: str, params: tuple = (), commit: bool = False) -> Any:
+    def _get_conn(self):
+        """Encapsulated method to get a raw DB connection."""
+        return get_db_connection()
+
+    def execute(self, query, params=(), commit=False):
+        """Shared logic to execute simple queries without manual conn management in subclasses."""
         conn = self._get_conn()
         try:
             cursor = conn.cursor()
             cursor.execute(query, params)
             if commit:
                 conn.commit()
-                return cursor.rowcount if "INSERT" not in query.upper() else cursor.lastrowid
+                return cursor.lastrowid
             return cursor.fetchall()
         except sqlite3.Error as e:
-            logging.error(f"Repository Error: {e} | Query: {query}", exc_info=True)
+            logging.error(f"Repository Error: {e} | Query: {query}")
             raise
         finally:
-            # Only manually close if we are running in a background script/worker
-            if not has_app_context():
-                conn.close()
+            conn.close()
 
-    def execute_one(self, query: str, params: tuple = ()) -> Optional[sqlite3.Row]:
+    def execute_one(self, query, params=()):
+        """Shared logic to fetch a single result."""
         conn = self._get_conn()
         try:
             cursor = conn.cursor()
             cursor.execute(query, params)
             return cursor.fetchone()
         except sqlite3.Error as e:
-            logging.error(f"Repository Error: {e} | Query: {query}", exc_info=True)
+            logging.error(f"Repository Error: {e} | Query: {query}")
             raise
         finally:
-            if not has_app_context():
-                conn.close()
-
-    def count(self, table_name: str, condition: str = "", params: tuple = ()) -> int:
-        """Helper to count rows in a table."""
-        query = f"SELECT COUNT(*) FROM {table_name}"
-        if condition:
-            query += f" WHERE {condition}"
-        row = self.execute_one(query, params)
-        return row[0] if row else 0
+            conn.close()

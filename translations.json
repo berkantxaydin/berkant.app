@@ -247,13 +247,7 @@
     "Starting AI Core...": "Starting AI Core...",
     "Processing batch": "Processing batch",
     "AI Core is initializing...": "AI Core is initializing...",
-    "All strings translated successfully! Refresh to see changes.": "All strings translated successfully! Refresh to see changes.",
-    "Multi-tag Search (e.g. Python, Godot, Linux) - Search by skills, title, summary, or location": "Multi-tag Search (e.g. Python, Godot, Linux) - Search by skills, title, summary, or location",
-    "Global / Remote": "Global / Remote",
-    "Location": "Location",
-    "e.g. Istanbul, Turkey": "e.g. Istanbul, Turkey",
-    "Save Changes": "Save Changes",
-    "Cancel": "Cancel"
+    "All strings translated successfully! Refresh to see changes.": "All strings translated successfully! Refresh to see changes."
   },
   "tr": {
     "Metrics": "Metrikler",

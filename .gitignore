@@ -59,6 +59,3 @@ nginx-1.30.0/
 *.pid
 .ai_pid
 logs/
-
-# Context Generation
-project_context.md

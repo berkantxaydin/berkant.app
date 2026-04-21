@@ -48,8 +48,7 @@ def login():
             else:
                 session.permanent = False
                 
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('main.landing_page'))
+            return redirect(url_for('main.landing_page'))
         else:
             return render_template('login.html', error=t("Invalid username or password."))
             
