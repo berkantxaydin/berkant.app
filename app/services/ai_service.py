@@ -560,9 +560,19 @@ def process_ai_task(task_id, payload_dict):
             full_answer = initial_response
 
         return {"status": "done", "answer": full_answer}
+        
     except Exception as e:
         import traceback
         traceback.print_exc()
+        try:
+            conn = get_db_connection()
+            error_json = json.dumps({"answer": f"⚠️ AI Engine error: {str(e)}"})
+            conn.execute("UPDATE System_Tasks SET status = 'error', result = ? WHERE id = ?", (error_json, task_id))
+            conn.commit()
+            conn.close()
+        except Exception as db_err:
+            print(f"Failed to update task error state: {db_err}")
+            
         return {"status": "error", "message": str(e)}
 
 # Note: threading.Thread(target=ai_worker, daemon=True).start() removed.
