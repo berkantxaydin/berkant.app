@@ -1,7 +1,7 @@
 import os
 import subprocess
 import requests
-import google.generativeai as genai
+from google import genai
 
 def main():
     gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -30,10 +30,7 @@ def main():
     # 2. Ask Gemini to Review
     print(" Sending diff to Gemini API...")
     try:
-        genai.configure(api_key=gemini_key)
-        
-        # Using Gemini 2.5 Flash as requested by the user
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        client = genai.Client(api_key=gemini_key)
         
         prompt = f"""
         Act as a Senior Security & Python Engineer. Review the following Git diff for a Pull Request.
@@ -52,7 +49,10 @@ def main():
         ```
         """
         
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
         review_comment = response.text
     except Exception as e:
         print(f" Gemini AI failed to generate review: {e}")
