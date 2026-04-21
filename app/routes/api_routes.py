@@ -241,7 +241,12 @@ def delete_game_comment(comment_id):
 def get_chat_rooms():
     """Returns all enabled rooms as an HTMX tab snippet."""
     rooms = chat_repo.get_rooms(admin_view=session.get('is_admin', False))
-    return jsonify(rooms)
+    html = "".join([
+        f'<button hx-get="/api/chat/messages?room_id={r["id"]}" '
+        f'hx-target="#chat-messages" class="outline">{r["name"]}</button>' 
+        for r in rooms
+    ])
+    return html
 
 
 @api_bp.route('/chat/messages', methods=['GET'])
