@@ -9,17 +9,29 @@ class CVRepository(BaseRepository):
 
     def get_all_cvs(self, search_term=None) -> list[CVCatalog]:
         if search_term:
-            query = '''
-                SELECT c.id, c.title, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
+            # Multi-tag search support: Split by comma and search for ANY tag
+            tags = [t.strip() for t in search_term.split(',') if t.strip()]
+            if not tags:
+                return self.get_all_cvs()
+
+            base_query = '''
+                SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
                 FROM CV_Catalog c
                 JOIN Users u ON c.user_id = u.id
-                WHERE c.title LIKE ? OR c.cv_data LIKE ? OR u.username LIKE ?
             '''
-            liketerm = f'%{search_term}%'
-            rows = self.execute(query, (liketerm, liketerm, liketerm))
+            
+            clauses = []
+            params = []
+            for tag in tags:
+                liketerm = f'%{tag}%'
+                clauses.append("(c.title LIKE ? OR c.cv_data LIKE ? OR u.username LIKE ? OR c.summary LIKE ? OR c.location LIKE ?)")
+                params.extend([liketerm, liketerm, liketerm, liketerm, liketerm])
+            
+            query = f"{base_query} WHERE {' OR '.join(clauses)}"
+            rows = self.execute(query, tuple(params))
         else:
             query = '''
-                SELECT c.id, c.title, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
+                SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
                 FROM CV_Catalog c
                 JOIN Users u ON c.user_id = u.id
             '''
@@ -29,7 +41,7 @@ class CVRepository(BaseRepository):
 
     def get_cvs_by_user(self, user_id) -> list[CVCatalog]:
         query = '''
-            SELECT c.id, c.title, c.summary, c.cv_data, c.custom_htmx, u.username
+            SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, u.username
             FROM CV_Catalog c
             JOIN Users u ON c.user_id = u.id
             WHERE c.user_id = ?
@@ -48,18 +60,18 @@ class CVRepository(BaseRepository):
         return CVCatalog.from_row(row)
 
 
-    def add_cv(self, user_id, title, summary, cv_data, custom_htmx=None):
+    def add_cv(self, user_id, title, location, summary, cv_data, custom_htmx=None):
         cv_json = json.dumps(cv_data)
-        query = "INSERT INTO CV_Catalog (user_id, title, summary, cv_data, custom_htmx) VALUES (?, ?, ?, ?, ?)"
-        return self.execute(query, (user_id, title, summary, cv_json, custom_htmx), commit=True)
+        query = "INSERT INTO CV_Catalog (user_id, title, location, summary, cv_data, custom_htmx) VALUES (?, ?, ?, ?, ?, ?)"
+        return self.execute(query, (user_id, title, location, summary, cv_json, custom_htmx), commit=True)
 
-    def update_cv(self, cv_id, user_id, title, summary, is_admin=False):
+    def update_cv(self, cv_id, user_id, title, location, summary, is_admin=False):
         if is_admin:
-            query = "UPDATE CV_Catalog SET title = ?, summary = ? WHERE id = ?"
-            params = (title, summary, cv_id)
+            query = "UPDATE CV_Catalog SET title = ?, location = ?, summary = ? WHERE id = ?"
+            params = (title, location, summary, cv_id)
         else:
-            query = "UPDATE CV_Catalog SET title = ?, summary = ? WHERE id = ? AND user_id = ?"
-            params = (title, summary, cv_id, user_id)
+            query = "UPDATE CV_Catalog SET title = ?, location = ?, summary = ? WHERE id = ? AND user_id = ?"
+            params = (title, location, summary, cv_id, user_id)
         
         self.execute(query, params, commit=True)
         return True

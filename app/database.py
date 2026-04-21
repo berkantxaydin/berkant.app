@@ -112,6 +112,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
+                location TEXT,
                 summary TEXT,
                 cv_data JSON NOT NULL,
                 custom_htmx TEXT,
@@ -119,6 +120,7 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES Users (id)
             )
         ''')
+        ensure_column(cursor, "CV_Catalog", "location", "TEXT")
         
         safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Game_Jams (

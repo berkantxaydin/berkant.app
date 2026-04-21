@@ -16,6 +16,9 @@
         <article class="glass-panel">
             <header>
                 <strong>{{ cv.title }}</strong>
+                {% if cv.location %}
+                    <small style="opacity: 0.7; margin-left: 0.5rem;">📍 {{ cv.location }}</small>
+                {% endif %}
                 <a href="#" hx-get="/api/cv/{{ cv.id }}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">{{ t("Edit") }}</a>
                 <a href="#" hx-delete="/api/cv/{{ cv.id }}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">{{ t("Delete") }}</a>
             </header>
