@@ -42,7 +42,7 @@ class AnalyticsRepository(BaseRepository):
             if stats[key] is None: stats[key] = 0
 
         stats['error_rate'] = round((errors / total * 100) if total > 0 else 0, 2)
-        stats['avg_ms'] = round(float(stats['avg_ms']), 2)
+        stats['avg_ms'] = round(float(stats['avg_ms']), 1)
             
         return stats
 
