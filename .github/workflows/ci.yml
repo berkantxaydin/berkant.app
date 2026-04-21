@@ -60,7 +60,7 @@ jobs:
         python-version: "3.11"
         
     - name: Install AI SDK
-      run: pip install google-generativeai requests
+      run: pip install google-genai requests
       
     - name: Run Gemini Code Review
       env:

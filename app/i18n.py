@@ -1,6 +1,7 @@
 import os
 import json
 import threading
+import atexit
 from flask import session
 
 I18N_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'translations.json')
@@ -31,6 +32,9 @@ def save_translations():
             with open(I18N_FILE, 'w', encoding='utf-8') as f:
                 json.dump(translations, f, indent=2, ensure_ascii=False)
             _dirty = False
+
+# Register save on shutdown
+atexit.register(save_translations)
 
 def t(text):
     global _dirty
