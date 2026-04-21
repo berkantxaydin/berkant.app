@@ -3,12 +3,12 @@ from app.repositories.base_repository import BaseRepository
 from app.models import AnalyticsLog
 
 class AnalyticsRepository(BaseRepository):
-    def log_request(self, method: str, path: str, visitor_id: str, is_htmx: bool, status_code: int, duration_ms: int) -> Any:
+    def log_request(self, method: str, path: str, visitor_id: str, is_htmx: bool, status_code: int, duration_ms: int, ip_address: Optional[str] = None) -> Any:
         query = """
-            INSERT INTO Analytics_Logs (method, path, visitor_id, is_htmx, status_code, duration_ms)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO Analytics_Logs (method, path, ip_address, visitor_id, is_htmx, status_code, duration_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """
-        return self.execute(query, (method, path, visitor_id, 1 if is_htmx else 0, status_code, duration_ms), commit=True)
+        return self.execute(query, (method, path, ip_address, visitor_id, 1 if is_htmx else 0, status_code, duration_ms), commit=True)
 
     def get_recent_logs(self, limit: int = 100) -> list[AnalyticsLog]:
         return [AnalyticsLog.from_row(row) for row in self.execute("SELECT * FROM Analytics_Logs ORDER BY created_at DESC LIMIT ?", (limit,))]
@@ -37,12 +37,10 @@ class AnalyticsRepository(BaseRepository):
         stats = dict(row)
         total = stats['total_traffic'] or 0
         errors = stats['errors'] or 0
-
+        stats['error_rate'] = (errors / total * 100) if total > 0 else 0
+        # Ensure values are not None
         for key in ['total_traffic', 'page_views', 'errors', 'unique_devices', 'avg_ms']:
             if stats[key] is None: stats[key] = 0
-
-        stats['error_rate'] = round((errors / total * 100) if total > 0 else 0, 2)
-        stats['avg_ms'] = round(float(stats['avg_ms']), 1)
             
         return stats
 

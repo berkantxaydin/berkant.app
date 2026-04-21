@@ -16,8 +16,8 @@ class ChatRepository(BaseRepository):
             """
         else:
             query = "SELECT * FROM Chat_Rooms WHERE is_enabled = 1 ORDER BY id ASC"
-        rows = self.execute(query)
-        return [dict(row) for row in rows]
+        
+        return self.execute(query)
 
     def get_room_by_id(self, room_id: int) -> Optional[sqlite3.Row]:
         return self.execute_one("SELECT * FROM Chat_Rooms WHERE id = ?", (room_id,))

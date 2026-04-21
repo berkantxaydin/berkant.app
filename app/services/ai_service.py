@@ -49,7 +49,7 @@ def validate_ai_sql(sql):
             return False, f"Forbidden SQL keyword detected: {word}"
             
     # 3. Forbidden columns/sensitive data
-    sensitive = ['password_hash', 'email', 'visitor_id']
+    sensitive = ['password_hash', 'email', 'ip_address', 'visitor_id']
     for col in sensitive:
         if col in sql_lower:
             return False, f"Access to sensitive column '{col}' is blocked."
@@ -92,7 +92,7 @@ def ai_security_authorizer(action_code, tname, cname, sql_location, trigger_name
         col = cname.lower() if cname else ""
         
         # 1. Block sensitive columns natively
-        if col in ['password_hash', 'email', 'visitor_id', 'preferences']:
+        if col in ['password_hash', 'email', 'ip_address', 'visitor_id', 'preferences']:
             return sqlite3.SQLITE_DENY
             
         # 2. Whitelist allowed tables
@@ -183,14 +183,6 @@ def is_port_in_use(port: int) -> bool:
 
 def cleanup_orphans() -> None:
     """Kills orphaned llama-server processes to reclaim RAM/GPU."""
-    try:
-        import requests
-        res = requests.get(f"http://127.0.0.1:{AI_CONFIG['port']}/health", timeout=1)
-        if res.status_code == 200:
-            return
-    except:
-        pass
-
     target_names = ["llama-server.exe", "llama-server"]
     
     if os.path.exists(PID_FILE):
@@ -244,9 +236,8 @@ def start_llama_server() -> Optional[subprocess.Popen]:
     now = time.time()
     if now - LAST_RESTART_TIME < RESTART_COOLDOWN:
         return None
-
+        
     cleanup_orphans()
-    time.sleep(3)
     if is_port_in_use(AI_CONFIG['port']):
         log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} occupied.")
         return None
@@ -568,19 +559,9 @@ def process_ai_task(task_id, payload_dict):
             full_answer = initial_response
 
         return {"status": "done", "answer": full_answer}
-        
     except Exception as e:
         import traceback
         traceback.print_exc()
-        try:
-            conn = get_db_connection()
-            error_json = json.dumps({"answer": f"⚠️ AI Engine error: {str(e)}"})
-            conn.execute("UPDATE System_Tasks SET status = 'error', result = ? WHERE id = ?", (error_json, task_id))
-            conn.commit()
-            conn.close()
-        except Exception as db_err:
-            print(f"Failed to update task error state: {db_err}")
-            
         return {"status": "error", "message": str(e)}
 
 # Note: threading.Thread(target=ai_worker, daemon=True).start() removed.
@@ -593,21 +574,13 @@ def submit_prompt(user_id, prompt):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-
-        cursor.execute("""
-            UPDATE System_Tasks 
-            SET status = 'error', result = '{"answer": "Task timed out and was cleared."}' 
-            WHERE status IN ('pending', 'waking_up', 'thinking', 'generating') 
-            AND created_at < datetime('now', '-5 minutes')
-        """)
-        conn.commit()
-
+        # Check if user already has a pending/generating task
         cursor.execute(
             "SELECT id FROM System_Tasks WHERE user_id = ? AND status IN ('pending', 'waking_up', 'thinking', 'generating')", 
             (user_id,)
         )
         if cursor.fetchone():
-            return None, False
+            return None, False # Block concurrent requests
 
         cursor.execute(
             "INSERT INTO System_Tasks (id, user_id, task_type, payload, status) VALUES (?, ?, 'ai_chat', ?, 'thinking')",
@@ -615,7 +588,7 @@ def submit_prompt(user_id, prompt):
         )
         conn.commit()
         
-        # Calculate dynamic queue position
+        # Calculate queue position
         cursor.execute("SELECT COUNT(*) FROM System_Tasks WHERE status IN ('pending', 'thinking') AND created_at <= (SELECT created_at FROM System_Tasks WHERE id = ?)", (task_id,))
         position = cursor.fetchone()[0]
         

@@ -78,6 +78,7 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 method TEXT,
                 path TEXT,
+                ip_address TEXT,
                 visitor_id TEXT,
                 is_htmx BOOLEAN DEFAULT 0,
                 status_code INTEGER,
