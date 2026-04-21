@@ -236,8 +236,9 @@ def start_llama_server() -> Optional[subprocess.Popen]:
     now = time.time()
     if now - LAST_RESTART_TIME < RESTART_COOLDOWN:
         return None
-        
+
     cleanup_orphans()
+    time.sleep(3)
     if is_port_in_use(AI_CONFIG['port']):
         log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} occupied.")
         return None
