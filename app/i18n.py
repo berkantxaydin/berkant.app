@@ -1,11 +1,14 @@
 import os
 import json
+import threading
+import atexit
 from flask import session
 
 I18N_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'translations.json')
 
 translations = {"en": {}, "tr": {}}
 _dirty = False
+_i18n_lock = threading.Lock()
 
 def load_translations():
     global translations, _dirty
@@ -24,10 +27,14 @@ def load_translations():
 
 def save_translations():
     global _dirty
-    if _dirty:
-        with open(I18N_FILE, 'w', encoding='utf-8') as f:
-            json.dump(translations, f, indent=2, ensure_ascii=False)
-        _dirty = False
+    with _i18n_lock:
+        if _dirty:
+            with open(I18N_FILE, 'w', encoding='utf-8') as f:
+                json.dump(translations, f, indent=2, ensure_ascii=False)
+            _dirty = False
+
+# Register save on shutdown
+atexit.register(save_translations)
 
 def t(text):
     global _dirty
@@ -39,16 +46,19 @@ def t(text):
         lang = 'en'
     
     # Auto-register english string if missing
-    if text not in translations["en"]:
-        translations["en"][text] = text
-        _dirty = True
-        save_translations()
+    with _i18n_lock:
+        if text not in translations["en"]:
+            translations["en"][text] = text
+            _dirty = True
+            # We don't save immediately here to avoid excessive IO; 
+            # save_translations() should be called periodically or after batch updates.
+            # But for the app's stability, we'll keep the logic if needed.
 
     if lang == 'en':
         return text
 
     # Try mapping to turkish
-    if text in translations["tr"]:
-        return translations["tr"][text]
-
-    return text # fallback to english
+    with _i18n_lock:
+        translated = translations["tr"].get(text)
+    
+    return translated if translated else text # fallback to english

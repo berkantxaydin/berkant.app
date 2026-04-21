@@ -1,0 +1,23 @@
+{% if not logs %}
+    <p style='color: grey; text-align: center; margin-top: 1rem;'><em>{{ t('No AI lifecycle events recorded yet.') }}</em></p>
+{% else %}
+    <style>
+        .ai-log-error { color: var(--pico-del-color); }
+        .ai-log-warning { color: #eab308; }
+        .ai-log-info { color: var(--pico-primary); }
+    </style>
+    <div style="display: flex; flex-direction: column;">
+        <div style="font-size: 0.75rem; overflow-x: auto;">
+            {% for log in logs|reverse %}
+                {% set status_class = "ai-log-error" if log.status == 'ERROR' else ("ai-log-warning" if log.status == 'WARNING' else "ai-log-info") %}
+                {% set ts = log.created_at.split(' ')[1][:8] if ' ' in log.created_at else log.created_at %}
+                
+                <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0.3rem 0; line-height: 1.2;">
+                    <span style="color: #64748b; font-family: var(--font-mono); margin-right: 8px;">[{{ ts }}]</span>
+                    <strong class="{{ status_class }}" style="font-family: var(--font-mono); margin-right: 8px;">[{{ log.event_type }}]</strong>
+                    <span style="color: #cbd5e1;">{{ log.message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}

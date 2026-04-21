@@ -1,117 +1,88 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Optional, Dict, Any, Type, TypeVar
 import json
 
+T = TypeVar('T', bound='BaseRowModel')
+
 @dataclass
-class User:
-    id: int = None
+class BaseRowModel:
+    @classmethod
+    def from_row(cls: Type[T], row: Any) -> Optional[T]:
+        if not row: return None
+        data = dict(row)
+        # Handle JSON fields if they are strings
+        for field_name, field_def in cls.__dataclass_fields__.items():
+            if field_def.type in [dict, Dict[str, Any]] and isinstance(data.get(field_name), str):
+                try:
+                    data[field_name] = json.loads(data[field_name])
+                except:
+                    data[field_name] = {}
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+
+@dataclass
+class User(BaseRowModel):
+    id: Optional[int] = None
     username: str = ""
     email: str = ""
     password_hash: str = ""
     is_admin: bool = False
-    created_at: str = None
-    preferences: dict = field(default_factory=dict)
-
-    @classmethod
-    def from_row(cls, row):
-        if not row: return None
-        data = dict(row)
-        if isinstance(data.get('preferences'), str):
-            try:
-                data['preferences'] = json.loads(data['preferences'])
-            except:
-                data['preferences'] = {}
-        # Filter keys that doesn't exist in dataclass fields if any
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+    created_at: Optional[str] = None
+    preferences: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
-class GodotGame:
-    id: int = None
-    user_id: int = None
-    jam_id: int = None
+class GodotGame(BaseRowModel):
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    jam_id: Optional[int] = None
     title: str = ""
     description: str = ""
     game_url: str = ""
     validation_status: str = "Pending"
     views: int = 0
-    created_at: str = None
-    username: str = None # Joined field
-    likes: int = 0       # Joined field
-
-    @classmethod
-    def from_row(cls, row):
-        if not row: return None
-        data = dict(row)
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+    created_at: Optional[str] = None
+    username: Optional[str] = None
+    likes: int = 0
 
 @dataclass
-class CVCatalog:
-    id: int = None
-    user_id: int = None
+class CVCatalog(BaseRowModel):
+    id: Optional[int] = None
+    user_id: Optional[int] = None
     title: str = ""
     location: str = ""
     summary: str = ""
-    cv_data: dict = field(default_factory=dict)
+    cv_data: Dict[str, Any] = field(default_factory=dict)
     custom_htmx: str = ""
-    created_at: str = None
-    username: str = None # Joined field
-    author_is_admin: bool = False # Joined field
-
-    @classmethod
-    def from_row(cls, row):
-        if not row: return None
-        data = dict(row)
-        if isinstance(data.get('cv_data'), str):
-            try:
-                data['cv_data'] = json.loads(data['cv_data'])
-            except:
-                data['cv_data'] = {}
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+    created_at: Optional[str] = None
+    username: Optional[str] = None
+    author_is_admin: bool = False
 
 @dataclass
-class GameJam:
-    id: int = None
+class GameJam(BaseRowModel):
+    id: Optional[int] = None
     title: str = ""
     theme: str = ""
     start_time: str = ""
     end_time: str = ""
     youtube_url: str = ""
 
-    @classmethod
-    def from_row(cls, row):
-        if not row: return None
-        data = dict(row)
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
-
 @dataclass
-class ChatMessage:
-    id: int = None
-    user_id: int = None
+class ChatMessage(BaseRowModel):
+    id: Optional[int] = None
+    user_id: Optional[int] = None
     room_id: int = 1
     content: str = ""
-    created_at: str = None
-    username: str = None # Joined field
-
-    @classmethod
-    def from_row(cls, row):
-        if not row: return None
-        data = dict(row)
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+    created_at: Optional[str] = None
+    username: Optional[str] = None
+    is_admin: bool = False
 
 @dataclass
-class AnalyticsLog:
-    id: int = None
+class AnalyticsLog(BaseRowModel):
+    id: Optional[int] = None
     method: str = ""
     path: str = ""
-    ip_address: str = ""
     visitor_id: str = ""
     is_htmx: bool = False
     status_code: int = 0
     duration_ms: int = 0
-    created_at: str = None
-
-    @classmethod
-    def from_row(cls, row):
-        if not row: return None
-        data = dict(row)
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+    created_at: Optional[str] = None
