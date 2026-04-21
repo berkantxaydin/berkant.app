@@ -1,9 +1,0 @@
-<article>
-    <header>
-        <strong>{{ title | e }}</strong>
-        <small style="opacity: 0.7; margin-left: 0.5rem;">📍 {{ location | e or t('Global') }}</small>
-        <a href="#" hx-get="/api/cv/{{ cv_id }}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">{{ t('Edit') }}</a>
-        <a href="#" hx-delete="/api/cv/{{ cv_id }}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">{{ t('Delete') }}</a>
-    </header>
-    <p>{{ summary | e }}</p>
-</article>

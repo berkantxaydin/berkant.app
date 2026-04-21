@@ -2,8 +2,7 @@ from flask import Blueprint, render_template, abort, current_app, send_from_dire
 import os
 from app.repositories.game_repository import GameRepository
 from app.repositories.cv_repository import CVRepository
-from app.repositories.chat_repository import ChatRepository
-from app.repositories.jam_repository import JamRepository
+from app.database import get_db_connection
 from app.i18n import t
 
 main_bp = Blueprint('main', __name__)
@@ -11,8 +10,6 @@ main_bp = Blueprint('main', __name__)
 # Instantiate repositories for use in routes
 game_repo = GameRepository()
 cv_repo = CVRepository()
-chat_repo = ChatRepository()
-jam_repo = JamRepository()
 
 
 @main_bp.route('/')
@@ -31,7 +28,6 @@ def favicon_ico():
 def health_check():
     """Real healthcheck for CI/CD and deployment monitoring."""
     try:
-        from app.database import get_db_connection
         conn = get_db_connection()
         conn.execute("SELECT 1").fetchone()
         conn.close()
@@ -61,7 +57,16 @@ def cv_create():
 
 @main_bp.route('/chat')
 def chat_room():
-    rooms = chat_repo.get_rooms(admin_view=session.get('is_admin', False))
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        if session.get('is_admin'):
+            cursor.execute("SELECT * FROM Chat_Rooms ORDER BY id ASC")
+        else:
+            cursor.execute("SELECT * FROM Chat_Rooms WHERE is_enabled = 1 ORDER BY id ASC")
+        rooms = [dict(r) for r in cursor.fetchall()]
+    finally:
+        conn.close()
     return render_template('chat.html', rooms=rooms)
 
 @main_bp.route('/cv/<int:cv_id>')
@@ -82,30 +87,71 @@ def upload_page():
 
 @main_bp.route('/jam')
 def jam_page():
-    # Use repo to fetch jams with games
-    jams = jam_repo.get_jams_with_games()
-    return render_template('jam.html', jams=jams)
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Fetch ALL jams so the UI can tab between them
+        cursor.execute("SELECT * FROM Game_Jams ORDER BY start_time DESC")
+        jams_raw = cursor.fetchall()
+
+        if not jams_raw:
+            return render_template('jam.html', jams=[])
+
+        jams = []
+        for jam_row in jams_raw:
+            jam = dict(jam_row)
+            cursor.execute("""
+                SELECT g.*, u.username, 
+                (SELECT COUNT(*) FROM Game_Likes WHERE game_id = g.id) as likes
+                FROM Godot_Games g 
+                JOIN Users u ON g.user_id = u.id 
+                WHERE g.jam_id = ? 
+                ORDER BY g.created_at DESC
+            """, (jam['id'],))
+            jam['games'] = [dict(r) for r in cursor.fetchall()]
+            jams.append(jam)
+
+        return render_template('jam.html', jams=jams)
+    finally:
+        conn.close()
 
 @main_bp.route('/games/<int:game_id>')
 def view_game(game_id):
     """Detailed game page with Godot embed and social features."""
-    game = game_repo.get_game_by_id(game_id)
-    if not game:
-        abort(404)
+    conn = get_db_connection()
+    try:
+        game = game_repo.get_game_by_id(game_id)
+        if not game:
+            abort(404)
 
-    uid = session.get('user_id')
-    is_liked = game_repo.is_liked_by_user(game_id, uid) if uid else False
-    like_count = game_repo.get_like_count(game_id)
-    comments = game_repo.get_comments(game_id)
+        # Check if current user liked it
+        is_liked = False
+        uid = session.get('user_id')
+        cursor = conn.cursor()
+        if uid:
+            cursor.execute("SELECT 1 FROM Game_Likes WHERE user_id = ? AND game_id = ?", (uid, game_id))
+            is_liked = cursor.fetchone() is not None
 
-    response = make_response(render_template('game_view.html', 
-                                          game=game, 
-                                          is_liked=is_liked, 
-                                          like_count=like_count, 
-                                          comments=comments))
-    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
-    response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
-    return response
+        # Get counts
+        cursor.execute("SELECT COUNT(*) as cnt FROM Game_Likes WHERE game_id = ?", (game_id,))
+        like_count = cursor.fetchone()['cnt'] or 0
+
+        # Fetch comments
+        cursor.execute("""
+            SELECT c.*, u.username 
+            FROM Game_Comments c 
+            JOIN Users u ON c.user_id = u.id 
+            WHERE c.game_id = ? 
+            ORDER BY c.created_at DESC
+        """, (game_id,))
+        comments = [dict(r) for r in cursor.fetchall()]
+
+        response = make_response(render_template('game_view.html', game=game, is_liked=is_liked, like_count=like_count, comments=comments))
+        response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+        response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
+        return response
+    finally:
+        conn.close()
 
 @main_bp.route('/games')
 def games_list():
