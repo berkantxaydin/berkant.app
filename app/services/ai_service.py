@@ -183,6 +183,14 @@ def is_port_in_use(port: int) -> bool:
 
 def cleanup_orphans() -> None:
     """Kills orphaned llama-server processes to reclaim RAM/GPU."""
+    try:
+        import requests
+        res = requests.get(f"http://127.0.0.1:{AI_CONFIG['port']}/health", timeout=1)
+        if res.status_code == 200:
+            return
+    except:
+        pass
+
     target_names = ["llama-server.exe", "llama-server"]
     
     if os.path.exists(PID_FILE):
