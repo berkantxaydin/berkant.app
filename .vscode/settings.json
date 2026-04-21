@@ -3,15 +3,29 @@
     "python.analysis.extraPaths": [
         ".\\venv\\Lib\\site-packages"
     ],
+    "python.analysis.exclude": [
+        "C:/_pyrefly_virtual__/**",
+        "C:\\_pyrefly_virtual__\\**"
+    ],
     "files.exclude": {
         "**/actions-runner/**": true,
         "**/__pycache__/**": true,
-        "**/.git/**": true
+        "**/.git/**": true,
+        "C:/_pyrefly_virtual__/**": true,
+        "C:\\_pyrefly_virtual__\\**": true
     },
     "search.exclude": {
-        "**/actions-runner/**": true
+        "**/actions-runner/**": true,
+        "C:/_pyrefly_virtual__/**": true,
+        "C:\\_pyrefly_virtual__\\**": true
     },
     "files.watcherExclude": {
-        "**/actions-runner/**": true
-    }
+        "**/actions-runner/**": true,
+        "C:/_pyrefly_virtual__/**": true,
+        "C:\\_pyrefly_virtual__\\**": true
+    },
+    "python.linting.ignorePatterns": [
+        "C:/_pyrefly_virtual__/**",
+        "C:\\_pyrefly_virtual__\\**"
+    ]
 }

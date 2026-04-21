@@ -1,0 +1,44 @@
+<table id="jam-admin-table">
+    <thead>
+        <tr>
+            <th>{{ t("Title") }}</th>
+            <th>{{ t("Theme") }}</th>
+            <th>{{ t("Start (UTC)") }}</th>
+            <th>{{ t("End (UTC)") }}</th>
+            <th>{{ t("Status") }}</th>
+            <th>{{ t("Actions") }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for j in jams %}
+            <tr id="jam-row-{{ j.id }}">
+                <td>{{ j.title }}</td>
+                <td>{{ j.theme }}</td>
+                <td>{{ j.start_time[:16].replace('T',' ') }}</td>
+                <td>{{ j.end_time[:16].replace('T',' ') }}</td>
+                <td>
+                    {% if j.start_time > now %}
+                        <span class="badge badge-upcoming">{{ t("Upcoming") }}</span>
+                    {% elif j.end_time < now %}
+                        <span class="badge badge-ended">{{ t("Ended") }}</span>
+                    {% else %}
+                        <span class="badge badge-active">{{ t("Active") }}</span>
+                    {% endif %}
+                </td>
+                <td style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <button class="outline" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
+                        hx-get="/api/jams/{{ j.id }}/edit_form"
+                        hx-target="#jam-row-{{ j.id }}"
+                        hx-swap="outerHTML">{{ t("Edit") }}</button>
+                    <button class="outline contrast" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
+                        hx-delete="/api/jams/{{ j.id }}"
+                        hx-target="#jam-row-{{ j.id }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="{{ t('Delete') }} '{{ j.title }}'? {{ t('This removes all its submissions too.') }}">{{ t("Delete") }}</button>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan='6' style='text-align:center; color:grey;'>{{ t('No jams yet. Create one below.') }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

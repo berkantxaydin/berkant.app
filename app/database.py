@@ -5,40 +5,51 @@ import logging
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DB_NAME = os.path.join(BASE_DIR, 'db', 'proglem.db')
 
-def get_db_connection():
-    """Create a database connection to the SQLite database with strictly enforced PRAGMAs."""
-    # Ensure the directory for the database exists (required for CI/CD environments)
+def get_db_connection() -> sqlite3.Connection:
+    """Creates a database connection with WAL mode and NORMAL synchronous settings."""
     os.makedirs(os.path.dirname(DB_NAME), exist_ok=True)
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10.0)
     conn.row_factory = sqlite3.Row
-    
-    # Enforce strict hardware/performance constraints for SQLite
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=NORMAL;")
-    
     return conn
 
-def safe_execute(cursor, sql, params=None):
-    """Executes a SQL statement and catches common SQLite errors without rolling back the entire transaction context."""
+from flask import g, has_app_context
+
+def get_db() -> sqlite3.Connection:
+    """Returns a request-scoped database connection, or a fresh one if outside a request."""
+    if has_app_context():
+        if 'db' not in g:
+            g.db = get_db_connection()
+        return g.db
+    else:
+        # Fallback for background workers (like the one we created in Phase 1)
+        return get_db_connection()
+
+def close_db(e=None) -> None:
+    """Closes the request-scoped database connection at the end of the request."""
+    if has_app_context():
+        db = g.pop('db', None)
+        if db is not None:
+            db.close()
+
+def safe_execute(cursor: sqlite3.Cursor, sql: str, params: tuple = None) -> bool:
+    """Executes SQL and suppresses errors for harmless migration checks."""
     try:
         cursor.execute(sql, params or ())
         return True
     except sqlite3.OperationalError as e:
-        # We specifically log these as warnings because they often occur during harmless migration checks
-        logging.warning(f"Database operation warning (safe to ignore if already exists): {e}")
+        logging.warning(f"Database warning: {e}")
         return False
     except Exception as e:
-        logging.error(f"Database operation failure: {e}")
+        logging.error(f"Database error: {e}")
         return False
 
-def ensure_column(cursor, table, column, definition):
-    """
-    Add a column to a table if it doesn't exist. Use with trusted internal schema identifiers.
-    """
+def ensure_column(cursor: sqlite3.Cursor, table: str, column: str, definition: str) -> bool:
+    """Adds a column to a table if it does not already exist."""
     try:
         cursor.execute(f"PRAGMA table_info({table})")
-        columns = [row[1] for row in cursor.fetchall()]
-        if column not in columns:
+        if column not in [row[1] for row in cursor.fetchall()]:
             logging.info(f"Migration: Adding column {column} to {table}...")
             cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
             return True
@@ -46,10 +57,8 @@ def ensure_column(cursor, table, column, definition):
         logging.error(f"Failed to ensure column {column} in {table}: {e}")
     return False
 
-def ensure_index(cursor, index_name, table, column):
-    """
-    Create an index if it doesn't exist. Use with trusted internal schema identifiers.
-    """
+def ensure_index(cursor: sqlite3.Cursor, index_name: str, table: str, column: str) -> bool:
+    """Creates an index if it does not already exist."""
     try:
         cursor.execute(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})")
         return True
@@ -57,14 +66,13 @@ def ensure_index(cursor, index_name, table, column):
         logging.error(f"Failed to ensure index {index_name} on {table}({column}): {e}")
     return False
 
-def init_db():
-    """Initialize the database schema with high resilience and per-component commit blocks."""
+def init_db() -> None:
+    """Initializes the database schema with resilience and per-component commit blocks."""
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         
-        # 1. CORE ANALYTICS (Highest Priority)
-        # We ensure this table first because the layout depends on it immediately
+        # 1. CORE ANALYTICS
         safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Analytics_Logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -185,7 +193,7 @@ def init_db():
             )
         ''')
 
-        # Seed default room if missing
+        # Seed default room
         try:
             cursor.execute("SELECT id FROM Chat_Rooms WHERE name = '💬 General'")
             if not cursor.fetchone():
@@ -205,10 +213,25 @@ def init_db():
         ''')
         ensure_column(cursor, "Chat_Messages", "room_id", "INTEGER NOT NULL DEFAULT 1")
 
+        # 5. ASYNCHRONOUS SYSTEM TASKS (Worker Queue)
+        safe_execute(cursor, '''
+            CREATE TABLE IF NOT EXISTS System_Tasks (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                task_type TEXT NOT NULL,
+                payload TEXT,
+                status TEXT DEFAULT 'pending',
+                result TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        ensure_index(cursor, "idx_tasks_status", "System_Tasks", "status")
+        ensure_index(cursor, "idx_tasks_user", "System_Tasks", "user_id")
+
         conn.commit()
-        logging.info("Database schema verified/initialized successfully.")
     except Exception as e:
-        logging.error(f"Critical failure during database initialization: {e}")
+        logging.error(f"Critical failure during DB init: {e}")
     finally:
         conn.close()
 
