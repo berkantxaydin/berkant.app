@@ -3,12 +3,12 @@ from app.repositories.base_repository import BaseRepository
 from app.models import AnalyticsLog
 
 class AnalyticsRepository(BaseRepository):
-    def log_request(self, method: str, path: str, visitor_id: str, is_htmx: bool, status_code: int, duration_ms: int, ip_address: Optional[str] = None) -> Any:
+    def log_request(self, method: str, path: str, visitor_id: str, is_htmx: bool, status_code: int, duration_ms: int) -> Any:
         query = """
-            INSERT INTO Analytics_Logs (method, path, ip_address, visitor_id, is_htmx, status_code, duration_ms)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Analytics_Logs (method, path, visitor_id, is_htmx, status_code, duration_ms)
+            VALUES (?, ?, ?, ?, ?, ?)
         """
-        return self.execute(query, (method, path, ip_address, visitor_id, 1 if is_htmx else 0, status_code, duration_ms), commit=True)
+        return self.execute(query, (method, path, visitor_id, 1 if is_htmx else 0, status_code, duration_ms), commit=True)
 
     def get_recent_logs(self, limit: int = 100) -> list[AnalyticsLog]:
         return [AnalyticsLog.from_row(row) for row in self.execute("SELECT * FROM Analytics_Logs ORDER BY created_at DESC LIMIT ?", (limit,))]
