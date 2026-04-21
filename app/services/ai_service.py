@@ -575,13 +575,21 @@ def submit_prompt(user_id, prompt):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Check if user already has a pending/generating task
+
+        cursor.execute("""
+            UPDATE System_Tasks 
+            SET status = 'error', result = '{"answer": "Task timed out and was cleared."}' 
+            WHERE status IN ('pending', 'waking_up', 'thinking', 'generating') 
+            AND created_at < datetime('now', '-5 minutes')
+        """)
+        conn.commit()
+
         cursor.execute(
             "SELECT id FROM System_Tasks WHERE user_id = ? AND status IN ('pending', 'waking_up', 'thinking', 'generating')", 
             (user_id,)
         )
         if cursor.fetchone():
-            return None, False # Block concurrent requests
+            return None, False
 
         cursor.execute(
             "INSERT INTO System_Tasks (id, user_id, task_type, payload, status) VALUES (?, ?, 'ai_chat', ?, 'thinking')",
@@ -589,7 +597,7 @@ def submit_prompt(user_id, prompt):
         )
         conn.commit()
         
-        # Calculate queue position
+        # Calculate dynamic queue position
         cursor.execute("SELECT COUNT(*) FROM System_Tasks WHERE status IN ('pending', 'thinking') AND created_at <= (SELECT created_at FROM System_Tasks WHERE id = ?)", (task_id,))
         position = cursor.fetchone()[0]
         
