@@ -49,7 +49,7 @@ def validate_ai_sql(sql):
             return False, f"Forbidden SQL keyword detected: {word}"
             
     # 3. Forbidden columns/sensitive data
-    sensitive = ['password_hash', 'email', 'ip_address', 'visitor_id']
+    sensitive = ['password_hash', 'email', 'visitor_id']
     for col in sensitive:
         if col in sql_lower:
             return False, f"Access to sensitive column '{col}' is blocked."
@@ -92,7 +92,7 @@ def ai_security_authorizer(action_code, tname, cname, sql_location, trigger_name
         col = cname.lower() if cname else ""
         
         # 1. Block sensitive columns natively
-        if col in ['password_hash', 'email', 'ip_address', 'visitor_id', 'preferences']:
+        if col in ['password_hash', 'email', 'visitor_id', 'preferences']:
             return sqlite3.SQLITE_DENY
             
         # 2. Whitelist allowed tables
