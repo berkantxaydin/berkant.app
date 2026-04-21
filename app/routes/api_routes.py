@@ -43,13 +43,17 @@ def get_cvs():
                 # Truncate and escape summary for card view
                 clean_title = escape(cv.title)
                 clean_username = escape(cv.username)
+                clean_location = escape(cv.location or t('Global / Remote'))
                 short_summary = escape(cv.summary[:85]) + '...' if len(cv.summary) > 85 else escape(cv.summary)
                 html += f"""
                 <article class="glass-panel" onclick="window.location.href='/cv/{cv.id}'" 
                          style="cursor: pointer; display: flex; flex-direction: column; padding: 1.5rem 2rem; min-height: 220px; transition: transform 0.2s;">
                     <header style="margin-bottom: 0.8rem; border: 0; padding: 0 0 0 1.2rem; background: transparent;">
                         <h4 class="accent-text" style="margin-bottom:0; font-size: 1.25rem;">{clean_title}</h4>
-                        <small style="opacity: 0.6; display: block; margin-top: 0.2rem;">@{clean_username}</small>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
+                            <small style="opacity: 0.6;">@{clean_username}</small>
+                            <small style="opacity: 0.8; font-style: italic;">📍 {clean_location}</small>
+                        </div>
                     </header>
                     <p style="font-size:0.95rem; flex-grow: 1; padding-left: 1.2rem; opacity: 0.9; line-height: 1.4;">{short_summary}</p>
                     <footer style="margin-top: 1.2rem; border: 0; padding: 0; background: transparent; text-align: left;">
@@ -81,6 +85,7 @@ def create_ecom_cv():
     from flask import session
     user_id = session['user_id']  # Always use the authenticated session user
     title = request.form.get('title')
+    location = request.form.get('location', '')
     summary = request.form.get('summary')
     skills = [s.strip() for s in request.form.get('skills', '').split(',') if s.strip()]
     exp_role = request.form.get('exp_role')
@@ -99,7 +104,7 @@ def create_ecom_cv():
         custom_htmx = file.read().decode('utf-8', errors='ignore')
         
     try:
-        cv_id = cv_repo.add_cv(user_id, title, summary, cv_data, custom_htmx=custom_htmx)
+        cv_id = cv_repo.add_cv(user_id, title, location, summary, cv_data, custom_htmx=custom_htmx)
         return redirect(f'/cv/{cv_id}')
 
 
@@ -213,6 +218,9 @@ def get_cv_edit_form(cv_id):
         <label>{t('Title')}
             <input type="text" name="title" value="{escape(cv.title)}" required>
         </label>
+        <label>{t('Location')}
+            <input type="text" name="location" value="{escape(cv.location or '')}" placeholder="e.g. Istanbul, Turkey">
+        </label>
         <label>{t('Summary')}
             <textarea name="summary" required>{escape(cv.summary)}</textarea>
         </label>
@@ -228,13 +236,15 @@ def get_cv_edit_form(cv_id):
 @login_required
 def update_cv_htmx(cv_id):
     title = request.form.get('title')
+    location = request.form.get('location', '')
     summary = request.form.get('summary')
-    success = cv_repo.update_cv(cv_id, session['user_id'], title, summary, is_admin=session.get('is_admin'))
+    success = cv_repo.update_cv(cv_id, session['user_id'], title, location, summary, is_admin=session.get('is_admin'))
     if success:
         return f"""
         <article>
             <header>
                 <strong>{escape(title)}</strong>
+                <small style="opacity: 0.7; margin-left: 0.5rem;">📍 {escape(location or t('Global'))}</small>
                 <a href="#" hx-get="/api/cv/{cv_id}/edit" hx-target="closest article" hx-swap="outerHTML" style="float:right;">{t('Edit')}</a>
                 <a href="#" hx-delete="/api/cv/{cv_id}" hx-target="closest article" hx-swap="outerHTML" style="float:right; margin-right: 1rem; color: var(--pico-del-color);">{t('Delete')}</a>
             </header>

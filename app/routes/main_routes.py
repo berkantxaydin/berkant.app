@@ -16,6 +16,14 @@ cv_repo = CVRepository()
 def landing_page():
     return render_template('landing.html')
 
+@main_bp.route('/robots.txt')
+def robots_txt():
+    return send_from_directory(current_app.static_folder, 'robots.txt')
+
+@main_bp.route('/favicon.ico')
+def favicon_ico():
+    return send_from_directory(current_app.static_folder, 'favicon.ico')
+
 @main_bp.route('/health')
 def health_check():
     """Real healthcheck for CI/CD and deployment monitoring."""

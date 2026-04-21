@@ -243,7 +243,11 @@
     "Explore massive Godot WebGL apps distributed safely. Participated in community Jams.": "Explore massive Godot WebGL apps distributed safely. Participated in community Jams.",
     "View Profile": "View Profile",
     "Custom Resume": "Custom Resume",
-    "AI Assistant (Qwen 2.5 7B)": "AI Assistant (Qwen 2.5 7B)"
+    "AI Assistant (Qwen 2.5 7B)": "AI Assistant (Qwen 2.5 7B)",
+    "Starting AI Core...": "Starting AI Core...",
+    "Processing batch": "Processing batch",
+    "AI Core is initializing...": "AI Core is initializing...",
+    "All strings translated successfully! Refresh to see changes.": "All strings translated successfully! Refresh to see changes."
   },
   "tr": {
     "Metrics": "Metrikler",
