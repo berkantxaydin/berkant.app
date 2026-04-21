@@ -1,5 +1,4 @@
 import os
-import time
 import subprocess
 import requests
 from google import genai
@@ -50,26 +49,11 @@ def main():
         ```
         """
         
-        # Retry mechanism for 503 errors and rate limits
-        max_retries = 3
-        retry_delay = 5 # seconds
-        
-        for attempt in range(max_retries):
-            try:
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt
-                )
-                review_comment = response.text
-                break # Success!
-            except Exception as e:
-                if "503" in str(e) or "429" in str(e):
-                    if attempt < max_retries - 1:
-                        print(f" Gemini API busy (Attempt {attempt+1}/{max_retries}). Retrying in {retry_delay}s...")
-                        time.sleep(retry_delay)
-                        retry_delay *= 2 # Exponential backoff
-                        continue
-                raise e # Re-raise if not a retryable error or last attempt
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        review_comment = response.text
     except Exception as e:
         print(f" Gemini AI failed to generate review: {e}")
         return
