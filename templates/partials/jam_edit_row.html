@@ -1,0 +1,20 @@
+{% set start_val = jam.start_time[:16].replace(' ', 'T') %}
+{% set end_val = jam.end_time[:16].replace(' ', 'T') %}
+{% set yt_val = jam.youtube_url or '' %}
+
+<tr id="jam-row-{{ jam.id }}">
+    <form hx-put="/api/jams/{{ jam.id }}" hx-target="#jam-admin-table" hx-swap="outerHTML" style="display:contents;">
+        <td><input name="title" value="{{ jam.title }}" required style="margin:0;" /></td>
+        <td><input name="theme" value="{{ jam.theme }}" required style="margin:0;" /></td>
+        <td><input name="start_time" type="datetime-local" value="{{ start_val }}" required style="margin:0;" /></td>
+        <td><input name="end_time" type="datetime-local" value="{{ end_val }}" required style="margin:0;" /></td>
+        <td><input name="youtube_url" value="{{ yt_val }}" placeholder="YouTube embed URL" style="margin:0;" /></td>
+        <td style="display:flex; gap:0.5rem;">
+            <button type="submit" style="padding:0.3rem 0.8rem; font-size:0.85rem;">{{ t("Save") }}</button>
+            <button type="button" class="outline secondary" style="padding:0.3rem 0.8rem; font-size:0.85rem;"
+                hx-get="/api/jams"
+                hx-target="#jam-admin-table"
+                hx-swap="outerHTML">{{ t("Cancel") }}</button>
+        </td>
+    </form>
+</tr>
