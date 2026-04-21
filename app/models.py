@@ -81,6 +81,7 @@ class AnalyticsLog(BaseRowModel):
     id: Optional[int] = None
     method: str = ""
     path: str = ""
+    ip_address: str = ""
     visitor_id: str = ""
     is_htmx: bool = False
     status_code: int = 0

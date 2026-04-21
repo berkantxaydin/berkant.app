@@ -85,8 +85,4 @@ def run_worker_loop():
                     pass
 
 if __name__ == '__main__':
-    from app.services import ai_service
-    ai_service.cleanup_orphans()
-    
-    print("Starting background worker loop...")
     run_worker_loop()
