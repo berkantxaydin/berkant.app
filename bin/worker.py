@@ -73,6 +73,9 @@ def run_worker_loop():
             else:
                 conn.close()
                 conn = None
+                # Heartbeat every 60 seconds
+                if int(time.time()) % 60 == 0:
+                    print(f"[*] Worker Heartbeat: Active (Time: {time.ctime()})")
                 time.sleep(1) # Wait before polling again
         except Exception as e:
             print(f"[!] Database error in worker loop: {e}")

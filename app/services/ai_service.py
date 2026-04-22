@@ -246,10 +246,19 @@ def start_llama_server() -> Optional[subprocess.Popen]:
         return None
 
     cleanup_orphans()
-    time.sleep(3)
+    time.sleep(1) # Reduced from 3s to speed up cold start
     if is_port_in_use(AI_CONFIG['port']):
         log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} occupied.")
         return None
+
+    mem = psutil.virtual_memory()
+    free_gb = mem.available / (1024**3)
+    # Lenient RAM check: warn if < 4GB, block only if < 1GB to prevent OOM.
+    if free_gb < 1.0:
+        log_ai_event('STARTUP', 'ERROR', f"Critically low RAM to start AI. Available: {free_gb:.1f}GB. Required: >1.0GB")
+        return None
+    elif free_gb < 4.0:
+        log_ai_event('STARTUP', 'WARNING', f"RAM is tight ({free_gb:.1f}GB available). Swapping might occur.")
 
     LAST_RESTART_TIME = now
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
@@ -265,7 +274,17 @@ def start_llama_server() -> Optional[subprocess.Popen]:
         cmd = ["python3", "-m", "llama_cpp.server", "--model", model_path, "--port", str(AI_CONFIG['port']), "--n_ctx", str(AI_CONFIG['context']), "--host", "127.0.0.1"]
     
     with open(log_file, 'a', encoding='utf-8') as err_out:
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=err_out, startupinfo=startupinfo)
+        proc = subprocess.Popen( # nosec B603
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=err_out,
+            startupinfo=startupinfo
+        )
+        # Important: Close the handle in the parent process. 
+        # The child process keeps its own inherited handle.
+        err_out.close()
+        
+        log_ai_event('STARTUP', 'INFO', f"AI process spawned with PID {proc.pid}")
         
     try:
         with open(PID_FILE, 'w') as f:
@@ -279,8 +298,31 @@ def background_initialization() -> None:
     global ai_ready, ai_booting
     ai_booting = True
     try:
+        url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
+        
+        # Cross-process check: if port is already active, verify health.
+        if is_port_in_use(AI_CONFIG['port']):
+            try:
+                with urllib.request.urlopen(url, timeout=1.5) as response:
+                    if response.status == 200:
+                        ai_ready = True
+                        ai_booting = False
+                        log_ai_event('HEALTH', 'INFO', "AI Engine detected as already running.")
+                        return
+            except Exception: pass
+
         proc = start_llama_server()
         if proc is None:
+            # Last-ditch check in case it started between checks
+            if is_port_in_use(AI_CONFIG['port']):
+                try:
+                    with urllib.request.urlopen(url, timeout=3) as response:
+                        if response.status == 200:
+                            ai_ready = True
+                            ai_booting = False
+                            return
+                except Exception: pass
+            
             ai_booting = False
             return
 
@@ -300,9 +342,9 @@ def background_initialization() -> None:
                         ai_booting = False
                         log_ai_event('HEALTH', 'INFO', "AI Engine is ready and responding.")
                         break
-            except Exception:
+            except Exception as e:
                 if i % 10 == 0 and i > 0:
-                    log_ai_event('HEALTH', 'WARNING', f"Still waiting for AI health check... (Attempt {i})")
+                    log_ai_event('HEALTH', 'WARNING', f"Still waiting for AI health check... (Attempt {i}, Error: {e})")
                 time.sleep(2)
         
         if not ai_ready:
@@ -335,7 +377,21 @@ def initialize_ai_system():
     print("AI Background initialization started...")
 
 def is_ai_ready():
-    return ai_ready
+    """Checks if the AI engine is ready. Verifies the port to sync state across processes."""
+    global ai_ready
+    if ai_ready:
+        return True
+    
+    # Ping the local server to verify status
+    try:
+        url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
+        with urllib.request.urlopen(url, timeout=0.5) as response: # nosec B310
+            if response.status == 200:
+                ai_ready = True
+                return True
+    except Exception:
+        pass
+    return False
 
 def is_ai_booting():
     return ai_booting
@@ -491,23 +547,27 @@ def process_ai_task(task_id, payload_dict):
         platform_schema = get_platform_schema()
         
         sys_msg = (
-            "You are the proglem Data-Aware Assistant. "
-            "You have access to a live SQLite database. "
-            f"{platform_schema}"
+            "You are the proglem Data-Aware Assistant for the 'proglem' ecosystem. "
+            "Context: This is a high-performance platform for hosting Godot WebGL games and interactive CVs. "
+            "Hardware Constraints: 16GB RAM (8GB limit for production), SQLite (WAL) backend. "
+            "Games: All games are Godot WebGL binaries hosted locally on our cloud. "
+            "You have access to a live SQLite database with these tables:\n"
+            f"{platform_schema}\n"
             "You also have a snapshot of recent activity:\n"
             f"{community_data}\n\n"
             "STRICT INSTRUCTIONS:\n"
-            "1. If the user asks for info NOT in the snapshot (e.g., specific game IDs/details, user records, or platform history), "
+            "1. NO EXTERNAL REDIRECTS: Do NOT suggest users play games on Itch.io or other websites. Every game mentioned in our database is playable directly here. "
+            "2. If the user asks for info NOT in the snapshot (e.g., specific game IDs, user records, or platform history), "
             "you MUST respond with a SQL query wrapped in <sql>SELECT ...</sql> tags.\n"
-            "2. LINKING: Use Markdown for platform resources ONLY if you have a valid numerical ID. Replace the ID in these patterns:\n"
-            "   - Games: [Title](/games/123)\n"
+            "3. LINKING: Use Markdown for platform resources ONLY if you have a valid numerical ID. Replace the ID in these patterns:\n"
+            "   - Games: [Title](/games/123) (EXAMPLE: [My Godot Game](/games/1))\n"
             "   - CV Profiles: [Title](/cv/45)\n"
             "   - Chat Rooms: [Name](/chat?room_id=7)\n"
             "   - Users: [Username](/u/alice)\n"
-            "3. IMPORTANT: NEVER use '?' or '{id}' or any placeholder in a link. If you don't have the ID, use <sql> to find it first.\n"
-            "4. PERSONA: Do NOT give tutorials or examples of how to ask (e.g., don't say 'You might say something like...') unless the user specifically asks how you work.\n"
-            "5. NO HALLUCINATION: Never share raw file paths like '/play_mock/...' or internal S3 URLs. Only use the patterns in rule #2.\n"
-            "6. Be concise, technical, and directly answer the user."
+            "4. GODOT/WEBGL: When users ask about games, assume they are talking about the Godot WebGL games on THIS platform. Never tell them to go to Itch.io. "
+            "5. IMPORTANT: NEVER use '?' or '{id}' or any placeholder in a link. If you don't have the ID, use <sql> to find it first.\n"
+            "6. NO HALLUCINATION: Never share raw file paths like '/play_mock/...' or internal S3 URLs. Only use the patterns in rule #3.\n"
+            "7. Be concise, technical, and directly answer the user."
         )
 
         def call_ai(msgs):

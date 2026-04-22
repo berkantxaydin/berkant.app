@@ -2,7 +2,7 @@ import os
 import time
 import subprocess
 import requests
-from google import genai
+from google import genai # type: ignore
 
 def main():
     gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -57,7 +57,7 @@ def main():
         for attempt in range(max_retries):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-2.0-flash',
                     contents=prompt
                 )
                 review_comment = response.text
