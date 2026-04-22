@@ -23,7 +23,7 @@ jobs:
         powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\cleanup_runner.ps1
 
     - name: Native Git Checkout (Surgical)
-      uses: actions/checkout@v6
+      uses: actions/checkout@v4
       with:
         ref: main
         clean: true
