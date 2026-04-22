@@ -36,14 +36,16 @@ foreach ($dir in $nginxTempDirs) {
 
 # --- STEP 4: STARTUP ---
 Write-Output "Starting Waitress on port 5000..."
-Start-Process -FilePath "$ProjectDir\venv\Scripts\waitress-serve.exe" -ArgumentList "--port=5000 --call app:create_app" -WindowStyle Hidden -WorkingDirectory $ProjectDir
+$waitressCmd = "`"$ProjectDir\venv\Scripts\waitress-serve.exe`" --port=5000 --call app:create_app"
+Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine = $waitressCmd; CurrentDirectory = $ProjectDir} | Out-Null
 
 Write-Output "Starting Background Worker..."
-Start-Process -FilePath "$ProjectDir\venv\Scripts\python.exe" -ArgumentList "bin/worker.py" -WindowStyle Hidden -WorkingDirectory $ProjectDir
+$workerCmd = "`"$ProjectDir\venv\Scripts\python.exe`" bin/worker.py"
+Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine = $workerCmd; CurrentDirectory = $ProjectDir} | Out-Null
 
 Write-Output "Starting Nginx..."
-Set-Location $NginxDir
-Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
+$nginxCmd = "`"$NginxDir\nginx.exe`""
+Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine = $nginxCmd; CurrentDirectory = $NginxDir} | Out-Null
 
 # --- STEP 5: VERIFY HEALTH ---
 Write-Output "Waiting for stability..."
@@ -60,7 +62,7 @@ try {
     Write-Output "FAILED: App (Waitress) is [UNREACHABLE]"
 }
 
-if (Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*worker.py*" }) { Write-Output "OK: Worker is [ACTIVE]" } else { Write-Output "FAILED: Worker did not start" }
+if (Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" | Where-Object { $_.CommandLine -like "*worker.py*" }) { Write-Output "OK: Worker is [ACTIVE]" } else { Write-Output "FAILED: Worker did not start" }
 
 $cf = Get-Service cloudflared -ErrorAction SilentlyContinue
 if ($cf -and $cf.Status -eq "Running") { Write-Output "OK: Tunnel is [ACTIVE]" }
