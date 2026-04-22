@@ -241,6 +241,33 @@ game, and win.{% endblock %}
     transform: scale(1.03);
   }
 
+  .jam-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .jam-tabs::-webkit-scrollbar {
+    display: none; /* Safari/Chrome */
+  }
+
+  .jam-tab-btn {
+    padding: 0.4rem 1.2rem;
+    border-radius: 50px;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    background: transparent;
+    color: var(--pico-color);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    box-shadow: none;
+    white-space: nowrap; /* Prevent wrapping */
+  }
+
   @keyframes pulse {
     0% {
       box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7);
@@ -258,6 +285,14 @@ game, and win.{% endblock %}
   @media (max-width: 768px) {
     .video-cinema-container {
       padding-bottom: 56.25% !important;
+    }
+    
+    .jam-tabs {
+      margin-left: -1rem;
+      margin-right: -1rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      -webkit-overflow-scrolling: touch;
     }
   }
 </style>

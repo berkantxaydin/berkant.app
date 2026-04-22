@@ -14,20 +14,18 @@ endblock %}
   {% if not rooms %}
   <p class="text-center" style="color: grey; margin-top: 4rem;">{{ t("No chat rooms are currently active.") }}</p>
   {% else %}
-  <div class="grid">
-    <aside style="grid-column: span 1;">
-      <article class="glass-panel"
-        style="padding: 1rem; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2);">
-        <header style="margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+  <div class="chat-container">
+    <aside class="chat-sidebar">
+      <article class="glass-panel channel-panel">
+        <header class="channel-header">
           <strong>{{ t("Channels") }}</strong>
         </header>
-        <nav id="room-tab-bar">
-          <ul style="flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0;">
+        <nav id="room-tab-bar" class="channel-nav">
+          <ul class="channel-list">
             {% for room in rooms %}
-            <li style="width: 100%; list-style: none;">
+            <li class="channel-item">
               <button id="room-tab-{{ room.id }}" class="jam-tab-btn {{ 'active' if loop.first else '' }} outline"
-                data-room-id="{{ room.id }}"
-                style="width: 100%; text-align: left; padding: 0.5rem 0.8rem; font-size: 0.9rem;">
+                data-room-id="{{ room.id }}">
                 # {{ room.name }}
                 {% if not room.is_enabled %}<span style="font-size:0.7rem; opacity:0.6;"> ({{ t("off") }})</span>{% endif %}
               </button>
@@ -38,11 +36,9 @@ endblock %}
       </article>
     </aside>
 
-    <div style="grid-column: span 3;">
-      <article class="glass-panel"
-        style="display: flex; flex-direction: column; height: 600px; padding: 0.5rem; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.1);">
-        <header
-          style="padding: 1rem; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <div class="chat-main">
+      <article class="glass-panel chat-box">
+        <header class="chat-header">
           <div style="min-width: 0;">
             <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
             <small id="active-room-desc"
@@ -170,28 +166,120 @@ endblock %}
 
 <style>
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  /* Chat Grid Layout */
+  .chat-container {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .chat-sidebar {
+    position: sticky;
+    top: 1rem;
+  }
+
+  .channel-panel {
+    padding: 1rem;
+    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.2);
+  }
+
+  .channel-header {
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .channel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .jam-tab-btn {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+    justify-content: flex-start !important;
   }
 
   .jam-tab-btn.active {
     background-color: var(--pico-primary) !important;
     color: white !important;
     border-color: var(--pico-primary) !important;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
   }
 
-  .jam-tab-btn {
-    justify-content: flex-start !important;
+  .chat-box {
+    display: flex;
+    flex-direction: column;
+    height: 700px;
+    max-height: 80vh;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.1);
+    overflow: hidden;
   }
 
-  /* Scrollbar styling for a premium feel */
+  .chat-header {
+    padding: 1rem;
+    margin-bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.2);
+  }
+
+  /* Mobile Adjustments */
+  @media (max-width: 992px) {
+    .chat-container {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .chat-sidebar {
+      position: static;
+    }
+
+    .channel-header {
+      display: none; /* Hide header on mobile to save space */
+    }
+
+    .channel-list {
+      flex-direction: row;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      scrollbar-width: none;
+    }
+
+    .channel-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    .channel-item {
+      flex: 0 0 auto;
+    }
+
+    .jam-tab-btn {
+      width: auto;
+      white-space: nowrap;
+    }
+
+    .chat-box {
+      height: 65vh;
+    }
+  }
+
+  /* Scrollbar styling */
   #chat-messages::-webkit-scrollbar {
     width: 6px;
   }
