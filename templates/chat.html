@@ -62,7 +62,7 @@
           </div>
         </div>
 
-        <footer style="padding: 1rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05);">
+        <footer style="padding: 1.25rem 1.75rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05); position: relative; z-index: 10;">
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
             hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();" 
@@ -313,16 +313,18 @@
     align-items: center;
     width: 100%;
     text-align: left;
-    padding: 0.5rem 0.8rem;
-    font-size: 0.9rem;
-    gap: 0.4rem;
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    gap: 0.5rem;
+    border-radius: 12px;
+    margin: 0;
   }
 
   .truncate {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    flex-grow: 1;
+    flex: 1;
     min-width: 0;
   }
 
@@ -345,7 +347,7 @@
   }
 
   .chat-header {
-    padding: 1.25rem 2rem;
+    padding: 1.25rem 1.75rem;
     margin-bottom: 0;
     display: flex;
     justify-content: space-between;
@@ -353,6 +355,7 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.2);
     position: relative;
+    z-index: 10;
   }
 
   /* Hide Mobile-Specific UI Elements on Desktop */
@@ -384,10 +387,11 @@
       color: white;
       font-size: 1.5rem;
       padding: 0;
-      margin-right: 0.8rem;
+      margin-right: 1rem;
       cursor: pointer;
       line-height: 1;
       position: relative;
+      z-index: 20;
     }
 
     .close-btn {
@@ -408,12 +412,12 @@
       width: 280px;
       max-width: 85vw;
       height: 100vh;
-      background: rgba(18, 12, 26, 0.95);
+      background: rgba(18, 12, 26, 0.98);
       /* Deep dark background */
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       z-index: 1000;
-      padding: 1rem;
+      padding: 0;
       transform: translateX(-100%);
       /* Hides it off-screen */
       transition: transform 0.3s ease-in-out;
@@ -448,8 +452,8 @@
     .channel-list.mobile-grid-force {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      padding: 0 1rem;
+      gap: 0.8rem;
+      padding: 1.5rem;
       margin: 0;
       list-style: none;
     }
@@ -508,7 +512,7 @@
     }
 
     .chat-header {
-      padding: 1rem 1.5rem;
+      padding: 1.25rem 1.75rem;
       background: rgba(0, 0, 0, 0.2);
     }
   }
@@ -562,7 +566,7 @@
     }
     
     .chat-bubble {
-        max-width: 80% !important; /* Increased width for better use of desktop space */
+        max-width: 95% !important; /* Fill almost entire width on desktop */
     }
   }
 </style>
