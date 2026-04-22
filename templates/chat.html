@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block title %}{{ t("Chat Rooms - proglem") }}{% endblock %}
-{% block meta_description %}{{ t("Join live community chat rooms tied to Game Jams and general discussion on proglem.") }}{%
+{% block meta_description %}{{ t("Join live community chat rooms tied to Game Jams and general discussion on proglem.")
+}}{%
 endblock %}
 
 {% block content %}
@@ -21,13 +22,14 @@ endblock %}
           <strong>{{ t("Channels") }}</strong>
         </header>
         <nav id="room-tab-bar" class="channel-nav">
-          <ul class="channel-list">
+          <ul class="channel-list mobile-grid-force">
             {% for room in rooms %}
             <li class="channel-item">
               <button id="room-tab-{{ room.id }}" class="jam-tab-btn {{ 'active' if loop.first else '' }} outline"
                 data-room-id="{{ room.id }}">
                 # {{ room.name }}
-                {% if not room.is_enabled %}<span style="font-size:0.7rem; opacity:0.6;"> ({{ t("off") }})</span>{% endif %}
+                {% if not room.is_enabled %}<span style="font-size:0.7rem; opacity:0.6;"> ({{ t("off") }})</span>{%
+                endif %}
               </button>
             </li>
             {% endfor %}
@@ -48,8 +50,7 @@ endblock %}
         </header>
 
         <div id="chat-messages" hx-get="/api/chat/messages?room_id={{ rooms[0].id }}"
-          hx-trigger="load, every 3s[document.visibilityState === 'visible']" 
-          hx-ext="morph" hx-swap="morph:innerHTML"
+          hx-trigger="load, every 3s[document.visibilityState === 'visible']" hx-ext="morph" hx-swap="morph:innerHTML"
           style="flex-grow: 1; overflow-y: auto; padding: 1rem; scroll-behavior: smooth;">
           <div style="display:flex; justify-content:center; padding:2rem;">
             <span aria-busy="true">{{ t("Connecting to secure tunnel...") }}</span>
@@ -58,14 +59,13 @@ endblock %}
 
         <footer style="padding: 1rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05);">
           {% if session.get('user_id') %}
-          <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" 
-            hx-ext="morph" hx-swap="morph:innerHTML"
-            hx-on::after-request="this.reset(); scrollToBottom();" style="margin-bottom: 0;">
+          <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
+            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom();" style="margin-bottom: 0;">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
             <fieldset role="group" style="margin-bottom: 0;">
               <input type="text" id="chat-input" name="content" autocomplete="off"
                 placeholder="{{ t('Message') }} #{{ rooms[0].name }}..." required maxlength="500">
-              <button type="submit" style="width: 110px;">↵</button>
+              <button type="submit" aria-label="{{ t('Send Message') }}" style="width: 110px;">↵</button>
             </fieldset>
           </form>
           {% else %}
@@ -93,7 +93,7 @@ endblock %}
     const chatRoomsDataElement = document.getElementById('chat-rooms-data');
     const chatRooms = chatRoomsDataElement ? JSON.parse(chatRoomsDataElement.textContent) : [];
 
-    window.switchRoom = function (roomId) {
+    const switchRoom = function (roomId) {
       // Toggle Tab Active State
       document.querySelectorAll('.jam-tab-btn').forEach(b => b.classList.remove('active'));
       const btn = document.getElementById('room-tab-' + roomId);
@@ -130,7 +130,7 @@ endblock %}
     // Event Delegation for Performance
     document.getElementById('room-tab-bar')?.addEventListener('click', e => {
       const btn = e.target.closest('[data-room-id]');
-      if (btn) window.switchRoom(Number(btn.dataset.roomId));
+      if (btn) switchRoom(Number(btn.dataset.roomId));
     });
 
     window.scrollToBottom = function () {
@@ -166,8 +166,15 @@ endblock %}
 
 <style>
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* Chat Grid Layout */
@@ -185,13 +192,13 @@ endblock %}
 
   .channel-panel {
     padding: 1rem;
-    border: 1px solid rgba(255,255,255,0.05);
-    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.2);
   }
 
   .channel-header {
     margin-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .channel-list {
@@ -224,8 +231,8 @@ endblock %}
     height: 700px;
     max-height: 80vh;
     padding: 0;
-    border: 1px solid rgba(255,255,255,0.05);
-    background: rgba(0,0,0,0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.1);
     overflow: hidden;
   }
 
@@ -235,8 +242,8 @@ endblock %}
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
   }
 
   /* Mobile Adjustments (Optimized for Portrait) */
@@ -244,7 +251,8 @@ endblock %}
     .chat-container {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem; /* Tighter gap */
+      gap: 0.5rem;
+      /* Tighter gap */
     }
 
     .chat-sidebar {
@@ -253,11 +261,15 @@ endblock %}
     }
 
     .channel-panel {
-      padding: 0.5rem 0.75rem;
+      padding: 0;
       border-radius: 12px;
-      background: rgba(0, 0, 0, 0.3) !important;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: none !important; /* Remove any artifacts */
+      background: rgba(18, 12, 26, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      margin: 0 auto 1rem auto;
+      display: table;
       overflow: hidden;
     }
 
@@ -265,54 +277,51 @@ endblock %}
       display: none;
     }
 
-    .channel-list {
-      display: flex !important;
-      flex-direction: row !important;
-      overflow-x: auto !important;
+    .channel-list.mobile-grid-force {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 0.5rem;
-      padding: 0.2rem 0;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
+      padding: 0.75rem;
       margin: 0;
-    }
-
-    .channel-list::-webkit-scrollbar {
-      display: none;
-    }
-
-    .channel-item {
-      flex: 0 0 auto;
       list-style: none;
     }
 
+    .channel-item {
+      display: block;
+      width: 100%;
+    }
+
     .jam-tab-btn {
-      width: auto !important;
-      white-space: nowrap;
-      padding: 0.4rem 0.9rem !important;
-      border-radius: 50px !important;
-      font-size: 0.8rem !important;
-      text-align: center !important;
-      background: rgba(255,255,255,0.05) !important;
-      border: 1px solid rgba(255,255,255,0.1) !important;
-      margin: 0;
-      display: inline-flex;
+      width: 100%;
+      height: 2.8rem;
+      padding: 0 0.5rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
       align-items: center;
+      justify-content: center;
+      white-space: normal;
+      line-height: 1.1;
     }
 
     .jam-tab-btn.active {
-      background: var(--pico-primary) !important;
-      color: white !important;
-      border-color: var(--pico-primary) !important;
-      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3) !important;
+      background: var(--pico-primary);
+      color: white;
+      border-color: var(--pico-primary);
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
     }
 
     .chat-box {
-      height: 62vh;
+      height: 600px;
+      max-height: calc(100dvh - 220px);
       border-radius: 12px;
     }
 
     .chat-header {
-      padding: 0.8rem 1rem !important; /* Fixed alignment */
+      padding: 0.8rem 1rem;
       background: rgba(0, 0, 0, 0.2);
     }
 
