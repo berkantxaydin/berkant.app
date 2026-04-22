@@ -17,13 +17,13 @@ jobs:
       shell: cmd
       run: |
         git config --global core.fsmonitor false
-        git config --global --add safe.directory "*"
+        git config --global --add safe.directory "%(prefix)/*"
         taskkill /F /IM git.exe /T /FI "STATUS eq RUNNING" || exit /b 0
         taskkill /F /IM node.exe /T /FI "STATUS eq RUNNING" || exit /b 0
         powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\cleanup_runner.ps1
 
     - name: Native Git Checkout (Surgical)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: main
         clean: true

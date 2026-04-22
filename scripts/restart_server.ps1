@@ -54,22 +54,22 @@ if ($VenvBroken) {
     # Robust Python Discovery
     $GlobalPython = $null
     
-    # Try 1: py launcher (recommended)
-    try {
-        $GlobalPython = & py -3.12 -c "import sys; print(sys.executable)" 2>$null
-    } catch { }
-
-    # Try 2: Get-Command
-    if (-not $GlobalPython) {
-        $GlobalPython = (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+    # Try 1: Known Good Path (Prioritized for this environment)
+    $knownPath = "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe"
+    if (Test-Path $knownPath -ErrorAction SilentlyContinue) {
+        $GlobalPython = $knownPath
     }
 
-    # Try 3: Fallback Hardcoded (with permission safety)
-    if (-not $GlobalPython -or -not (Test-Path $GlobalPython -ErrorAction SilentlyContinue)) {
-        $fallback = "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe"
-        if (Test-Path $fallback -ErrorAction SilentlyContinue) {
-            $GlobalPython = $fallback
-        }
+    # Try 2: py launcher
+    if (-not $GlobalPython) {
+        try {
+            $GlobalPython = & py -3.12 -c "import sys; print(sys.executable)" 2>$null
+        } catch { }
+    }
+
+    # Try 3: Get-Command (Last resort, might find MSYS2)
+    if (-not $GlobalPython) {
+        $GlobalPython = (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
     }
 
     if (-not $GlobalPython -or -not (Test-Path $GlobalPython -ErrorAction SilentlyContinue)) {
