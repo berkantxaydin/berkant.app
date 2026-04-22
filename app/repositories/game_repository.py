@@ -36,8 +36,10 @@ class GameRepository(BaseRepository):
 
 
     def add_game(self, user_id: int, title: str, description: str, game_url: str, jam_id: Optional[int] = None, icon_url: Optional[str] = None, github_url: Optional[str] = None) -> int:
-        query = "INSERT INTO Godot_Games (user_id, title, description, game_url, jam_id, icon_url, github_url) VALUES (?, ?, ?, ?, ?, ?, ?)"
-        return self.execute(query, (user_id, title, description, game_url, jam_id, icon_url, github_url), commit=True)
+        from datetime import datetime
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        query = "INSERT INTO Godot_Games (user_id, title, description, game_url, jam_id, icon_url, github_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        return self.execute(query, (user_id, title, description, game_url, jam_id, icon_url, github_url, now), commit=True)
 
     def update_game(self, game_id: int, user_id: int, title: str, description: str, is_admin: bool = False) -> bool:
         if is_admin:

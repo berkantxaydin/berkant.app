@@ -55,9 +55,11 @@ class CVRepository(BaseRepository):
 
 
     def add_cv(self, user_id: int, title: str, location: str, summary: str, cv_data: dict, custom_htmx: Optional[str] = None, photo_url: Optional[str] = None, github_url: Optional[str] = None) -> int:
+        from datetime import datetime
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cv_json = json.dumps(cv_data)
-        query = "INSERT INTO CV_Catalog (user_id, title, location, summary, cv_data, custom_htmx, photo_url, github_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        return self.execute(query, (user_id, title, location, summary, cv_json, custom_htmx, photo_url, github_url), commit=True)
+        query = "INSERT INTO CV_Catalog (user_id, title, location, summary, cv_data, custom_htmx, photo_url, github_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        return self.execute(query, (user_id, title, location, summary, cv_json, custom_htmx, photo_url, github_url, now), commit=True)
 
     def update_cv(self, cv_id: int, user_id: int, title: str, location: str, summary: str, is_admin: bool = False) -> bool:
         if is_admin:

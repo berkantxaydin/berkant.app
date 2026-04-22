@@ -169,10 +169,11 @@ def log_ai_event(event_type: str, status: str, message: str) -> None:
         logger.info(log_msg)
 
     try:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db_connection()
         conn.execute(
-            "INSERT INTO AI_System_Logs (event_type, status, message) VALUES (?, ?, ?)",
-            (event_type, status, message)
+            "INSERT INTO AI_System_Logs (event_type, status, message, created_at) VALUES (?, ?, ?, ?)",
+            (event_type, status, message, now)
         )
         conn.commit()
         conn.close()
