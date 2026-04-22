@@ -22,9 +22,26 @@
       <label>{{ t("Game Title") }}
         <input type="text" id="gameTitle" name="title" required>
       </label>
+
+      <label>{{ t("GitHub Source URL (Optional)") }}
+        <input type="url" id="githubUrl" name="github_url" placeholder="https://github.com/user/repo">
+      </label>
       
       <label>{{ t("Description (Optional)") }}
         <textarea id="gameDesc" name="description"></textarea>
+      </label>
+
+      <label>{{ t("Game Icon (.png)") }}
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+          <div id="iconPreview" style="width: 60px; height: 60px; border-radius: 12px; background: rgba(168,85,247,0.1); border: 2px dashed rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <span id="iconPlaceholder">🖼️</span>
+          </div>
+          <div style="flex-grow: 1;">
+            <input type="file" id="gameIcon" accept=".png" style="margin-bottom: 0;" onchange="uploadIcon()">
+            <input type="hidden" id="iconUrl">
+            <small id="iconStatus" style="display: block; margin-top: 0.3rem;"></small>
+          </div>
+        </div>
       </label>
 
       <label>{{ t("WebGL Binary (.zip)") }}
@@ -153,6 +170,8 @@ async function handleUpload() {
                 title: title,
                 description: desc,
                 game_url: mockFinalUrl,
+                icon_url: document.getElementById('iconUrl').value || null,
+                github_url: document.getElementById('githubUrl').value || null,
                 jam_id: document.getElementById('jamId') ? document.getElementById('jamId').value : null
             })
         });
@@ -161,10 +180,61 @@ async function handleUpload() {
             status.innerHTML = `<strong class="accent-text">{{ t("Game Infrastructure Compiled Successfully! Validation queued.") }}</strong>`;
             btn.setAttribute("aria-busy", "false");
             btn.innerText = "{{ t('Deployment Verified') }}";
+            setTimeout(() => window.location.href = '/dashboard', 1500);
         } else throw new Error("{{ t('Server rejected routing bindings.') }}");
 
     } catch (e) {
         uiError(e.message);
+    }
+}
+
+async function uploadIcon() {
+    const fileInput = document.getElementById('gameIcon');
+    const status = document.getElementById('iconStatus');
+    const preview = document.getElementById('iconPreview');
+    const hiddenInput = document.getElementById('iconUrl');
+    
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    
+    if (!file.name.toLowerCase().endsWith('.png')) {
+        alert("{{ t('Please upload a .png file for the icon.') }}");
+        fileInput.value = '';
+        return;
+    }
+
+    try {
+        status.innerText = "{{ t('Uploading icon...') }}";
+        const filename = `${crypto.randomUUID()}.png`;
+        const resp = await fetch(`/api/jam/get_upload_url?type=icons&filename=${filename}&content_type=image/png`);
+        const s3Data = await resp.json();
+        
+        let targetUrl = s3Data.url;
+        let isMock = false;
+        if (targetUrl.includes("mock-endpoint")) {
+            targetUrl = "/api/jam/mock_upload";
+            isMock = true;
+        }
+
+        const formData = new FormData();
+        Object.entries(s3Data.fields).forEach(([k, v]) => formData.append(k, v));
+        formData.append('file', file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', targetUrl, true);
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const finalUrl = isMock ? `/play_mock/${s3Data.fields.key}` : `${s3Data.url}/${s3Data.fields.key}`;
+                hiddenInput.value = finalUrl;
+                preview.innerHTML = `<img src="${finalUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+                status.innerHTML = `<span style="color:var(--pico-ins-color);">✓ {{ t('Icon ready') }}</span>`;
+            } else {
+                status.innerHTML = `<span style="color:var(--pico-del-color);">✗ {{ t('Upload failed') }}</span>`;
+            }
+        };
+        xhr.send(formData);
+    } catch (e) {
+        status.innerText = "Error: " + e.message;
     }
 }
 </script>

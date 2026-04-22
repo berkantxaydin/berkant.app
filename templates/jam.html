@@ -35,8 +35,13 @@ game, and win.{% endblock %}
       <hgroup>
         <h2 style="font-size: 2.8rem; margin-bottom: 0.3rem; filter: drop-shadow(0 0 10px rgba(168,85,247,0.4));">{{
           jam.title }}</h2>
+        
+        {% if jam.status != 'not_started' %}
         <p style="color: #94a3b8;">{{ t("Theme:") }} <strong style="color: var(--pico-primary);">{{ jam.theme
             }}</strong></p>
+        {% else %}
+        <p style="color: #94a3b8;"><i style="opacity: 0.7;">{{ t("Theme will be revealed when the jam starts!") }}</i></p>
+        {% endif %}
       </hgroup>
 
       <!-- COUNTDOWN TIMER -->
@@ -52,15 +57,32 @@ game, and win.{% endblock %}
       </div>
 
       <div style="margin-top: 1rem;">
+        {% if jam.status == 'ongoing' %}
         <a href="/upload?jam_id={{ jam.id }}" role="button" class="contrast"
           style="font-size: 1.1rem; padding: 0.8rem 2.5rem; border-radius: 50px; box-shadow: 0 0 20px rgba(168,85,247,0.4);">
           🎮 {{ t("Participate & Upload") }}
         </a>
+        {% elif jam.status == 'not_started' %}
+        <button disabled class="secondary" style="border-radius: 50px; opacity: 0.6;">
+          ⏳ {{ t("Starts Soon") }}
+        </button>
+        {% else %}
+        <button disabled class="secondary" style="border-radius: 50px; opacity: 0.6;">
+          🏁 {{ t("Jam Ended") }}
+        </button>
+        {% endif %}
       </div>
     </div>
 
-    <!-- YouTube Embed (High-Res Cinema Mode) -->
-    {% if jam.youtube_url %}
+    <!-- Jam Promotion Image (Show if not started or as a background) -->
+    {% if jam.status == 'not_started' and jam.image_url %}
+    <div style="max-width: 1100px; margin: 0 auto 3rem; border-radius: 20px; overflow: hidden; border: 2px solid rgba(168,85,247,0.2); box-shadow: 0 0 30px rgba(168,85,247,0.1);">
+      <img src="{{ jam.image_url }}" alt="Jam Promotion" style="width: 100%; height: auto; display: block;">
+    </div>
+    {% endif %}
+
+    <!-- YouTube Embed (Show only if started) -->
+    {% if jam.youtube_url and jam.status != 'not_started' %}
     <div id="video-container-{{ jam.id }}" class="video-cinema-container" style="max-width: 1100px; margin: 0 auto 3.5rem; position: relative; padding-bottom: 38%; height: 0;
                 border-radius: 20px; overflow: hidden; cursor: pointer;
                 border: 2px solid rgba(168,85,247,0.25);

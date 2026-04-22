@@ -40,6 +40,8 @@ class GodotGame(BaseRowModel):
     game_url: str = ""
     validation_status: str = "Pending"
     views: int = 0
+    icon_url: Optional[str] = None
+    github_url: Optional[str] = None
     created_at: Optional[str] = None
     username: Optional[str] = None
     likes: int = 0
@@ -53,6 +55,8 @@ class CVCatalog(BaseRowModel):
     summary: str = ""
     cv_data: Dict[str, Any] = field(default_factory=dict)
     custom_htmx: str = ""
+    photo_url: Optional[str] = None
+    github_url: Optional[str] = None
     created_at: Optional[str] = None
     username: Optional[str] = None
     author_is_admin: bool = False
@@ -65,6 +69,7 @@ class GameJam(BaseRowModel):
     start_time: str = ""
     end_time: str = ""
     youtube_url: str = ""
+    image_url: Optional[str] = None
 
 @dataclass
 class ChatMessage(BaseRowModel):
