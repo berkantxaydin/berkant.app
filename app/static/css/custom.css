@@ -15,6 +15,7 @@
   /* 10% - Accent / Contrast (Crimson Red / Black Mix) */
   --accent-color: #991b1b; 
   --accent-glow: rgba(153, 27, 27, 0.5);
+  --accent-brown: #3e2723; /* Deep Coffee/Brown */
   --pico-ins-color: #ef4444; /* Used for success/active accents */
   
   --pico-h1-color: #f8fafc;
@@ -169,13 +170,51 @@ nav strong.logo {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   border-radius: 16px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative; /* For corner brackets */
+  overflow: hidden;
+}
+
+.glass-panel::before, .glass-panel::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 3px solid transparent; /* Wider bracket */
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.glass-panel::before {
+  top: 0;
+  left: 0;
+  border-top-left-radius: 16px;
+}
+
+.glass-panel::after {
+  bottom: 0;
+  right: 0;
+  border-bottom-right-radius: 16px;
 }
 
 .glass-panel:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(153, 27, 27, 0.15);
-  border-color: var(--accent-color);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(62, 39, 35, 0.4); /* Brown glow mix */
   background: rgba(18, 12, 26, 0.9);
+}
+
+.glass-panel:hover::before {
+  width: 40px;
+  height: 40px;
+  border-top-color: var(--accent-color);
+  border-left-color: var(--accent-color);
+}
+
+.glass-panel:hover::after {
+  width: 40px;
+  height: 40px;
+  border-bottom-color: var(--accent-color);
+  border-right-color: var(--accent-color);
 }
 
 .premium-hero {

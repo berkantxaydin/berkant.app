@@ -47,8 +47,8 @@
             <span class="accent-text mono-val">{{ "%.1f"|format(metrics.ram_used_gb) }} / {{ "%.0f"|format(metrics.ram_total_gb) }} GB</span>
         </div>
         <div class="metric-bar-container" style="display: flex;">
+            <div class="metric-bar-fill {{ 'ram-bar-critical' if metrics.ram_percent > 85 else 'ram-bar-normal' }}" style="width: {{ metrics.sys_only_percent }}%; border-radius: 0;"></div>
             <div class="metric-bar-fill ai-bar" style="width: {{ metrics.ai_ram_percent }}%; border-radius: 0;"></div>
-            <div class="metric-bar-fill {{ 'ram-bar-critical' if metrics.ram_percent > 85 else 'ram-bar-normal' }}" style="width: {{ [0, metrics.ram_percent - metrics.ai_ram_percent]|max }}%; border-radius: 0;"></div>
         </div>
         <div style="display:flex; justify-content: space-between; font-size: 0.75rem; margin-top: 0.4rem; color: #94a3b8; font-weight: 500;">
             <span>{{ t("System") }}: {{ "%.1f"|format(metrics.sys_ram_gb) }} GB</span>
