@@ -101,8 +101,13 @@ def create_app() -> Flask:
         return response
 
     # Global Error Handling
+    from werkzeug.exceptions import HTTPException
     @app.errorhandler(Exception)
     def handle_global_error(e):
+        # Prevent standard HTTP errors (like 404s) from spamming the error log
+        if isinstance(e, HTTPException):
+            return e  # Let Flask handle it normally!
+
         app.logger.error(f"Unhandled Exception: {str(e)}", exc_info=True)
         if 'HX-Request' in request.headers:
             return f'''

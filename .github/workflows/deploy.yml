@@ -18,6 +18,7 @@ jobs:
       run: |
         git config --global core.fsmonitor false
         git config --global --add safe.directory "C:/Users/berka/Downloads/berkant.app"
+        git config --global --add safe.directory "${{ github.workspace }}"
         taskkill /F /IM git.exe /T /FI "STATUS eq RUNNING" || exit /b 0
         taskkill /F /IM node.exe /T /FI "STATUS eq RUNNING" || exit /b 0
         powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\cleanup_runner.ps1
