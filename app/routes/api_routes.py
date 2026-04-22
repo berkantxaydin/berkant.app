@@ -398,8 +398,7 @@ def get_recent_errors():
     with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
         all_lines = f.readlines()
         
-        # Find the start of the current session
-        boot_signature = "Proglem App instance created and logger configured."
+        boot_signature = "Proglem App instance created."
         start_index = 0
         for i in range(len(all_lines) - 1, -1, -1):
             if boot_signature in all_lines[i]:
