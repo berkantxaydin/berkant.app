@@ -29,8 +29,8 @@
             <li class="channel-item">
               <button id="room-tab-{{ room.id }}" class="jam-tab-btn {{ 'active' if loop.first else '' }} outline"
                 data-room-id="{{ room.id }}" title="# {{ room.name }}">
-                # {{ room.name }}
-                {% if not room.is_enabled %}<span style="font-size:0.7rem; opacity:0.6;"> ({{ t("off") }})</span>{%
+                <span class="truncate"># {{ room.name }}</span>
+                {% if not room.is_enabled %}<small style="opacity:0.6; flex-shrink: 0;"> ({{ t("off") }})</small>{%
                 endif %}
               </button>
             </li>
@@ -43,7 +43,7 @@
     <div class="chat-main">
       <article class="glass-panel chat-box">
         <header class="chat-header">
-          <div style="display: flex; align-items: center; gap: 15px; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 15px; min-width: 0; position: relative; z-index: 10;">
             <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Menu">☰</button>
             <div style="min-width: 0;">
               <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
@@ -66,7 +66,7 @@
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
             hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();" 
-            enctype="multipart/form-data" style="margin-bottom: 0;">
+            enctype="multipart/form-data" style="margin-bottom: 0; position: relative; z-index: 10;">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
             <fieldset role="group" style="margin-bottom: 0;">
               <button type="button" class="outline" id="camera-btn" style="width: 50px; padding: 0;" title="{{ t('Upload Image') }}">📷</button>
@@ -309,15 +309,21 @@
 
   /* Smart Text Truncation and Alignment Applied Here */
   .jam-tab-btn {
-    display: block;
-    /* Required for text-overflow to work perfectly */
+    display: flex;
+    align-items: center;
     width: 100%;
     text-align: left;
     padding: 0.5rem 0.8rem;
     font-size: 0.9rem;
+    gap: 0.4rem;
+  }
+
+  .truncate {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex-grow: 1;
+    min-width: 0;
   }
 
   .jam-tab-btn.active {
@@ -339,13 +345,14 @@
   }
 
   .chat-header {
-    padding: 1.25rem 1.5rem;
+    padding: 1.25rem 2rem;
     margin-bottom: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.2);
+    position: relative;
   }
 
   /* Hide Mobile-Specific UI Elements on Desktop */
@@ -377,9 +384,10 @@
       color: white;
       font-size: 1.5rem;
       padding: 0;
-      margin-right: 0.5rem;
+      margin-right: 0.8rem;
       cursor: pointer;
       line-height: 1;
+      position: relative;
     }
 
     .close-btn {
@@ -500,7 +508,7 @@
     }
 
     .chat-header {
-      padding: 0.8rem 1rem;
+      padding: 1rem 1.5rem;
       background: rgba(0, 0, 0, 0.2);
     }
   }
@@ -554,7 +562,7 @@
     }
     
     .chat-bubble {
-        max-width: 70% !important; /* Slightly narrower bubbles on desktop for better readability */
+        max-width: 80% !important; /* Increased width for better use of desktop space */
     }
   }
 </style>
