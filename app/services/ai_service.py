@@ -337,7 +337,19 @@ def background_initialization() -> None:
                         ai_booting = False
                         log_ai_event('HEALTH', 'INFO', "AI Engine detected as already running.")
                         return
-            except Exception: pass
+            except Exception:
+                log_ai_event('PORT_CONFLICT', 'WARNING', f"Port {AI_CONFIG['port']} is in use but unresponsive. Attempting to reclaim...")
+                # Attempt to kill whatever is on the port
+                try:
+                    for proc in psutil.process_iter(['pid', 'name']):
+                        for conn in proc.connections(kind='inet'):
+                            if conn.laddr.port == AI_CONFIG['port']:
+                                p = psutil.Process(proc.info['pid'])
+                                log_ai_event('PORT_CONFLICT', 'INFO', f"Killing process {p.pid} ({p.name()}) occupying AI port.")
+                                p.kill()
+                                time.sleep(1)
+                except Exception as ex:
+                    log_ai_event('PORT_CONFLICT', 'ERROR', f"Failed to reclaim port: {ex}")
 
         proc = start_llama_server()
         if proc is None:
@@ -555,7 +567,7 @@ def process_ai_task(task_id, payload_dict):
     
     try:
         # Update status to Waking Up if not ready
-        if not ai_ready:
+        if not is_ai_ready():
             conn = get_db_connection()
             conn.execute("UPDATE System_Tasks SET status = 'waking_up' WHERE id = ?", (task_id,))
             conn.commit()
@@ -565,16 +577,16 @@ def process_ai_task(task_id, payload_dict):
             # Wait for bootup - strict timeout to prevent "stuck" assistant
             max_wait = 180 # 3 minutes total
             start_wait = time.time()
-            while not ai_ready:
+            while not is_ai_ready():
                 if time.time() - start_wait > max_wait:
                     raise Exception("AI Engine wakeup timed out (3 minute limit reached).")
                 
                 # Heartbeat check: ensure we didn't fail and stop booting
-                if not ai_booting and not ai_ready:
+                if not is_ai_booting() and not is_ai_ready():
                     # Attempt one last re-initialization if something died
                     initialize_ai_system()
                     time.sleep(2)
-                    if not ai_booting and not ai_ready:
+                    if not is_ai_booting() and not is_ai_ready():
                         raise Exception("AI Engine failed to initialize during wakeup.")
                 time.sleep(1)
 
@@ -772,7 +784,12 @@ def submit_prompt(user_id, prompt):
         conn.commit()
         
         # Calculate dynamic queue position
-        cursor.execute("SELECT COUNT(*) FROM System_Tasks WHERE status IN ('pending', 'thinking') AND created_at <= (SELECT created_at FROM System_Tasks WHERE id = ?)", (task_id,))
+        # We count everything that is not 'done' or 'error' and was created before or at the same time as this task
+        cursor.execute("""
+            SELECT COUNT(*) FROM System_Tasks 
+            WHERE status NOT IN ('done', 'error') 
+            AND created_at <= (SELECT created_at FROM System_Tasks WHERE id = ?)
+        """, (task_id,))
         position = cursor.fetchone()[0]
         
         return task_id, position > 1
@@ -794,7 +811,12 @@ def get_result(task_id):
         
         if status == 'thinking':
             # Dynamic queue position calculation
-            cursor.execute("SELECT COUNT(*) FROM System_Tasks WHERE status IN ('pending', 'thinking') AND created_at <= ?", (row['created_at'],))
+            # Count all tasks ahead of us that are still being processed
+            cursor.execute("""
+                SELECT COUNT(*) FROM System_Tasks 
+                WHERE status NOT IN ('done', 'error') 
+                AND created_at <= ?
+            """, (row['created_at'],))
             result_data['queue_pos'] = cursor.fetchone()[0]
             
         return {"status": status, **result_data}
