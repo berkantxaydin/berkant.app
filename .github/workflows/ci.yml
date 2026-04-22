@@ -13,12 +13,17 @@ permissions:
   
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test-and-scan:
     name: Lint, Test, and Security Scan
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
+    
+    # ---> THIS IS THE NEW FIX FOR THE GIT WARNING <---
+    - name: Fix Git Safe Directory Warnings
+      run: git config --global --add safe.directory '*'
     
     - name: Set up Python 3.11
       uses: actions/setup-python@v6
@@ -55,6 +60,9 @@ jobs:
     - uses: actions/checkout@v6
       with:
         fetch-depth: 0 # Required to fetch the full git diff
+
+    - name: Fix Git Safe Directory Warnings
+      run: git config --global --add safe.directory '*'
         
     - name: Set up Python 3.11
       uses: actions/setup-python@v6
