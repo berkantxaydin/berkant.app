@@ -26,6 +26,7 @@ class BaseRepository:
             raise
         finally:
             # Only manually close if we are running in a background script/worker
+            # AND we are not in a Flask request context.
             if not has_app_context():
                 conn.close()
 

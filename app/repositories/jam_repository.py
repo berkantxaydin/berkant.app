@@ -32,7 +32,7 @@ class JamRepository(BaseRepository):
             conn.rollback()
             raise
         finally:
-            conn.close()
+            pass
 
     def update_jam(self, jam_id: int, title: str, theme: str, start_time: str, end_time: str, youtube_url: Optional[str] = None) -> bool:
         query = """

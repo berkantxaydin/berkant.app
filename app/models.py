@@ -77,6 +77,15 @@ class ChatMessage(BaseRowModel):
     is_admin: bool = False
 
 @dataclass
+class GameComment(BaseRowModel):
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    game_id: Optional[int] = None
+    content: str = ""
+    created_at: Optional[str] = None
+    username: Optional[str] = None
+
+@dataclass
 class AnalyticsLog(BaseRowModel):
     id: Optional[int] = None
     method: str = ""

@@ -73,6 +73,10 @@ def run_worker_loop():
             else:
                 conn.close()
                 conn = None
+                
+                # Check for AI idle timeout while waiting for new tasks
+                ai_service.check_idle_timeout()
+                
                 # Heartbeat every 60 seconds
                 if int(time.time()) % 60 == 0:
                     print(f"[*] Worker Heartbeat: Active (Time: {time.ctime()})")
