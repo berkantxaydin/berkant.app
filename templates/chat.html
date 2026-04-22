@@ -474,17 +474,18 @@
     /* Adjusted tab buttons to look native */
     .jam-tab-btn {
       width: 100%;
-      height: 3rem;
-      padding: 0 1rem;
+      min-height: 4rem; /* Taller for mobile touch targets */
+      padding: 1rem 1.5rem;
       border-radius: 8px;
-      font-size: 1rem; /* Slightly larger for mobile touch targets */
+      font-size: 1rem;
       text-align: left;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid transparent;
       display: flex;
       align-items: center;
-      justify-content: flex-start; /* Align text left instead of center */
+      justify-content: space-between; /* Anchor content to left and right */
       white-space: nowrap;
+      gap: 0.8rem;
     }
 
     .jam-tab-btn.active {
