@@ -61,13 +61,13 @@ class CVRepository(BaseRepository):
         query = "INSERT INTO CV_Catalog (user_id, title, location, summary, cv_data, custom_htmx, photo_url, github_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         return self.execute(query, (user_id, title, location, summary, cv_json, custom_htmx, photo_url, github_url, now), commit=True)
 
-    def update_cv(self, cv_id: int, user_id: int, title: str, location: str, summary: str, is_admin: bool = False) -> bool:
+    def update_cv(self, cv_id: int, user_id: int, title: str, location: str, summary: str, photo_url: Optional[str] = None, is_admin: bool = False) -> bool:
         if is_admin:
-            query = "UPDATE CV_Catalog SET title = ?, location = ?, summary = ? WHERE id = ?"
-            params = (title, location, summary, cv_id)
+            query = "UPDATE CV_Catalog SET title = ?, location = ?, summary = ?, photo_url = COALESCE(?, photo_url) WHERE id = ?"
+            params = (title, location, summary, photo_url, cv_id)
         else:
-            query = "UPDATE CV_Catalog SET title = ?, location = ?, summary = ? WHERE id = ? AND user_id = ?"
-            params = (title, location, summary, cv_id, user_id)
+            query = "UPDATE CV_Catalog SET title = ?, location = ?, summary = ?, photo_url = COALESCE(?, photo_url) WHERE id = ? AND user_id = ?"
+            params = (title, location, summary, photo_url, cv_id, user_id)
         
         return self.execute(query, params, commit=True)
 

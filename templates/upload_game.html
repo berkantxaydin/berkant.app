@@ -204,35 +204,15 @@ async function uploadIcon() {
     }
 
     try {
-        status.innerText = "{{ t('Uploading icon...') }}";
-        const filename = `${crypto.randomUUID()}.png`;
-        const resp = await fetch(`/api/jam/get_upload_url?type=icons&filename=${filename}&content_type=image/png`);
-        const s3Data = await resp.json();
-        
-        let targetUrl = s3Data.url;
-        let isMock = false;
-        if (targetUrl.includes("mock-endpoint")) {
-            targetUrl = "/api/jam/mock_upload";
-            isMock = true;
-        }
-
-        const formData = new FormData();
-        Object.entries(s3Data.fields).forEach(([k, v]) => formData.append(k, v));
-        formData.append('file', file);
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', targetUrl, true);
-        xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                const finalUrl = isMock ? `/play_mock/${s3Data.fields.key}` : `${s3Data.url}/${s3Data.fields.key}`;
-                hiddenInput.value = finalUrl;
-                preview.innerHTML = `<img src="${finalUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-                status.innerHTML = `<span style="color:var(--pico-ins-color);">✓ {{ t('Icon ready') }}</span>`;
-            } else {
-                status.innerHTML = `<span style="color:var(--pico-del-color);">✗ {{ t('Upload failed') }}</span>`;
-            }
+        status.innerText = "{{ t('Processing icon...') }}";
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64 = e.target.result;
+            hiddenInput.value = base64;
+            preview.innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover;">`;
+            status.innerHTML = `<span style="color:var(--pico-ins-color);">✓ {{ t('Icon ready') }}</span>`;
         };
-        xhr.send(formData);
+        reader.readAsDataURL(file);
     } catch (e) {
         status.innerText = "Error: " + e.message;
     }

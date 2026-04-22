@@ -8,3 +8,4 @@ psutil
 python-dotenv
 google-genai
 requests
+Pillow

@@ -3,14 +3,14 @@
 {% set yt_val = jam.youtube_url or '' %}
 
 <tr id="jam-row-{{ jam.id }}">
-    <form hx-put="/api/jams/{{ jam.id }}" hx-target="#jam-admin-table" hx-swap="outerHTML" style="display:contents;">
+    <form hx-put="/api/jams/{{ jam.id }}" hx-target="#jam-admin-table" hx-swap="outerHTML" enctype="multipart/form-data" style="display:contents;">
         <td><input name="title" value="{{ jam.title }}" required style="margin:0;" /></td>
         <td><input name="theme" value="{{ jam.theme }}" required style="margin:0;" /></td>
         <td><input name="start_time" type="datetime-local" value="{{ start_val }}" required style="margin:0;" /></td>
         <td><input name="end_time" type="datetime-local" value="{{ end_val }}" required style="margin:0;" /></td>
         <td>
             <input name="youtube_url" value="{{ yt_val }}" placeholder="YouTube URL" style="margin:0; font-size:0.8rem;" />
-            <input name="image_url" value="{{ jam.image_url or '' }}" placeholder="Promo Image URL" style="margin:0; font-size:0.8rem; margin-top:0.2rem;" />
+            <input name="image_file" type="file" accept=".png" style="margin:0; font-size:0.8rem; margin-top:0.2rem;" />
         </td>
         <td style="display:flex; gap:0.5rem;">
             <button type="submit" style="padding:0.3rem 0.8rem; font-size:0.85rem;">{{ t("Save") }}</button>
