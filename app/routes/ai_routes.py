@@ -73,13 +73,18 @@ def ask_ai():
     if not ai_service.is_ai_ready():
         status_msg = t("AI is waking up (Warm-up phase)...")
     else:
-        status_msg = t("Adding to queue...") if is_busy else t("Initializing AI...")
+        if is_busy:
+            # We already calculated position in submit_prompt but it's not returned directly,
+            # we'll just use a generic 'Queued' message here and let status polling update the exact number.
+            status_msg = t("Adding to queue...")
+        else:
+            status_msg = t("AI is thinking...")
 
     return f'''
     <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 1.5s" hx-swap="outerHTML">
         <article class="thinking">
             <header><strong aria-busy="true">{t("AI Assistant")}</strong></header>
-            {status_msg} ({t("Task")} {task_id[:8]})
+            <p style="text-align: center; padding: 1rem;">{status_msg}</p>
         </article>
     </div>
     '''
@@ -151,7 +156,10 @@ def ai_status(task_id):
         '''
     else:
         pos = result.get('queue_pos', 1)
-        msg = t("AI is thinking...") if pos == 1 else f"{t('In Queue')}: {t('You are')} #{pos} {t('in line')}..."
+        if pos > 1:
+            msg = f"{t('In Queue')}: {t('You are')} #{pos} {t('in line')}..."
+        else:
+            msg = t("AI is thinking...")
         return f'''
         <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 1.5s" hx-swap="outerHTML">
             <article class="thinking">
@@ -159,6 +167,9 @@ def ai_status(task_id):
                 <p style="text-align: center; padding: 1rem; color: var(--pico-primary);">
                     {msg}
                 </p>
+                <footer style="text-align: center; font-size: 0.8rem; opacity: 0.7;">
+                    {t("Task ID")}: {task_id[:8]}
+                </footer>
             </article>
         </div>
         '''

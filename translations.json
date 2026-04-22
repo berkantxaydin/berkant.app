@@ -254,7 +254,8 @@
     "e.g. Istanbul, Turkey": "e.g. Istanbul, Turkey",
     "Save Changes": "Save Changes",
     "Cancel": "Cancel",
-    "Disable": "Disable"
+    "Disable": "Disable",
+    "AI is thinking...": "AI is thinking..."
   },
   "tr": {
     "Metrics": "Metrikler",
