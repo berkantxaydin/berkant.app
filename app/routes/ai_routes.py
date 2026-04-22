@@ -1,6 +1,6 @@
 import html
 import re
-from flask import Blueprint, request
+from flask import Blueprint, request, g
 from app.services import ai_service
 from app.i18n import t
 
@@ -55,8 +55,8 @@ def ask_ai():
     if not prompt:
         return f"<strong>{t('Error:')}</strong> {t('Please provide a prompt.')}", 400
 
-    # Pass the remote IP as user identifier
-    user_id = request.remote_addr
+    # Use cookie-based visitor ID to survive NAT/CGNAT
+    user_id = getattr(g, 'visitor_id', request.remote_addr)
     task_id, is_busy = ai_service.submit_prompt(user_id, prompt)
     
     if not task_id:
@@ -92,7 +92,7 @@ def ai_status(task_id):
     if status == 'done':
         formatted_answer = format_ai_message(result.get('answer', ''))
         return f'''
-        <div id="chat-result">
+        <div id="chat-result" style="animation: slideIn 0.4s ease-out;">
             <style>
                 .accent-link {{
                     color: var(--pico-primary);
@@ -106,17 +106,18 @@ def ai_status(task_id):
                 }}
             </style>
             <article>
-                <header><strong>{t("AI Answer")}</strong></header>
+                <header><strong>{t("AI Assistant")}</strong></header>
                 <div style="white-space: pre-wrap;">{formatted_answer}</div>
             </article>
         </div>
         '''
     elif status == 'generating':
-        # Use a faster poll during generation
+        # Use a faster poll during generation for the "typing" effect
+        # We also keep the article stable (no pulse) so text is easy to read
         formatted_answer = format_ai_message(result.get('answer', ''))
         return f'''
         <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 0.5s" hx-swap="outerHTML">
-            <article>
+            <article style="border-color: var(--pico-primary); box-shadow: 0 0 15px rgba(168, 85, 247, 0.1);">
                 <header><strong aria-busy="true">{t("AI is typing...")}</strong></header>
                 <div style="white-space: pre-wrap;">{formatted_answer}</div>
             </article>
@@ -125,10 +126,13 @@ def ai_status(task_id):
     elif status == 'waking_up':
         return f'''
         <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 2s" hx-swap="outerHTML">
-            <article class="thinking" style="border-color: var(--pico-primary);">
+            <article class="thinking" style="border-style: solid;">
                 <header><strong aria-busy="true">{t("AI Engine")}</strong></header>
-                ⚡ {t("Waking up from idle...")}
-                <p><small>{t("The model is loading into system RAM. This may take 30-60 seconds.")}</small></p>
+                <div style="text-align: center; padding: 1rem;">
+                    <span style="font-size: 2rem;">⚡</span>
+                    <p><strong>{t("Waking up from idle...")}</strong></p>
+                    <p><small>{t("The model is loading into system RAM. This may take 30-60 seconds.")}</small></p>
+                </div>
             </article>
         </div>
         '''
@@ -136,20 +140,25 @@ def ai_status(task_id):
         safe_error = html.escape(result.get('message', 'Unknown error occurred.'))
         return f'''
         <div id="chat-result">
-            <article>
+            <article style="border-color: var(--pico-del-color);">
                 <header style="color: var(--pico-del-color);"><strong>{t("Error Processing Request")}</strong></header>
                 <p>{safe_error}</p>
+                <footer>
+                    <button class="outline" onclick="window.location.reload()">{t("Try Again")}</button>
+                </footer>
             </article>
         </div>
         '''
     else:
         pos = result.get('queue_pos', 1)
-        msg = t("AI is processing your request...") if pos == 1 else f"{t('In Queue')}: {t('You are')} #{pos} {t('in line')}..."
+        msg = t("AI is thinking...") if pos == 1 else f"{t('In Queue')}: {t('You are')} #{pos} {t('in line')}..."
         return f'''
         <div id="chat-result" hx-get="/ai/status/{task_id}" hx-trigger="every 1.5s" hx-swap="outerHTML">
             <article class="thinking">
                 <header><strong aria-busy="true">{t("AI Assistant")}</strong></header>
-                {msg}
+                <p style="text-align: center; padding: 1rem; color: var(--pico-primary);">
+                    {msg}
+                </p>
             </article>
         </div>
         '''

@@ -57,6 +57,8 @@ def create_ecom_cv():
     title = request.form.get('title')
     location = request.form.get('location', '')
     summary = request.form.get('summary')
+    photo_url = request.form.get('photo_url')
+    github_url = request.form.get('github_url')
     skills = [s.strip() for s in request.form.get('skills', '').split(',') if s.strip()]
     exp_role = request.form.get('exp_role')
     
@@ -73,7 +75,7 @@ def create_ecom_cv():
     if file and file.filename != '':
         custom_htmx = file.read().decode('utf-8', errors='ignore')
         
-    cv_id = cv_repo.add_cv(user_id, title, location, summary, cv_data, custom_htmx=custom_htmx)
+    cv_id = cv_repo.add_cv(user_id, title, location, summary, cv_data, custom_htmx=custom_htmx, photo_url=photo_url, github_url=github_url)
     return redirect(f'/cv/{cv_id}')
 
 
@@ -85,7 +87,19 @@ def get_upload_url():
     """Generates a secure S3/R2 upload URL to bypass local server bandwidth constraints."""
     filename = request.args.get('filename', 'default.bin')
     mime_type = request.args.get('content_type', 'application/octet-stream')
+    upload_type = request.args.get('type', 'submissions') # submissions, icons, photos, jams
     
+    # Force .png for images if requested by user rule (or at least suggest it)
+    if upload_type in ['icons', 'photos', 'jams'] and not filename.lower().endswith('.png'):
+        # We don't force it here but we could. For now let's just use the provided filename.
+        pass
+
+    # Map type to folder
+    folder = "submissions"
+    if upload_type == 'icons': folder = "assets/icons"
+    elif upload_type == 'photos': folder = "assets/photos"
+    elif upload_type == 'jams': folder = "assets/jams"
+
     # Smart Mock Detection: If R2 endpoint contains placeholders or common defaults, force Mock Mode
     r2_endpoint = os.environ.get('R2_ENDPOINT_URL', "https://mock-endpoint.com")
     r2_key_id = os.environ.get('R2_ACCESS_KEY_ID', 'test')
@@ -107,7 +121,7 @@ def get_upload_url():
 
     presigned_data = s3_client.generate_presigned_post(
         Bucket=os.environ.get('R2_BUCKET_NAME', 'jam-uploads'),
-        Key=f"submissions/{filename}",
+        Key=f"{folder}/{filename}",
         Fields={"Content-Type": mime_type},
         Conditions=[
             ["content-length-range", 1, 524288000],
@@ -141,8 +155,33 @@ def submit_game():
     if not data or not data.get('title') or not data.get('game_url'):
         return jsonify({"error": "Title and Game URL are required"}), 400
         
+    jam_id = data.get('jam_id')
+    if jam_id:
+        # Validate Jam Timeline
+        jam = jam_repo.get_jam_by_id(jam_id)
+        if not jam:
+            return jsonify({"error": "Invalid Jam ID"}), 404
+            
+        import datetime
+        now = datetime.datetime.now()
+        start = datetime.datetime.fromisoformat(jam.start_time.replace(' ', 'T'))
+        end = datetime.datetime.fromisoformat(jam.end_time.replace(' ', 'T'))
+        
+        if now < start:
+            return jsonify({"error": t("This jam hasn't started yet!")}), 403
+        if now > end:
+            return jsonify({"error": t("This jam has already ended!")}), 403
+
     from app.services.game_validator import submit_validation_job
-    game_id = game_repo.add_game(session['user_id'], data['title'], data.get('description', ''), data['game_url'], data.get('jam_id'))
+    game_id = game_repo.add_game(
+        session['user_id'], 
+        data['title'], 
+        data.get('description', ''), 
+        data['game_url'], 
+        jam_id,
+        icon_url=data.get('icon_url'),
+        github_url=data.get('github_url')
+    )
     
     # Fire and forget our Mutex UUID validation background task
     job_uid = submit_validation_job(game_id, data['game_url'])
@@ -438,6 +477,7 @@ def create_jam():
     start_time = request.form.get('start_time', '').strip()
     end_time = request.form.get('end_time', '').strip()
     youtube_url = request.form.get('youtube_url', '').strip() or None
+    image_url = request.form.get('image_url', '').strip() or None
 
     if not all([title, theme, start_time, end_time]):
         raise ValueError(t('All fields except YouTube URL are required.'))
@@ -446,7 +486,7 @@ def create_jam():
     start_time = start_time.replace('T', ' ')
     end_time = end_time.replace('T', ' ')
 
-    jam_repo.create_jam(title, theme, start_time, end_time, youtube_url)
+    jam_repo.create_jam(title, theme, start_time, end_time, youtube_url, image_url)
     return list_jams_admin()
 
 
@@ -471,11 +511,12 @@ def update_jam(jam_id):
     start_time = request.form.get('start_time', '').strip().replace('T', ' ')
     end_time = request.form.get('end_time', '').strip().replace('T', ' ')
     youtube_url = request.form.get('youtube_url', '').strip() or None
+    image_url = request.form.get('image_url', '').strip() or None
 
     if not all([title, theme, start_time, end_time]):
         raise ValueError(t('All fields are required.'))
 
-    jam_repo.update_jam(jam_id, title, theme, start_time, end_time, youtube_url)
+    jam_repo.update_jam(jam_id, title, theme, start_time, end_time, youtube_url, image_url)
     return list_jams_admin()
 
 

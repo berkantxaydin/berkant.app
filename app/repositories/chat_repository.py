@@ -43,8 +43,10 @@ class ChatRepository(BaseRepository):
         return [ChatMessage.from_row(row) for row in self.execute(query, (room_id, limit))]
 
     def add_message(self, user_id: int, room_id: int, content: str) -> int:
-        query = "INSERT INTO Chat_Messages (user_id, room_id, content) VALUES (?, ?, ?)"
-        return self.execute(query, (user_id, room_id, content), commit=True)
+        from datetime import datetime
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        query = "INSERT INTO Chat_Messages (user_id, room_id, content, created_at) VALUES (?, ?, ?, ?)"
+        return self.execute(query, (user_id, room_id, content, now), commit=True)
 
     def delete_message(self, msg_id: int, user_id: Optional[int] = None, is_admin: bool = False) -> bool:
         if is_admin:

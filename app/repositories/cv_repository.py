@@ -12,7 +12,7 @@ class CVRepository(BaseRepository):
                 return self.get_all_cvs()
 
             base_query = '''
-                SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
+                SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, c.photo_url, c.github_url, c.user_id, u.username
                 FROM CV_Catalog c
                 JOIN Users u ON c.user_id = u.id
             '''
@@ -27,7 +27,7 @@ class CVRepository(BaseRepository):
             rows = self.execute(query, tuple(params))
         else:
             query = '''
-                SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, c.user_id, u.username
+                SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, c.photo_url, c.github_url, c.user_id, u.username
                 FROM CV_Catalog c
                 JOIN Users u ON c.user_id = u.id
             '''
@@ -37,7 +37,7 @@ class CVRepository(BaseRepository):
 
     def get_cvs_by_user(self, user_id: int) -> list[CVCatalog]:
         query = '''
-            SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, u.username
+            SELECT c.id, c.title, c.location, c.summary, c.cv_data, c.custom_htmx, c.photo_url, c.github_url, u.username
             FROM CV_Catalog c
             JOIN Users u ON c.user_id = u.id
             WHERE c.user_id = ?
@@ -54,10 +54,12 @@ class CVRepository(BaseRepository):
         return CVCatalog.from_row(self.execute_one(query, (cv_id,)))
 
 
-    def add_cv(self, user_id: int, title: str, location: str, summary: str, cv_data: dict, custom_htmx: Optional[str] = None) -> int:
+    def add_cv(self, user_id: int, title: str, location: str, summary: str, cv_data: dict, custom_htmx: Optional[str] = None, photo_url: Optional[str] = None, github_url: Optional[str] = None) -> int:
+        from datetime import datetime
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cv_json = json.dumps(cv_data)
-        query = "INSERT INTO CV_Catalog (user_id, title, location, summary, cv_data, custom_htmx) VALUES (?, ?, ?, ?, ?, ?)"
-        return self.execute(query, (user_id, title, location, summary, cv_json, custom_htmx), commit=True)
+        query = "INSERT INTO CV_Catalog (user_id, title, location, summary, cv_data, custom_htmx, photo_url, github_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        return self.execute(query, (user_id, title, location, summary, cv_json, custom_htmx, photo_url, github_url, now), commit=True)
 
     def update_cv(self, cv_id: int, user_id: int, title: str, location: str, summary: str, is_admin: bool = False) -> bool:
         if is_admin:
