@@ -27,7 +27,9 @@ IDLE_TIMEOUT = 7 * 60
 AI_CONFIG = {
     "file": "qwen2.5-7b-instruct-q3_k_m.gguf",
     "port": 8082,
-    "context": 4096
+    "context": 4096,
+    "threads": 6,        # Optimized for i5-1235U (2 P-cores + 4 E-cores)
+    "use_gpu": False     # Set to False to force CPU / AVX2 on RAM-constrained systems
 }
 
 def validate_ai_sql(sql):
@@ -269,9 +271,32 @@ def start_llama_server() -> Optional[subprocess.Popen]:
     if os.name == 'nt' and os.path.exists(server_exe):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        cmd = [server_exe, "-m", model_path, "--port", str(AI_CONFIG['port']), "--host", "127.0.0.1", "-c", str(AI_CONFIG['context'])]
+        
+        # Build command with optimized threads and GPU layers
+        cmd = [
+            server_exe, 
+            "-m", model_path, 
+            "--port", str(AI_CONFIG['port']), 
+            "--host", "127.0.0.1", 
+            "-c", str(AI_CONFIG['context']),
+            "-t", str(AI_CONFIG['threads'])
+        ]
+        
+        # If use_gpu is False, we force CPU by setting gpu layers to 0
+        if not AI_CONFIG.get('use_gpu', True):
+            cmd += ["--n-gpu-layers", "0"]
+            
     else:
-        cmd = ["python3", "-m", "llama_cpp.server", "--model", model_path, "--port", str(AI_CONFIG['port']), "--n_ctx", str(AI_CONFIG['context']), "--host", "127.0.0.1"]
+        cmd = [
+            "python3", "-m", "llama_cpp.server", 
+            "--model", model_path, 
+            "--port", str(AI_CONFIG['port']), 
+            "--n_ctx", str(AI_CONFIG['context']), 
+            "--host", "127.0.0.1",
+            "--threads", str(AI_CONFIG['threads'])
+        ]
+        if not AI_CONFIG.get('use_gpu', True):
+            cmd += ["--n_gpu_layers", "0"]
     
     with open(log_file, 'a', encoding='utf-8') as err_out:
         proc = subprocess.Popen( # nosec B603
@@ -399,6 +424,17 @@ def is_ai_booting():
 def reset_activity_timer():
     global last_activity_time
     last_activity_time = time.time()
+
+def check_idle_timeout():
+    """Checks if the AI engine has been idle and terminates it if so."""
+    global ai_ready
+    if not ai_ready:
+        return
+
+    idle_duration = time.time() - last_activity_time
+    if idle_duration > IDLE_TIMEOUT:
+        log_ai_event('SHUTDOWN', 'INFO', f"AI Engine idle for {int(idle_duration/60)}m. Unloading to free RAM.")
+        terminate_ai_server()
 
 # Note: Background monitor and initial boot moved to standalone bin/worker.py or handled on-demand.
 # However, we keep helper functions for use by both the web app and the worker.

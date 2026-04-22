@@ -88,6 +88,7 @@ class GameRepository(BaseRepository):
         return self.execute("INSERT INTO Game_Comments (user_id, game_id, content) VALUES (?, ?, ?)", (user_id, game_id, content), commit=True)
 
     def get_comments(self, game_id: int) -> List[Any]:
+        from app.models import GameComment
         query = """
             SELECT c.*, u.username 
             FROM Game_Comments c 
@@ -95,7 +96,7 @@ class GameRepository(BaseRepository):
             WHERE c.game_id = ? 
             ORDER BY c.created_at DESC
         """
-        return self.execute(query, (game_id,))
+        return [GameComment.from_row(row) for row in self.execute(query, (game_id,))]
 
     def delete_comment(self, comment_id: int, user_id: int, is_admin: bool = False) -> bool:
         if is_admin:
