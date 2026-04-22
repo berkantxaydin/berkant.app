@@ -59,7 +59,8 @@ if ($VenvBroken) {
     $GlobalPython = $null
     
     # Try 1: Dynamic Discovery (PATH & Launcher)
-    $GlobalPython = (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+    $GlobalPythons = Get-Command python.exe -All -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+    $GlobalPython = $GlobalPythons | Where-Object { $_ -notlike "*msys64*" -and $_ -notlike "*WindowsApps*" } | Select-Object -First 1
     if (-not $GlobalPython) {
         try { $GlobalPython = & py -3.12 -c "import sys; print(sys.executable)" 2>$null } catch { }
     }
@@ -112,11 +113,13 @@ if ($VenvBroken) {
         Where-Object { $_.LastWriteTime -lt (Get-Date).AddHours(-1) } | 
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     
-    & $GlobalPython -m venv "$ProjectDir\venv" --with-pip
+    & $GlobalPython -m venv "$ProjectDir\venv"
     if ($LASTEXITCODE -ne 0) {
-        Write-Output "WARNING: standard venv creation failed. Trying secondary method..."
-        & $GlobalPython -m venv "$ProjectDir\venv"
-        & $PythonExe -m ensurepip --upgrade
+        Write-Output "WARNING: standard venv creation failed. Trying secondary method (ensurepip)..."
+        & $GlobalPython -m venv "$ProjectDir\venv" --without-pip
+        if (Test-Path $PythonExe) {
+            & $PythonExe -m ensurepip --upgrade
+        }
     }
     
     if (-not (Test-Path $PythonExe)) {
