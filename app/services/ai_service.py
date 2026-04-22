@@ -303,7 +303,7 @@ def background_initialization() -> None:
         # Cross-process check: if port is already active, verify health.
         if is_port_in_use(AI_CONFIG['port']):
             try:
-                with urllib.request.urlopen(url, timeout=1.5) as response:
+                with urllib.request.urlopen(url, timeout=1.5) as response: # nosec B310
                     if response.status == 200:
                         ai_ready = True
                         ai_booting = False
@@ -316,7 +316,7 @@ def background_initialization() -> None:
             # Last-ditch check in case it started between checks
             if is_port_in_use(AI_CONFIG['port']):
                 try:
-                    with urllib.request.urlopen(url, timeout=3) as response:
+                    with urllib.request.urlopen(url, timeout=3) as response: # nosec B310
                         if response.status == 200:
                             ai_ready = True
                             ai_booting = False
