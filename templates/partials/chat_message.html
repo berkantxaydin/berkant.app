@@ -3,7 +3,7 @@
 {% set time_str = msg.created_at.split(' ')[1][:5] if msg.created_at and ' ' in msg.created_at else (msg.created_at[:5] if msg.created_at else "??:??") %}
 
 <div id="chat-msg-{{ msg.id }}" class="chat-message {{ 'self' if is_self else '' }}" style="margin-bottom: 0.3rem; animation: slideIn 0.3s ease-out forwards;">
-    <div class="chat-bubble {{ 'primary' if is_self else '' }}" style="padding: 0.5rem 0.8rem; border-radius: 0.8rem; max-width: 85%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <div class="chat-bubble {{ 'primary' if is_self else '' }}" style="padding: 0.5rem 0.8rem; border-radius: 0.8rem; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <header style="margin-bottom: 0.2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: transparent; border: 0; padding: 0; --name-color: {{ 'var(--accent-color)' if msg.is_admin else '#e2e8f0' }};">
             <strong style="font-size: 0.8rem; color: var(--name-color);">
                 {{ '👨‍💻 ' | safe if msg.is_admin else '' }}{{ msg.username | e }}
@@ -14,7 +14,7 @@
             {% if msg.image_url %}
             <div class="chat-image-attachment" style="margin-top: 0.5rem;">
                 <img src="{{ msg.image_url }}" alt="Attachment" 
-                     style="max-width: 100%; border-radius: 0.4rem; cursor: pointer; transition: transform 0.2s;"
+                     style="cursor: pointer; transition: transform 0.2s;"
                      onclick="openLightbox(this.src)">
             </div>
             {% endif %}
