@@ -30,12 +30,12 @@ foreach ($name in $processesToKill) {
 # --- STEP 2: VIRTUAL ENVIRONMENT HEALTH CHECK ---
 Write-Output "Checking Python environment..."
 $PythonExe = "$ProjectDir\venv\Scripts\python.exe"
-if (-not (Test-Path $PythonExe -ErrorAction SilentlyContinue)) {
-    $PythonExe = "$ProjectDir\venv\bin\python.exe" # Fallback for MSYS2 style venv
-}
 $VenvBroken = $false
 
-if (-not (Test-Path $PythonExe -ErrorAction SilentlyContinue)) {
+if (Test-Path "$ProjectDir\venv\bin\python.exe" -ErrorAction SilentlyContinue) {
+    Write-Output "WARNING: MSYS2-style virtual environment detected. Forcing migration to standard Windows Python..."
+    $VenvBroken = $true
+} elseif (-not (Test-Path $PythonExe -ErrorAction SilentlyContinue)) {
     Write-Output "WARNING: Virtual environment missing."
     $VenvBroken = $true
 } else {
