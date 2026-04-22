@@ -427,7 +427,6 @@ def reset_activity_timer():
 
 def check_idle_timeout():
     """Checks if the AI engine has been idle and terminates it if so."""
-    global ai_ready
     if not ai_ready:
         return
 
