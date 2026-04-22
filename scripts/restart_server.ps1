@@ -80,7 +80,18 @@ if ($VenvBroken) {
     Write-Output "Using source Python: $GlobalPython"
     
     if (Test-Path "$ProjectDir\venv") {
-        Remove-Item -Path "$ProjectDir\venv" -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Output "Removing old virtual environment..."
+        # Surgical Kill: Stop any process running from THIS venv
+        Get-Process | Where-Object { $_.Path -like "$ProjectDir\venv\*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+        
+        try {
+            Remove-Item -Path "$ProjectDir\venv" -Recurse -Force -ErrorAction Stop
+        } catch {
+            Write-Output "WARNING: Could not delete venv folder. Attempting to rename it..."
+            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+            Move-Item -Path "$ProjectDir\venv" -Destination "$ProjectDir\venv_old_$timestamp" -ErrorAction SilentlyContinue
+        }
     }
     
     & $GlobalPython -m venv "$ProjectDir\venv"
