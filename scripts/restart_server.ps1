@@ -42,8 +42,11 @@ if (Test-Path "$ProjectDir\venv\bin\python.exe" -ErrorAction SilentlyContinue) {
     try {
         & $PythonExe --version 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Python launcher failed" }
+        # NEW: Verify pip exists
+        & $PythonExe -m pip --version 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Pip missing" }
     } catch {
-        Write-Output "WARNING: Virtual environment is BROKEN (launcher error)."
+        Write-Output "WARNING: Virtual environment is BROKEN or incomplete ($($_.Exception.Message))."
         $VenvBroken = $true
     }
 }
@@ -54,10 +57,18 @@ if ($VenvBroken) {
     # Robust Python Discovery
     $GlobalPython = $null
     
-    # Try 1: Known Good Path (Prioritized for this environment)
-    $knownPath = "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe"
-    if (Test-Path $knownPath -ErrorAction SilentlyContinue) {
-        $GlobalPython = $knownPath
+    # Try 1: Known Good Paths (Prioritized)
+    $knownPaths = @(
+        "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe",
+        "C:\Users\berka\AppData\Local\Programs\Python\Python311\python.exe",
+        "C:\Users\berka\AppData\Local\Programs\Python\Python314\python.exe",
+        "C:\Program Files\Python312\python.exe"
+    )
+    foreach ($path in $knownPaths) {
+        if (Test-Path $path -ErrorAction SilentlyContinue) {
+            $GlobalPython = $path
+            break
+        }
     }
 
     # Try 2: py launcher
@@ -94,8 +105,14 @@ if ($VenvBroken) {
         }
     }
     
-    & $GlobalPython -m venv "$ProjectDir\venv"
+    & $GlobalPython -m venv "$ProjectDir\venv" --with-pip
     if ($LASTEXITCODE -ne 0) {
+        Write-Output "WARNING: standard venv creation failed. Trying secondary method..."
+        & $GlobalPython -m venv "$ProjectDir\venv"
+        & $PythonExe -m ensurepip --upgrade
+    }
+    
+    if (-not (Test-Path $PythonExe)) {
         Write-Output "ERROR: Failed to create virtual environment."
         exit 1
     }
