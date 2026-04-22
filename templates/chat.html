@@ -239,35 +239,37 @@ endblock %}
     background: rgba(0,0,0,0.2);
   }
 
-  /* Mobile Adjustments */
+  /* Mobile Adjustments (Optimized for Portrait) */
   @media (max-width: 992px) {
     .chat-container {
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
 
     .chat-sidebar {
+      width: 100%;
       position: static;
-      z-index: 10;
     }
 
     .channel-panel {
-      padding: 0.5rem;
-      margin-bottom: 0;
-      overflow: visible; /* Ensure scroll isn't clipped */
+      padding: 0.75rem;
+      border-radius: 12px;
+      background: rgba(18, 12, 26, 0.95);
     }
 
     .channel-header {
-      display: none;
+      display: none; /* Hide header to save space */
     }
 
     .channel-list {
-      flex-direction: row;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      display: flex !important;
+      flex-direction: row !important;
+      overflow-x: auto !important;
+      gap: 0.6rem;
       padding: 0.2rem 0;
-      gap: 0.5rem;
-      display: flex !important; /* Force flex in case of conflicts */
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
 
     .channel-list::-webkit-scrollbar {
@@ -277,25 +279,30 @@ endblock %}
     .channel-item {
       flex: 0 0 auto;
       list-style: none;
-      margin: 0;
-      padding: 0;
     }
 
     .jam-tab-btn {
-      width: auto;
+      width: auto !important;
       white-space: nowrap;
-      font-size: 0.85rem;
-      padding: 0.4rem 0.8rem;
+      padding: 0.5rem 1rem !important;
+      border-radius: 50px !important;
+      font-size: 0.85rem !important;
+      text-align: center !important;
+      background: rgba(255,255,255,0.05) !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
       margin: 0;
     }
 
-    .chat-box {
-      height: 60vh;
-      border-radius: 12px;
+    .jam-tab-btn.active {
+      background: var(--pico-primary) !important;
+      color: white !important;
+      border-color: var(--pico-primary) !important;
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.5) !important;
     }
-    
-    .chat-header {
-      padding: 0.75rem;
+
+    .chat-box {
+      height: 65vh;
+      border-radius: 12px;
     }
   }
 
