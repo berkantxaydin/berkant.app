@@ -10,21 +10,20 @@
         color: var(--pico-color);
     }
 </style>
-<div
-    style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; overflow-y: auto; max-height: 250px; white-space: pre;'>
+<div style='font-family: var(--font-mono); font-size: 0.75rem; overflow-x: auto; overflow-y: auto; max-height: 250px;'>
     {% for line in lines|reverse %}
     {% set clean_line = line.strip() %}
 
-    {# Only render if the line actually contains text, preventing giant blank spaces #}
     {% if clean_line %}
-    {# Strip "2026-" prefix if present #}
     {% if clean_line.startswith("20") and "-" in clean_line[:5] %}
     {% set clean_line = clean_line[5:] %}
     {% endif %}
 
     {% set level_class = "log-line-error" if "ERROR" in clean_line or "CRITICAL" in clean_line else "log-line-normal" %}
-    <div class="{{ level_class }}" style='border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0.2rem 0;'>{{
-        clean_line }}</div>
+
+    <div class="{{ level_class }}"
+        style='border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0.2rem 0; white-space: pre-wrap; word-break: break-word;'>
+        {{ clean_line }}</div>
     {% endif %}
     {% endfor %}
 </div>

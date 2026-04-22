@@ -21,9 +21,9 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     
-    # ---> THIS IS THE NEW FIX FOR THE GIT WARNING <---
+    # ---> FIX 1: Replaced '*' with dynamic github.workspace <---
     - name: Fix Git Safe Directory Warnings
-      run: git config --global --add safe.directory '*'
+      run: git config --global --add safe.directory '${{ github.workspace }}'
     
     - name: Set up Python 3.11
       uses: actions/setup-python@v6
@@ -61,8 +61,9 @@ jobs:
       with:
         fetch-depth: 0 # Required to fetch the full git diff
 
+    # ---> FIX 2: Replaced '*' with dynamic github.workspace <---
     - name: Fix Git Safe Directory Warnings
-      run: git config --global --add safe.directory '*'
+      run: git config --global --add safe.directory '${{ github.workspace }}'
         
     - name: Set up Python 3.11
       uses: actions/setup-python@v6
