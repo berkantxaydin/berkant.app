@@ -126,7 +126,8 @@ def create_app() -> Flask:
     from app.routes.api_routes import api_bp
     from app.routes.ai_routes import ai_bp
     from app.routes.auth_routes import auth_bp
-    for bp in [main_bp, api_bp, ai_bp, auth_bp]:
+    from app.routes.security_routes import security_bp
+    for bp in [main_bp, api_bp, ai_bp, auth_bp, security_bp]:
         app.register_blueprint(bp)
 
     return app

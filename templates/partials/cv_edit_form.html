@@ -8,8 +8,8 @@
     <label>{{ t('Summary') }}
         <textarea name="summary" required>{{ cv.summary | e }}</textarea>
     </label>
-    <label>{{ t('Profile Photo (.png)') }}
-        <input type="file" name="photo_file" accept=".png">
+    <label>{{ t('Profile Photo') }}
+        <input type="file" name="photo_file" accept=".png,.jpg,.jpeg,.webp">
     </label>
     <div class="grid">
         <button type="submit">{{ t('Save Changes') }}</button>
