@@ -30,6 +30,9 @@ foreach ($name in $processesToKill) {
 # --- STEP 2: VIRTUAL ENVIRONMENT HEALTH CHECK ---
 Write-Output "Checking Python environment..."
 $PythonExe = "$ProjectDir\venv\Scripts\python.exe"
+if (-not (Test-Path $PythonExe -ErrorAction SilentlyContinue)) {
+    $PythonExe = "$ProjectDir\venv\bin\python.exe" # Fallback for MSYS2 style venv
+}
 $VenvBroken = $false
 
 if (-not (Test-Path $PythonExe -ErrorAction SilentlyContinue)) {
@@ -90,8 +93,8 @@ if ($VenvBroken) {
 
 # --- STEP 3: UPDATE DEPENDENCIES ---
 Write-Output "Updating dependencies..."
-& "$ProjectDir\venv\Scripts\python.exe" -m pip install --upgrade pip | Out-Null
-& "$ProjectDir\venv\Scripts\python.exe" -m pip install -r "$ProjectDir\requirements.txt"
+& $PythonExe -m pip install --upgrade pip | Out-Null
+& $PythonExe -m pip install -r "$ProjectDir\requirements.txt" --prefer-binary
 if ($LASTEXITCODE -ne 0) {
     Write-Output "ERROR: Failed to install dependencies."
     exit 1
@@ -114,11 +117,13 @@ $startupConfig = $wmiStartup.CreateInstance()
 $startupConfig.ShowWindow = [uint16]0 # 0 = Hidden
 
 Write-Output "Starting Waitress on port 5000..."
-$waitressCmd = "`"$ProjectDir\venv\Scripts\waitress-serve.exe`" --port=5000 --call app:create_app"
+$waitressPath = "$ProjectDir\venv\Scripts\waitress-serve.exe"
+if (-not (Test-Path $waitressPath)) { $waitressPath = "$ProjectDir\venv\bin\waitress-serve.exe" }
+$waitressCmd = "`"$waitressPath`" --port=5000 --call app:create_app"
 $wmiProcess.Create($waitressCmd, $ProjectDir, $startupConfig) | Out-Null
 
 Write-Output "Starting Background Worker..."
-$workerCmd = "`"$ProjectDir\venv\Scripts\python.exe`" bin/worker.py"
+$workerCmd = "`"$PythonExe`" bin/worker.py"
 $wmiProcess.Create($workerCmd, $ProjectDir, $startupConfig) | Out-Null
 
 Write-Output "Starting Nginx..."
