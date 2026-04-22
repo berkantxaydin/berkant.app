@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}{{ t("Chat Rooms - proglem") }}{% endblock %}
-{% block meta_description %}{{ t("Join live community chat rooms tied to Game Jams and general discussion on proglem.")
-}}{%
-endblock %}
+{% block meta_description %}{{ t("Join live community chat rooms tied to Game Jams and general discussion on proglem.") }}{% endblock %}
 
 {% block content %}
 <section class="container" style="animation: fadeIn 0.5s ease-out;">
@@ -15,18 +13,22 @@ endblock %}
   {% if not rooms %}
   <p class="text-center" style="color: grey; margin-top: 4rem;">{{ t("No chat rooms are currently active.") }}</p>
   {% else %}
+
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
   <div class="chat-container">
-    <aside class="chat-sidebar">
+    <aside id="chat-sidebar" class="chat-sidebar">
       <article class="glass-panel channel-panel">
-        <header class="channel-header">
+        <header class="channel-header" style="display: flex; justify-content: space-between; align-items: center;">
           <strong>{{ t("Channels") }}</strong>
+          <button id="close-sidebar-btn" class="close-btn" aria-label="Close">✕</button>
         </header>
         <nav id="room-tab-bar" class="channel-nav">
           <ul class="channel-list mobile-grid-force">
             {% for room in rooms %}
             <li class="channel-item">
               <button id="room-tab-{{ room.id }}" class="jam-tab-btn {{ 'active' if loop.first else '' }} outline"
-                data-room-id="{{ room.id }}">
+                data-room-id="{{ room.id }}" title="# {{ room.name }}">
                 # {{ room.name }}
                 {% if not room.is_enabled %}<span style="font-size:0.7rem; opacity:0.6;"> ({{ t("off") }})</span>{%
                 endif %}
@@ -41,11 +43,14 @@ endblock %}
     <div class="chat-main">
       <article class="glass-panel chat-box">
         <header class="chat-header">
-          <div style="min-width: 0;">
-            <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
-            <small id="active-room-desc"
-              style="display: block; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{
-              rooms[0].description }}</small>
+          <div style="display: flex; align-items: center; gap: 15px; min-width: 0;">
+            <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Menu">☰</button>
+            <div style="min-width: 0;">
+              <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
+              <small id="active-room-desc"
+                style="display: block; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{
+                rooms[0].description }}</small>
+            </div>
           </div>
         </header>
 
@@ -60,13 +65,20 @@ endblock %}
         <footer style="padding: 1rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05);">
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
-            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom();" style="margin-bottom: 0;">
+            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(); clearImagePreview();" 
+            enctype="multipart/form-data" style="margin-bottom: 0;">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
             <fieldset role="group" style="margin-bottom: 0;">
+              <button type="button" class="outline" id="camera-btn" style="width: 50px; padding: 0;" title="{{ t('Upload Image') }}">📷</button>
+              <input type="file" id="chat-image-input" name="image" accept="image/*" style="display: none;">
               <input type="text" id="chat-input" name="content" autocomplete="off"
-                placeholder="{{ t('Message') }} #{{ rooms[0].name }}..." required maxlength="500">
-              <button type="submit" aria-label="{{ t('Send Message') }}" style="width: 110px;">↵</button>
+                placeholder="{{ t('Message') }} #{{ rooms[0].name }}..." maxlength="500">
+              <button type="submit" aria-label="{{ t('Send Message') }}" style="width: 60px;">↵</button>
             </fieldset>
+            <div id="image-preview-container" style="display: none; margin-top: 0.5rem; align-items: center; gap: 0.5rem;">
+                <small id="image-preview-name" style="color: var(--pico-primary);"></small>
+                <button type="button" class="outline secondary" onclick="clearImagePreview()" style="padding: 0 5px; font-size: 0.7rem; border: 0;">✕</button>
+            </div>
           </form>
           {% else %}
           <p class="text-center" style="margin: 0; color: #64748b;">
@@ -84,6 +96,16 @@ endblock %}
 <input type="hidden" id="active-room-id" value="{{ rooms[0].id }}">
 {% endif %}
 
+<!-- Lightbox Modal -->
+<dialog id="chat-lightbox" onclick="if(event.target==this) this.close()">
+  <article style="max-width: 90vw; padding: 0; background: transparent; box-shadow: none;">
+    <header style="background: rgba(0,0,0,0.5); border: 0; padding: 0.5rem 1rem; display: flex; justify-content: flex-end;">
+      <a href="#close" aria-label="Close" class="close" onclick="event.preventDefault(); document.getElementById('chat-lightbox').close()"></a>
+    </header>
+    <img id="lightbox-img" src="" style="width: 100%; height: auto; display: block; border-radius: 8px;">
+  </article>
+</dialog>
+
 <script id="chat-rooms-data" type="application/json">
   {{ rooms | tojson }}
 </script>
@@ -93,7 +115,25 @@ endblock %}
     const chatRoomsDataElement = document.getElementById('chat-rooms-data');
     const chatRooms = chatRoomsDataElement ? JSON.parse(chatRoomsDataElement.textContent) : [];
 
-    const switchRoom = function (roomId) {
+    // --- MOBILE MENU LOGIC ---
+    const sidebar = document.getElementById('chat-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const closeBtn = document.getElementById('close-sidebar-btn');
+
+    const toggleMenu = (forceState) => {
+      if (!sidebar) return;
+      const isOpen = typeof forceState === 'boolean' ? forceState : !sidebar.classList.contains('open');
+      sidebar.classList.toggle('open', isOpen);
+      overlay.classList.toggle('open', isOpen);
+    };
+
+    if (menuBtn) menuBtn.addEventListener('click', () => toggleMenu(true));
+    if (closeBtn) closeBtn.addEventListener('click', () => toggleMenu(false));
+    if (overlay) overlay.addEventListener('click', () => toggleMenu(false));
+    // -------------------------
+
+    window.switchRoom = function (roomId) {
       // Toggle Tab Active State
       document.querySelectorAll('.jam-tab-btn').forEach(b => b.classList.remove('active'));
       const btn = document.getElementById('room-tab-' + roomId);
@@ -125,12 +165,17 @@ endblock %}
         if (nameLabel) nameLabel.innerText = '# ' + roomObj.name;
         if (descLabel) descLabel.innerText = roomObj.description || '';
       }
+
+      // Auto-close mobile menu when a channel is clicked
+      if (window.innerWidth <= 992) {
+        toggleMenu(false);
+      }
     };
 
     // Event Delegation for Performance
     document.getElementById('room-tab-bar')?.addEventListener('click', e => {
       const btn = e.target.closest('[data-room-id]');
-      if (btn) switchRoom(Number(btn.dataset.roomId));
+      if (btn) window.switchRoom(Number(btn.dataset.roomId));
     });
 
     window.scrollToBottom = function () {
@@ -154,13 +199,48 @@ endblock %}
       window.scrollToBottom();
     });
 
-    // Smart Visibility Polling (Triggers an immediate load when tabbing back)
+    // Smart Visibility Polling
     document.addEventListener('visibilitychange', () => {
       const messagesEl = document.getElementById('chat-messages');
       if (document.visibilityState === 'visible' && messagesEl) {
         htmx.trigger(messagesEl, 'load');
       }
     });
+
+    // --- IMAGE UPLOAD & LIGHTBOX ---
+    const cameraBtn = document.getElementById('camera-btn');
+    const imageInput = document.getElementById('chat-image-input');
+    const previewContainer = document.getElementById('image-preview-container');
+    const previewName = document.getElementById('image-preview-name');
+
+    if (cameraBtn) {
+        cameraBtn.addEventListener('click', () => imageInput.click());
+    }
+
+    if (imageInput) {
+        imageInput.addEventListener('change', () => {
+            if (imageInput.files && imageInput.files[0]) {
+                previewName.innerText = imageInput.files[0].name;
+                previewContainer.style.display = 'flex';
+                document.getElementById('chat-input').removeAttribute('required');
+            }
+        });
+    }
+
+    window.clearImagePreview = function() {
+        if (imageInput) imageInput.value = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+        document.getElementById('chat-input').setAttribute('required', 'required');
+    };
+
+    window.openLightbox = function(src) {
+        const dialog = document.getElementById('chat-lightbox');
+        const img = document.getElementById('lightbox-img');
+        if (dialog && img) {
+            img.src = src;
+            dialog.showModal();
+        }
+    };
   })();
 </script>
 
@@ -177,7 +257,7 @@ endblock %}
     }
   }
 
-  /* Chat Grid Layout */
+  /* Desktop Chat Grid Layout */
   .chat-container {
     display: grid;
     grid-template-columns: 280px 1fr;
@@ -199,6 +279,7 @@ endblock %}
   .channel-header {
     margin-bottom: 0.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
   }
 
   .channel-list {
@@ -210,12 +291,17 @@ endblock %}
     list-style: none;
   }
 
+  /* Smart Text Truncation and Alignment Applied Here */
   .jam-tab-btn {
+    display: block;
+    /* Required for text-overflow to work perfectly */
     width: 100%;
     text-align: left;
     padding: 0.5rem 0.8rem;
     font-size: 0.9rem;
-    justify-content: flex-start !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .jam-tab-btn.active {
@@ -246,20 +332,74 @@ endblock %}
     background: rgba(0, 0, 0, 0.2);
   }
 
-  /* Mobile Adjustments (Optimized for Portrait) */
+  /* Hide Mobile-Specific UI Elements on Desktop */
+  .hamburger-btn {
+    display: none;
+  }
+
+  .close-btn {
+    display: none;
+  }
+
+  .sidebar-overlay {
+    display: none;
+  }
+
+  /* Mobile Hamburger Drawer Adjustments */
   @media (max-width: 992px) {
     .chat-container {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      /* Tighter gap */
     }
 
+    /* Show Mobile Buttons */
+    .hamburger-btn {
+      display: block;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      padding: 0 0.5rem 0 0;
+      cursor: pointer;
+    }
+
+    .close-btn {
+      display: block;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    /* Convert Sidebar into Sliding Drawer */
     .chat-sidebar {
-      width: 100%;
-      position: static;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 280px;
+      max-width: 85vw;
+      height: 100vh;
+      background: rgba(18, 12, 26, 0.95);
+      /* Deep dark background */
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 1000;
+      padding: 1rem;
+      transform: translateX(-100%);
+      /* Hides it off-screen */
+      transition: transform 0.3s ease-in-out;
+      overflow-y: auto;
     }
 
+    .chat-sidebar.open {
+      transform: translateX(0);
+      /* Slides it in */
+    }
+
+    /* Adjust Channel Panel for Mobile Drawer */
     .channel-panel {
       padding: 0;
       border-radius: 12px;
@@ -314,6 +454,26 @@ endblock %}
       box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
     }
 
+    /* Dark Overlay */
+    .sidebar-overlay {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .sidebar-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     .chat-box {
       height: 600px;
       max-height: calc(100dvh - 220px);
@@ -324,27 +484,27 @@ endblock %}
       padding: 0.8rem 1rem;
       background: rgba(0, 0, 0, 0.2);
     }
-
-    #active-room-name {
-      font-size: 1.1rem;
-    }
   }
 
   /* Scrollbar styling */
-  #chat-messages::-webkit-scrollbar {
+  #chat-messages::-webkit-scrollbar,
+  .chat-sidebar::-webkit-scrollbar {
     width: 6px;
   }
 
-  #chat-messages::-webkit-scrollbar-track {
+  #chat-messages::-webkit-scrollbar-track,
+  .chat-sidebar::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  #chat-messages::-webkit-scrollbar-thumb {
+  #chat-messages::-webkit-scrollbar-thumb,
+  .chat-sidebar::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
   }
 
-  #chat-messages::-webkit-scrollbar-thumb:hover {
+  #chat-messages::-webkit-scrollbar-thumb:hover,
+  .chat-sidebar::-webkit-scrollbar-thumb:hover {
     background: var(--pico-primary);
   }
 </style>

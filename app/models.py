@@ -77,6 +77,7 @@ class ChatMessage(BaseRowModel):
     user_id: Optional[int] = None
     room_id: int = 1
     content: str = ""
+    image_url: Optional[str] = None
     created_at: Optional[str] = None
     username: Optional[str] = None
     is_admin: bool = False
