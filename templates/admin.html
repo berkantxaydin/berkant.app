@@ -78,6 +78,7 @@
         <form hx-post="/api/jams"
               hx-target="#jam-admin-table-wrapper"
               hx-swap="innerHTML"
+              enctype="multipart/form-data"
               hx-on::after-request="if(event.detail.successful){ this.reset(); document.getElementById('create-jam-details').removeAttribute('open'); }">
           <div class="grid">
             <label>Title
@@ -99,8 +100,8 @@
             <label>YouTube Embed URL <small style="color:#64748b;">(optional — paste the /embed/ URL)</small>
               <input type="url" name="youtube_url" placeholder="https://www.youtube.com/embed/VIDEO_ID">
             </label>
-            <label>Promo Image URL <small style="color:#64748b;">(optional — shown before start)</small>
-              <input type="url" name="image_url" placeholder="https://cloud.r2.com/assets/jams/promo.png">
+            <label>Promo Image (.png) <small style="color:#64748b;">(optional)</small>
+              <input type="file" name="image_file" accept=".png">
             </label>
           </div>
           <button type="submit">Create Jam</button>

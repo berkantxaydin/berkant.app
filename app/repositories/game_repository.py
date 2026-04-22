@@ -41,13 +41,13 @@ class GameRepository(BaseRepository):
         query = "INSERT INTO Godot_Games (user_id, title, description, game_url, jam_id, icon_url, github_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         return self.execute(query, (user_id, title, description, game_url, jam_id, icon_url, github_url, now), commit=True)
 
-    def update_game(self, game_id: int, user_id: int, title: str, description: str, is_admin: bool = False) -> bool:
+    def update_game(self, game_id: int, user_id: int, title: str, description: str, icon_url: Optional[str] = None, is_admin: bool = False) -> bool:
         if is_admin:
-            query = "UPDATE Godot_Games SET title = ?, description = ? WHERE id = ?"
-            params = (title, description, game_id)
+            query = "UPDATE Godot_Games SET title = ?, description = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?"
+            params = (title, description, icon_url, game_id)
         else:
-            query = "UPDATE Godot_Games SET title = ?, description = ? WHERE id = ? AND user_id = ?"
-            params = (title, description, game_id, user_id)
+            query = "UPDATE Godot_Games SET title = ?, description = ?, icon_url = COALESCE(?, icon_url) WHERE id = ? AND user_id = ?"
+            params = (title, description, icon_url, game_id, user_id)
         
         return self.execute(query, params, commit=True)
 

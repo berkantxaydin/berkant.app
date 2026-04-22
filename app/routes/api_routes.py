@@ -18,6 +18,7 @@ from app.utils.system_utils import get_system_metrics
 from app.utils.response_helpers import json_response, htmx_response
 import app.utils.render_helpers as render_helpers
 import app.services.translation_service as translation_service
+from app.utils.image_utils import save_image_as_base64
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -58,6 +59,12 @@ def create_ecom_cv():
     location = request.form.get('location', '')
     summary = request.form.get('summary')
     photo_url = request.form.get('photo_url')
+    
+    # Direct File Upload Override
+    photo_file = request.files.get('photo_file')
+    if photo_file and photo_file.filename != '':
+        photo_url = save_image_as_base64(photo_file)
+
     github_url = request.form.get('github_url')
     skills = [s.strip() for s in request.form.get('skills', '').split(',') if s.strip()]
     exp_role = request.form.get('exp_role')
@@ -224,7 +231,13 @@ def update_cv_htmx(cv_id):
     title = request.form.get('title')
     location = request.form.get('location', '')
     summary = request.form.get('summary')
-    success = cv_repo.update_cv(cv_id, session['user_id'], title, location, summary, is_admin=session.get('is_admin'))
+    
+    photo_url = None
+    photo_file = request.files.get('photo_file')
+    if photo_file and photo_file.filename != '':
+        photo_url = save_image_as_base64(photo_file)
+        
+    success = cv_repo.update_cv(cv_id, session['user_id'], title, location, summary, photo_url=photo_url, is_admin=session.get('is_admin'))
     if success:
         return render_template('partials/cv_preview.html', cv_id=cv_id, title=title, location=location, summary=summary)
     raise ValueError(t("Update failed"))
@@ -478,6 +491,11 @@ def create_jam():
     end_time = request.form.get('end_time', '').strip()
     youtube_url = request.form.get('youtube_url', '').strip() or None
     image_url = request.form.get('image_url', '').strip() or None
+    
+    # Direct File Upload Override
+    image_file = request.files.get('image_file')
+    if image_file and image_file.filename != '':
+        image_url = save_image_as_base64(image_file)
 
     if not all([title, theme, start_time, end_time]):
         raise ValueError(t('All fields except YouTube URL are required.'))
@@ -512,6 +530,11 @@ def update_jam(jam_id):
     end_time = request.form.get('end_time', '').strip().replace('T', ' ')
     youtube_url = request.form.get('youtube_url', '').strip() or None
     image_url = request.form.get('image_url', '').strip() or None
+    
+    # Direct File Upload Override
+    image_file = request.files.get('image_file')
+    if image_file and image_file.filename != '':
+        image_url = save_image_as_base64(image_file)
 
     if not all([title, theme, start_time, end_time]):
         raise ValueError(t('All fields are required.'))

@@ -42,9 +42,8 @@
             <span id="photoPlaceholder">👤</span>
           </div>
           <div style="flex-grow: 1;">
-            <input type="file" id="photoFile" accept=".png" style="margin-bottom: 0;" onchange="uploadPhoto()">
-            <input type="hidden" name="photo_url" id="photoUrl">
-            <small id="photoStatus" style="display: block; margin-top: 0.3rem;"></small>
+            <input type="file" name="photo_file" accept=".png" style="margin-bottom: 0;" onchange="previewPhoto(this)">
+            <small style="display: block; margin-top: 0.3rem;">{{ t("Will be stored on server") }}</small>
           </div>
         </div>
       </label>
@@ -62,53 +61,14 @@
 </section>
 
 <script>
-async function uploadPhoto() {
-    const fileInput = document.getElementById('photoFile');
-    const status = document.getElementById('photoStatus');
+function previewPhoto(input) {
     const preview = document.getElementById('photoPreview');
-    const hiddenInput = document.getElementById('photoUrl');
-    
-    if (fileInput.files.length === 0) return;
-    const file = fileInput.files[0];
-    
-    if (!file.name.toLowerCase().endsWith('.png')) {
-        alert("{{ t('Please upload a .png file.') }}");
-        fileInput.value = '';
-        return;
-    }
-
-    try {
-        status.innerText = "{{ t('Uploading photo...') }}";
-        const filename = `${crypto.randomUUID()}.png`;
-        const resp = await fetch(`/api/jam/get_upload_url?type=photos&filename=${filename}&content_type=image/png`);
-        const s3Data = await resp.json();
-        
-        let targetUrl = s3Data.url;
-        let isMock = false;
-        if (targetUrl.includes("mock-endpoint")) {
-            targetUrl = "/api/jam/mock_upload";
-            isMock = true;
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
         }
-
-        const formData = new FormData();
-        Object.entries(s3Data.fields).forEach(([k, v]) => formData.append(k, v));
-        formData.append('file', file);
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', targetUrl, true);
-        xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                const finalUrl = isMock ? `/play_mock/${s3Data.fields.key}` : `${s3Data.url}/${s3Data.fields.key}`;
-                hiddenInput.value = finalUrl;
-                preview.innerHTML = `<img src="${finalUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-                status.innerHTML = `<span style="color:var(--pico-ins-color);">✓ {{ t('Photo ready') }}</span>`;
-            } else {
-                status.innerHTML = `<span style="color:var(--pico-del-color);">✗ {{ t('Upload failed') }}</span>`;
-            }
-        };
-        xhr.send(formData);
-    } catch (e) {
-        status.innerText = "Error: " + e.message;
+        reader.readAsDataURL(input.files[0]);
     }
 }
 </script>
