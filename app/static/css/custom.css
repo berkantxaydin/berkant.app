@@ -1,14 +1,22 @@
-/* Premium Custom Overrides for Pico.css */
+/* Premium Custom Overrides for Pico.css (60-30-10 Design System) */
 :root {
+  /* 60% - Base / Neutral Dark (Deep Blackcurrant) */
+  --pico-background-color: #09060d; 
+  --pico-card-background-color: rgba(18, 12, 26, 0.75);
+  --pico-color: #cbd5e1;
+  
+  /* 30% - Main / Primary (Vibrant Purple) */
   --pico-primary: #a855f7;
   --pico-primary-background: #a855f7;
   --pico-primary-border: #a855f7;
-  --pico-primary-hover: #d946ef;
-  --pico-primary-hover-background: #d946ef;
-  --pico-primary-hover-border: #d946ef;
-  --pico-background-color: #0f172a;
-  --pico-card-background-color: rgba(30, 41, 59, 0.6);
-  --pico-color: #cbd5e1;
+  --pico-primary-hover: #c084fc;
+  --pico-primary-hover-background: #c084fc;
+  
+  /* 10% - Accent / Contrast (Crimson Red / Black Mix) */
+  --accent-color: #991b1b; 
+  --accent-glow: rgba(153, 27, 27, 0.5);
+  --pico-ins-color: #ef4444; /* Used for success/active accents */
+  
   --pico-h1-color: #f8fafc;
   --pico-h2-color: #f1f5f9;
   --pico-font-family: 'Inter', -apple-system, sans-serif;
@@ -44,7 +52,7 @@ body::after {
 
   background-image:
     url('/static/img/Protest3.png'),
-    radial-gradient(circle at top, #1e1b4b 70%, var(--pico-background-color) 100%);
+    radial-gradient(circle at top, #1e0b1d 70%, var(--pico-background-color) 100%);
   background-size: 500px 250px, auto;
   background-repeat: repeat, no-repeat;
   background-blend-mode: overlay, normal;
@@ -63,7 +71,7 @@ body::before {
   /* 1. Added the exact same gradient below the Rebellion image */
   background-image:
     url('/static/img/Rebellion2.png'),
-    radial-gradient(circle at top, #1e1b4b 70%, var(--pico-background-color) 100%);
+    radial-gradient(circle at top, #1e0b1d 70%, var(--pico-background-color) 100%);
 
   /* 2. Matched the sizing for both the image and the gradient */
   background-size: 500px 250px, auto;
@@ -115,7 +123,15 @@ body::before {
   font-size: 1.1rem;
   padding: 0.8rem 2.5rem;
   border-radius: 50px;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(153, 27, 27, 0.4);
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.btn-join:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  box-shadow: 0 0 30px rgba(153, 27, 27, 0.6);
 }
 
 .btn-play {
@@ -139,7 +155,7 @@ nav strong.logo {
   font-size: 1.8rem;
   font-weight: 800;
   letter-spacing: -1.5px;
-  background: linear-gradient(90deg, #a855f7, #ec4899);
+  background: linear-gradient(90deg, var(--pico-primary), var(--accent-color));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -148,18 +164,18 @@ nav strong.logo {
 .glass-panel {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  background: var(--pico-card-background-color);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   border-radius: 16px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-panel:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(168, 85, 247, 0.2);
-  border-color: rgba(168, 85, 247, 0.5);
-  background: rgba(30, 41, 59, 0.6);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(153, 27, 27, 0.15);
+  border-color: var(--accent-color);
+  background: rgba(18, 12, 26, 0.9);
 }
 
 .premium-hero {
@@ -236,7 +252,7 @@ button.outline:hover,
 
 /* Typography WOW factor */
 .hero-gradient {
-  background: linear-gradient(135deg, #a855f7 -20%, #ec4899 120%);
+  background: linear-gradient(135deg, var(--pico-primary) -20%, var(--accent-color) 120%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -303,7 +319,6 @@ button.outline:hover,
 
 /* Mobile responsive refinements */
 @media (max-width: 768px) {
-
   /* Prevent horizontal overflow on body */
   html,
   body {
@@ -407,21 +422,21 @@ button.outline:hover,
 }
 
 .badge-active {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.1);
   color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.4);
+  border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .badge-upcoming {
-  background: rgba(168, 85, 247, 0.2);
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.1);
+  color: var(--pico-primary);
+  border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
 .badge-ended {
-  background: rgba(100, 116, 139, 0.2);
-  color: #94a3b8;
-  border: 1px solid rgba(100, 116, 139, 0.4);
+  background: rgba(153, 27, 27, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(153, 27, 27, 0.3);
 }
 
 /* Waving Flag Animation */

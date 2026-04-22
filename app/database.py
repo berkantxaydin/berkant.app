@@ -128,6 +128,8 @@ def init_db() -> None:
             )
         ''')
         ensure_column(cursor, "CV_Catalog", "location", "TEXT")
+        ensure_column(cursor, "CV_Catalog", "photo_url", "TEXT")
+        ensure_column(cursor, "CV_Catalog", "github_url", "TEXT")
         
         safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Game_Jams (
@@ -139,6 +141,7 @@ def init_db() -> None:
                 youtube_url TEXT
             )
         ''')
+        ensure_column(cursor, "Game_Jams", "image_url", "TEXT")
 
         safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Godot_Games (
@@ -155,6 +158,8 @@ def init_db() -> None:
                 FOREIGN KEY (jam_id) REFERENCES Game_Jams (id) ON DELETE SET NULL
             )
         ''')
+        ensure_column(cursor, "Godot_Games", "icon_url", "TEXT")
+        ensure_column(cursor, "Godot_Games", "github_url", "TEXT")
 
         safe_execute(cursor, '''
             CREATE TABLE IF NOT EXISTS Game_Likes (

@@ -51,13 +51,13 @@ def main():
         """
         
         # Retry mechanism for 503 errors and rate limits
-        max_retries = 3
+        max_retries = 5
         retry_delay = 5 # seconds
         
         for attempt in range(max_retries):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.0-flash',
+                    model='gemini-3-flash',
                     contents=prompt
                 )
                 review_comment = response.text
@@ -71,7 +71,7 @@ def main():
                         continue
                 raise e # Re-raise if not a retryable error or last attempt
     except Exception as e:
-        print(f" Gemini AI failed to generate review: {e}")
+        print(f" Gemini AI (gemini-3-flash) failed to generate review: {e}")
         return
 
     # 3. Post the comment back to GitHub

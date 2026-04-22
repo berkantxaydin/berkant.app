@@ -169,10 +169,11 @@ def log_ai_event(event_type: str, status: str, message: str) -> None:
         logger.info(log_msg)
 
     try:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         conn = get_db_connection()
         conn.execute(
-            "INSERT INTO AI_System_Logs (event_type, status, message) VALUES (?, ?, ?)",
-            (event_type, status, message)
+            "INSERT INTO AI_System_Logs (event_type, status, message, created_at) VALUES (?, ?, ?, ?)",
+            (event_type, status, message, now)
         )
         conn.commit()
         conn.close()
@@ -279,7 +280,8 @@ def start_llama_server() -> Optional[subprocess.Popen]:
             "--port", str(AI_CONFIG['port']), 
             "--host", "127.0.0.1", 
             "-c", str(AI_CONFIG['context']),
-            "-t", str(AI_CONFIG['threads'])
+            "-t", str(AI_CONFIG['threads']),
+            "--flash-attn"
         ]
         
         # If use_gpu is False, we force CPU by setting gpu layers to 0
@@ -293,7 +295,8 @@ def start_llama_server() -> Optional[subprocess.Popen]:
             "--port", str(AI_CONFIG['port']), 
             "--n_ctx", str(AI_CONFIG['context']), 
             "--host", "127.0.0.1",
-            "--threads", str(AI_CONFIG['threads'])
+            "--threads", str(AI_CONFIG['threads']),
+            "--flash_attn"
         ]
         if not AI_CONFIG.get('use_gpu', True):
             cmd += ["--n_gpu_layers", "0"]
@@ -577,6 +580,27 @@ def process_ai_task(task_id, payload_dict):
 
         reset_activity_timer()
         
+        # PHASE 0: Fetch Conversation History (Last 3 rounds)
+        history_msgs = []
+        try:
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT payload, result FROM System_Tasks 
+                WHERE user_id = ? AND task_type = 'ai_chat' AND status = 'done' 
+                ORDER BY created_at DESC LIMIT 3
+            """, (user_id,))
+            history_rows = cursor.fetchall()[::-1] # Reverse to get chronological order
+            for row in history_rows:
+                old_payload = json.loads(row['payload'])
+                old_result = json.loads(row['result'])
+                history_msgs.append({"role": "user", "content": old_payload.get('prompt', '')})
+                history_msgs.append({"role": "assistant", "content": old_result.get('answer', '')})
+            conn.close()
+        except Exception as e:
+            print(f"History fetch error: {e}")
+
         # PHASE 1: Thinking Pass (Determine if we need more data)
         community_data = get_public_snapshot()
         platform_schema = get_platform_schema()
@@ -602,28 +626,62 @@ def process_ai_task(task_id, payload_dict):
             "4. GODOT/WEBGL: When users ask about games, assume they are talking about the Godot WebGL games on THIS platform. Never tell them to go to Itch.io. "
             "5. IMPORTANT: NEVER use '?' or '{id}' or any placeholder in a link. If you don't have the ID, use <sql> to find it first.\n"
             "6. NO HALLUCINATION: Never share raw file paths like '/play_mock/...' or internal S3 URLs. Only use the patterns in rule #3.\n"
-            "7. Be concise, technical, and directly answer the user."
+            "7. DATABASE QUERIES: When using <sql> tags, you MUST list specific column names (e.g., SELECT id, title FROM Godot_Games). NEVER use '*' (wildcard) as it is strictly blocked for security. "
+            "The 'id' column is essential for building links but should NOT be shown to the user as raw text. Use it only inside Markdown patterns.\n"
+            "8. ALL GAMES: The 'Godot_Games' table contains ALL games on the platform, including those submitted to Game Jams (identifiable via jam_id). "
+            "Always filter Godot_Games by validation_status = 'Approved' to ensure you only show playable games.\n"
+            "9. Be concise, technical, and directly answer the user."
         )
 
-        def call_ai(msgs):
+        def call_ai(msgs, stream=False):
+            import requests
             payload = {
                 "model": "local-model",
                 "messages": msgs,
-                "max_tokens": 512,
+                "max_tokens": 700,
                 "temperature": 0.3,
-                "stream": False
+                "stream": stream
             }
             server_url = f"http://127.0.0.1:{AI_CONFIG['port']}/v1/chat/completions"
-            data = json.dumps(payload).encode('utf-8')
-            req = urllib.request.Request(server_url, data=data, headers={"Content-Type": "application/json", "Authorization": "Bearer local"})
-            with urllib.request.urlopen(req, timeout=300) as response: # nosec B310
-                return json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content']
+            
+            if not stream:
+                res = requests.post(server_url, json=payload, timeout=120)
+                return res.json()['choices'][0]['message']['content']
+            
+            # Streaming implementation
+            full_text = ""
+            last_update = time.time()
+            
+            with requests.post(server_url, json=payload, stream=True, timeout=120) as r:
+                for line in r.iter_lines():
+                    if line:
+                        line_text = line.decode('utf-8')
+                        if line_text.startswith("data: "):
+                            data_str = line_text[6:]
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(data_str)
+                                content = chunk['choices'][0].get('delta', {}).get('content', '')
+                                full_text += content
+                                
+                                # Update DB every 0.8 seconds to create typing effect without overloading DB
+                                if time.time() - last_update > 0.8:
+                                    conn = get_db_connection()
+                                    conn.execute(
+                                        "UPDATE System_Tasks SET result = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", 
+                                        (json.dumps({"answer": full_text}), task_id)
+                                    )
+                                    conn.commit()
+                                    conn.close()
+                                    last_update = time.time()
+                            except:
+                                continue
+            return full_text
 
         # First Pass
-        initial_response = call_ai([
-            {"role": "system", "content": sys_msg},
-            {"role": "user", "content": user_prompt}
-        ])
+        first_pass_msgs = [{"role": "system", "content": sys_msg}] + history_msgs + [{"role": "user", "content": user_prompt}]
+        initial_response = call_ai(first_pass_msgs)
         
         # Check for SQL tag
         import re
@@ -646,8 +704,8 @@ def process_ai_task(task_id, payload_dict):
                 "INSTRUCTIONS:\n"
                 "1. Provide a direct, helpful answer based on the search results.\n"
                 "2. Use Markdown links for platform resources: [Title](/games/ID), [Title](/cv/ID), [Name](/chat?room_id=ID), [Username](/u/name).\n"
-                "3. Replace 'ID' with the actual numerical ID from the search results. NEVER use placeholders or '?' in links.\n"
-                "4. If no results were found, state that you couldn't find the resource and ask for clarification WITHOUT giving tutorial examples."
+                "3. IMPORTANT: Use the actual numerical 'id' column from the search results to build the links. NEVER use placeholders.\n"
+                "4. If a result exists but you are missing the title, use a generic name but keep the ID valid."
             )
             
             conn = get_db_connection()
@@ -655,12 +713,15 @@ def process_ai_task(task_id, payload_dict):
             conn.commit()
             conn.close()
             
-            full_answer = call_ai([
-                {"role": "system", "content": final_sys_msg},
-                {"role": "user", "content": user_prompt}
-            ])
+            final_pass_msgs = [{"role": "system", "content": final_sys_msg}] + history_msgs + [{"role": "user", "content": user_prompt}]
+            full_answer = call_ai(final_pass_msgs, stream=True)
         else:
-            full_answer = initial_response
+            conn = get_db_connection()
+            conn.execute("UPDATE System_Tasks SET status = 'generating' WHERE id = ?", (task_id,))
+            conn.commit()
+            conn.close()
+            final_pass_msgs = [{"role": "system", "content": sys_msg}] + history_msgs + [{"role": "user", "content": user_prompt}]
+            full_answer = call_ai(final_pass_msgs, stream=True)
 
         return {"status": "done", "answer": full_answer}
         

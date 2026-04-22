@@ -22,6 +22,9 @@
           <label>{{ t("Location") }}
             <input type="text" name="location" placeholder="{{ t('e.g. Istanbul, Turkey') }}">
           </label>
+          <label>{{ t("GitHub Profile URL (Optional)") }}
+            <input type="url" name="github_url" placeholder="https://github.com/username">
+          </label>
       </div>
       
       <label>{{ t("Professional Summary") }}
@@ -32,6 +35,20 @@
           <input type="text" name="exp_role" placeholder="{{ t('Lead Developer at TechCorp') }}" required>
       </label>
 
+      <!-- Profile Photo -->
+      <label>{{ t("Profile Photo (.png)") }}
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+          <div id="photoPreview" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(168,85,247,0.1); border: 2px dashed rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <span id="photoPlaceholder">👤</span>
+          </div>
+          <div style="flex-grow: 1;">
+            <input type="file" id="photoFile" accept=".png" style="margin-bottom: 0;" onchange="uploadPhoto()">
+            <input type="hidden" name="photo_url" id="photoUrl">
+            <small id="photoStatus" style="display: block; margin-top: 0.3rem;"></small>
+          </div>
+        </div>
+      </label>
+
       <!-- Advanced Feature: HTMX file injection -->
       <label>
         {{ t("Optional: Upload Raw Custom HTMX / HTML Resume") }}
@@ -39,10 +56,60 @@
         <small>{{ t("Allows bypassing standard formats with your own interactive design!") }}</small>
       </label>
       
-      <!-- user_id is read from session server-side, not the form -->
-      
       <button type="submit">{{ t("Publish to Talent Pool") }}</button>
     </form>
   </article>
 </section>
+
+<script>
+async function uploadPhoto() {
+    const fileInput = document.getElementById('photoFile');
+    const status = document.getElementById('photoStatus');
+    const preview = document.getElementById('photoPreview');
+    const hiddenInput = document.getElementById('photoUrl');
+    
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    
+    if (!file.name.toLowerCase().endsWith('.png')) {
+        alert("{{ t('Please upload a .png file.') }}");
+        fileInput.value = '';
+        return;
+    }
+
+    try {
+        status.innerText = "{{ t('Uploading photo...') }}";
+        const filename = `${crypto.randomUUID()}.png`;
+        const resp = await fetch(`/api/jam/get_upload_url?type=photos&filename=${filename}&content_type=image/png`);
+        const s3Data = await resp.json();
+        
+        let targetUrl = s3Data.url;
+        let isMock = false;
+        if (targetUrl.includes("mock-endpoint")) {
+            targetUrl = "/api/jam/mock_upload";
+            isMock = true;
+        }
+
+        const formData = new FormData();
+        Object.entries(s3Data.fields).forEach(([k, v]) => formData.append(k, v));
+        formData.append('file', file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', targetUrl, true);
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const finalUrl = isMock ? `/play_mock/${s3Data.fields.key}` : `${s3Data.url}/${s3Data.fields.key}`;
+                hiddenInput.value = finalUrl;
+                preview.innerHTML = `<img src="${finalUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+                status.innerHTML = `<span style="color:var(--pico-ins-color);">✓ {{ t('Photo ready') }}</span>`;
+            } else {
+                status.innerHTML = `<span style="color:var(--pico-del-color);">✗ {{ t('Upload failed') }}</span>`;
+            }
+        };
+        xhr.send(formData);
+    } catch (e) {
+        status.innerText = "Error: " + e.message;
+    }
+}
+</script>
 {% endblock %}
