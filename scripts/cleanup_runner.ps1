@@ -3,7 +3,7 @@
 # Hardened to avoid the 'Suicide Bug' by only cleaning STALE temp files.
 
 $ProjectDir = "C:\Users\berka\Downloads\berkant.app"
-$RunnerDir = "C:\Users\berka\runner_work"
+$RunnerDir = "C:\actions-runner\_work"
 
 Write-Output "--- Starting Surgical Runner Cleanup ---"
 
