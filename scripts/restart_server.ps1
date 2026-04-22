@@ -38,6 +38,9 @@ foreach ($dir in $nginxTempDirs) {
 Write-Output "Starting Waitress on port 5000..."
 Start-Process -FilePath "$ProjectDir\venv\Scripts\waitress-serve.exe" -ArgumentList "--port=5000 --call app:create_app" -WindowStyle Hidden -WorkingDirectory $ProjectDir
 
+Write-Output "Starting Background Worker..."
+Start-Process -FilePath "$ProjectDir\venv\Scripts\python.exe" -ArgumentList "bin/worker.py" -WindowStyle Hidden -WorkingDirectory $ProjectDir
+
 Write-Output "Starting Nginx..."
 Set-Location $NginxDir
 Start-Process -FilePath ".\nginx.exe" -WindowStyle Hidden
@@ -56,6 +59,8 @@ try {
 } catch {
     Write-Output "FAILED: App (Waitress) is [UNREACHABLE]"
 }
+
+if (Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*worker.py*" }) { Write-Output "OK: Worker is [ACTIVE]" } else { Write-Output "FAILED: Worker did not start" }
 
 $cf = Get-Service cloudflared -ErrorAction SilentlyContinue
 if ($cf -and $cf.Status -eq "Running") { Write-Output "OK: Tunnel is [ACTIVE]" }

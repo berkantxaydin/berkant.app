@@ -12,23 +12,18 @@ import sqlite3
 from datetime import datetime, timedelta
 import logging
 import socket
+from typing import Optional, Tuple
 from app.database import get_db_connection
 
-# App-wide logger for integrated logging
+# Integrated App Logger
 logger = logging.getLogger('flask.app')
 
-# Global paths
+# Global Paths & Configuration
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+PID_FILE = os.path.join(BASE_DIR, 'logs', '.ai_pid')
+RESTART_COOLDOWN = 10
+IDLE_TIMEOUT = 7 * 60
 
-# In Docker/Linux, we use the installed package command. 
-# On Windows, we try to use the local binary if available.
-if os.name == 'nt':
-    server_exe = os.path.join(BASE_DIR, 'bin', 'llama-server.exe')
-else:
-    # On Linux/Docker, llama-cpp-python[server] provides the command
-    server_exe = "python3" # We will use -m llama_cpp.server
-
-# Configuration for the primary Qwen 2.5 7B model
 AI_CONFIG = {
     "file": "qwen2.5-7b-instruct-q3_k_m.gguf",
     "port": 8082,
@@ -54,7 +49,7 @@ def validate_ai_sql(sql):
             return False, f"Forbidden SQL keyword detected: {word}"
             
     # 3. Forbidden columns/sensitive data
-    sensitive = ['password_hash', 'email', 'ip_address', 'visitor_id']
+    sensitive = ['password_hash', 'email', 'visitor_id']
     for col in sensitive:
         if col in sql_lower:
             return False, f"Access to sensitive column '{col}' is blocked."
@@ -76,53 +71,93 @@ def validate_ai_sql(sql):
             
     return True, "OK"
 
-def execute_ai_read_query(sql):
-    """Executes a validated read-only query and returns the results as a string."""
-    is_valid, error = validate_ai_sql(sql)
-    if not is_valid:
-        return f"ERROR: {error}"
+# Determine server executable platform-specifically
+if os.name == 'nt':
+    server_exe = os.path.join(BASE_DIR, 'bin', 'llama-server.exe')
+else:
+    server_exe = "python3"
+
+def ai_security_authorizer(action_code, tname, cname, sql_location, trigger_name):
+    """
+    Native SQLite engine-level sandbox.
+    Intercepts and evaluates every operation before execution.
+    """
+    # Allow safe operations: SELECT statements and basic aggregate functions (COUNT, MAX)
+    if action_code == sqlite3.SQLITE_SELECT or action_code == sqlite3.SQLITE_FUNCTION:
+        return sqlite3.SQLITE_OK
         
-    # Ensure LIMIT is present to prevent resource exhaustion
+    # Intercept READ access on a per-column and per-table basis
+    if action_code == sqlite3.SQLITE_READ:
+        table = tname.lower() if tname else ""
+        col = cname.lower() if cname else ""
+        
+        # 1. Block sensitive columns natively
+        if col in ['password_hash', 'email', 'visitor_id', 'preferences']:
+            return sqlite3.SQLITE_DENY
+            
+        # 2. Whitelist allowed tables
+        allowed_tables = [
+            'godot_games', 'game_jams', 'users', 'cv_catalog', 
+            'game_likes', 'game_comments', 'chat_rooms', 'ai_system_logs'
+        ]
+        # Allow internal SQLite tables (like sqlite_master) for schema checks if needed,
+        # otherwise strictly enforce the whitelist.
+        if table and table not in allowed_tables and not table.startswith('sqlite_'):
+            return sqlite3.SQLITE_DENY
+            
+        return sqlite3.SQLITE_OK
+
+    # Block EVERYTHING else (INSERT, DROP, UPDATE, PRAGMA, ATTACH, DELETE, etc.)
+    return sqlite3.SQLITE_DENY
+
+def execute_ai_read_query(sql: str) -> str:
+    """Executes LLM queries inside a strict SQLite Authorizer sandbox."""
     if "limit" not in sql.lower():
         sql = sql.rstrip(';') + " LIMIT 15"
         
     try:
+        from app.database import get_db_connection
+        # We spawn a fresh connection specifically for the AI query 
+        # so the strict rules don't affect standard application routing.
         conn = get_db_connection()
+        
+        # Attach the security sandbox to this specific connection
+        conn.set_authorizer(ai_security_authorizer)
+        
         c = conn.cursor()
         c.execute(sql)
         rows = c.fetchall()
-        column_names = [description[0] for description in c.description]
         
         if not rows:
+            conn.close()
             return "No results found."
             
-        # Format as readable list of dicts
-        results = []
-        for row in rows:
-            results.append(dict(zip(column_names, row)))
-            
+        column_names = [d[0] for d in c.description]
+        result_json = json.dumps([dict(zip(column_names, r)) for r in rows], indent=2)
+        
         conn.close()
-        return json.dumps(results, indent=2)
+        return result_json
+        
+    except sqlite3.DatabaseError as e:
+        # If the authorizer blocks an action, SQLite throws a DatabaseError natively
+        msg = f"SECURITY BLOCK: The query attempted an unauthorized action. ({str(e)})"
+        log_ai_event('SECURITY', 'WARNING', msg)
+        return msg
     except Exception as e:
-        return f"DATABASE ERROR: {str(e)}"
+        return f"EXECUTION ERROR: {str(e)}"
 
 
+# Engine State Management
 ai_processes = {}
 ai_ready = False
-ai_boot_thread = None
 ai_booting = False
-ai_init_lock = threading.Lock() # Robustness: prevent multiple boot threads
-PID_FILE = os.path.join(BASE_DIR, 'logs', '.ai_pid')
+ai_boot_thread = None
+ai_init_lock = threading.Lock()
 LAST_RESTART_TIME = 0.0
-RESTART_COOLDOWN = 10 # 10 seconds debounce to prevent rapid-fire spawn loops
-
-# Configuration for RAM conservation (unloading after inactivity)
-IDLE_TIMEOUT = 7 * 60  # 7 minutes
 last_activity_time = time.time()
 
-def log_ai_event(event_type, status, message):
-    """Logs an AI event to both the standard logger and the database."""
-    # 1. Standard Logger
+def log_ai_event(event_type: str, status: str, message: str) -> None:
+    """Logs an AI event to both the integrated logger and DB logs."""
     log_msg = f"[AI {event_type}] ({status}) {message}"
     if status == 'ERROR':
         logger.error(log_msg)
@@ -131,29 +166,33 @@ def log_ai_event(event_type, status, message):
     else:
         logger.info(log_msg)
 
-    # 2. Database Logger
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO AI_System_Logs (event_type, status, message, created_at) VALUES (?, ?, ?, datetime('now', 'localtime'))",
+        conn.execute(
+            "INSERT INTO AI_System_Logs (event_type, status, message) VALUES (?, ?, ?)",
             (event_type, status, message)
         )
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Failed to log AI event to DB: {e}")
+        print(f"Log failure: {e}")
 
-def is_port_in_use(port):
-    """Checks if a local TCP port is currently occupied."""
+def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('127.0.0.1', port)) == 0
 
-def cleanup_orphans():
-    """Forcefully kills any orphaned llama-server processes to free GPU/RAM."""
+def cleanup_orphans() -> None:
+    """Kills orphaned llama-server processes to reclaim RAM/GPU."""
+    try:
+        import requests
+        res = requests.get(f"http://127.0.0.1:{AI_CONFIG['port']}/health", timeout=1)
+        if res.status_code == 200:
+            return
+    except:
+        pass
+
     target_names = ["llama-server.exe", "llama-server"]
     
-    # 1. First, try cleaning using the persistent PID file if it exists
     if os.path.exists(PID_FILE):
         try:
             with open(PID_FILE, 'r') as f:
@@ -161,28 +200,17 @@ def cleanup_orphans():
                 if psutil.pid_exists(old_pid):
                     p = psutil.Process(old_pid)
                     if any(tn in p.name().lower() for tn in target_names):
-                        print(f"Cleaning up persistent AI PID: {old_pid}")
                         for child in p.children(recursive=True):
                             child.kill()
                         p.kill()
             os.remove(PID_FILE)
-        except Exception as e:
-            print(f"PID Cleanup Error: {e}")
+        except Exception: pass
 
-    # 2. Broad sweep for any process matching 'llama' in name or path
     for proc in psutil.process_iter(['pid', 'name', 'exe']):
         try:
-            is_match = False
             pname = proc.info.get('name', '').lower()
             pexe = (proc.info.get('exe') or '').lower()
-            
-            if any(tn in pname for tn in target_names):
-                is_match = True
-            elif "llama" in pexe or "llama-server" in pexe:
-                is_match = True
-            
-            if is_match:
-                print(f"Cleaning up orphaned AI process: {proc.info['pid']} ({pname})")
+            if any(tn in pname for tn in target_names) or "llama" in pexe:
                 p = psutil.Process(proc.info['pid'])
                 for child in p.children(recursive=True):
                     child.kill()
@@ -190,121 +218,116 @@ def cleanup_orphans():
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
 
-def terminate_ai_server():
+def terminate_ai_server() -> None:
     """Unloads the model from RAM by terminating the background process."""
     global ai_ready, ai_booting
-    for name, proc in list(ai_processes.items()):
-        print(f"Terminating {name} AI server...")
+    for proc in list(ai_processes.values()):
         try:
-            # Kill children first (very important for GPU offloading sub-procs)
             p = psutil.Process(proc.pid)
             for child in p.children(recursive=True):
                 child.kill()
             proc.terminate()
             proc.wait(timeout=5)
         except Exception:
-            try:
-                proc.kill()
-            except Exception:
-                pass
+            try: proc.kill()
+            except Exception: pass
     
-    # Final sweep to ensure no ghosts remain on GPU
     cleanup_orphans()
-    
-    # 1.0 second delay to allow the OS to fully release port/RAM
     time.sleep(1)
     
     ai_processes.clear()
-    ai_ready = False
-    ai_booting = False
+    ai_ready = ai_booting = False
     log_ai_event('SHUTDOWN', 'INFO', 'AI Engine unloaded from RAM.')
 
-def start_llama_server():
+def start_llama_server() -> Optional[subprocess.Popen]:
     global LAST_RESTART_TIME
-    
-    # Debounce: prevent spawning if we just tried very recently
     now = time.time()
     if now - LAST_RESTART_TIME < RESTART_COOLDOWN:
-        print("AI Server restart suppressed (cooldown active).")
         return None
-        
-    # Ensure a clean slate before starting
+
     cleanup_orphans()
-    
-    # Port Guard: Check if the port is busy before trying to spawn
+    time.sleep(1) # Reduced from 3s to speed up cold start
     if is_port_in_use(AI_CONFIG['port']):
-        log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} is already in use. Attempting cleanup...")
-        cleanup_orphans()
-        time.sleep(1)
-        if is_port_in_use(AI_CONFIG['port']):
-            log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} still busy after cleanup. Aborting.")
-            return None
+        log_ai_event('STARTUP', 'ERROR', f"Port {AI_CONFIG['port']} occupied.")
+        return None
+
+    mem = psutil.virtual_memory()
+    free_gb = mem.available / (1024**3)
+    # Lenient RAM check: warn if < 4GB, block only if < 1GB to prevent OOM.
+    if free_gb < 1.0:
+        log_ai_event('STARTUP', 'ERROR', f"Critically low RAM to start AI. Available: {free_gb:.1f}GB. Required: >1.0GB")
+        return None
+    elif free_gb < 4.0:
+        log_ai_event('STARTUP', 'WARNING', f"RAM is tight ({free_gb:.1f}GB available). Swapping might occur.")
 
     LAST_RESTART_TIME = now
-    
-    log_ai_event('STARTUP', 'INFO', f"Starting {AI_CONFIG['file']} AI server on port {AI_CONFIG['port']}...")
     model_path = os.path.join(BASE_DIR, 'models', AI_CONFIG['file'])
-    
-    # Redirect errors to a log file for debugging
     log_file = os.path.join(BASE_DIR, 'logs', 'llm_server_error.log')
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
-    err_out = open(log_file, 'a', encoding='utf-8')
     
     startupinfo = None
     if os.name == 'nt' and os.path.exists(server_exe):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        cmd = [
-            server_exe, 
-            "-m", model_path, 
-            "--port", str(AI_CONFIG['port']), 
-            "--host", "127.0.0.1", 
-            "-c", str(AI_CONFIG['context'])
-        ]
+        cmd = [server_exe, "-m", model_path, "--port", str(AI_CONFIG['port']), "--host", "127.0.0.1", "-c", str(AI_CONFIG['context'])]
     else:
-        # Docker / Linux path: using python -m llama_cpp.server
-        cmd = [
-            "python3", "-m", "llama_cpp.server", 
-            "--model", model_path, 
-            "--port", str(AI_CONFIG['port']), 
-            "--n_ctx", str(AI_CONFIG['context']),
-            "--host", "127.0.0.1"
-        ]
+        cmd = ["python3", "-m", "llama_cpp.server", "--model", model_path, "--port", str(AI_CONFIG['port']), "--n_ctx", str(AI_CONFIG['context']), "--host", "127.0.0.1"]
     
-    proc = subprocess.Popen( # nosec B603
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=err_out,
-        startupinfo=startupinfo
-    )
-    # Important: Close the handle in the parent process. 
-    # The child process keeps its own inherited handle.
-    err_out.close()
-    
-    # Persist the PID for next app boot recovery
+    with open(log_file, 'a', encoding='utf-8') as err_out:
+        proc = subprocess.Popen( # nosec B603
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=err_out,
+            startupinfo=startupinfo
+        )
+        # Important: Close the handle in the parent process. 
+        # The child process keeps its own inherited handle.
+        err_out.close()
+        
+        log_ai_event('STARTUP', 'INFO', f"AI process spawned with PID {proc.pid}")
+        
     try:
         with open(PID_FILE, 'w') as f:
             f.write(str(proc.pid))
-    except Exception as e:
-        print(f"Error persisting AI PID: {e}")
+    except Exception: pass
         
     ai_processes['chat'] = proc
     return proc
 
-def background_initialization():
-    """Background task to start AI server and poll health."""
+def background_initialization() -> None:
     global ai_ready, ai_booting
     ai_booting = True
     try:
+        url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
+        
+        # Cross-process check: if port is already active, verify health.
+        if is_port_in_use(AI_CONFIG['port']):
+            try:
+                with urllib.request.urlopen(url, timeout=1.5) as response: # nosec B310
+                    if response.status == 200:
+                        ai_ready = True
+                        ai_booting = False
+                        log_ai_event('HEALTH', 'INFO', "AI Engine detected as already running.")
+                        return
+            except Exception: pass
+
         proc = start_llama_server()
         if proc is None:
-            # If server didn't start (cooldown or port busy), we should not wait 2 minutes
-            log_ai_event('STARTUP', 'WARNING', "AI Server startup suppressed or failed. Aborting health check.")
+            # Last-ditch check in case it started between checks
+            if is_port_in_use(AI_CONFIG['port']):
+                try:
+                    with urllib.request.urlopen(url, timeout=3) as response: # nosec B310
+                        if response.status == 200:
+                            ai_ready = True
+                            ai_booting = False
+                            return
+                except Exception: pass
+            
             ai_booting = False
             return
 
         url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
-        max_retries = 90 # 3 minutes total for slow cold starts
+        max_retries = 90
         for i in range(max_retries):
             # Check if the process has already crashed/exited
             if proc.poll() is not None:
@@ -319,9 +342,9 @@ def background_initialization():
                         ai_booting = False
                         log_ai_event('HEALTH', 'INFO', "AI Engine is ready and responding.")
                         break
-            except Exception:
+            except Exception as e:
                 if i % 10 == 0 and i > 0:
-                    log_ai_event('HEALTH', 'WARNING', f"Still waiting for AI health check... (Attempt {i})")
+                    log_ai_event('HEALTH', 'WARNING', f"Still waiting for AI health check... (Attempt {i}, Error: {e})")
                 time.sleep(2)
         
         if not ai_ready:
@@ -354,7 +377,21 @@ def initialize_ai_system():
     print("AI Background initialization started...")
 
 def is_ai_ready():
-    return ai_ready
+    """Checks if the AI engine is ready. Verifies the port to sync state across processes."""
+    global ai_ready
+    if ai_ready:
+        return True
+    
+    # Ping the local server to verify status
+    try:
+        url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
+        with urllib.request.urlopen(url, timeout=0.5) as response: # nosec B310
+            if response.status == 200:
+                ai_ready = True
+                return True
+    except Exception:
+        pass
+    return False
 
 def is_ai_booting():
     return ai_booting
@@ -363,25 +400,14 @@ def reset_activity_timer():
     global last_activity_time
     last_activity_time = time.time()
 
-def idle_monitor():
-    """Background thread to monitor inactivity and free RAM."""
-    while True:
-        time.sleep(60) # Heartbeat
-        if ai_ready and not ai_queue.unfinished_tasks:
-            idle_time = time.time() - last_activity_time
-            if idle_time > IDLE_TIMEOUT:
-                log_ai_event('SHUTDOWN', 'INFO', f"AI Idle for {idle_time/60:.1f} minutes. Freeing system RAM...")
-                terminate_ai_server()
-
-# Start background monitor and initial boot
-threading.Thread(target=idle_monitor, daemon=True).start()
-initialize_ai_system()
+# Note: Background monitor and initial boot moved to standalone bin/worker.py or handled on-demand.
+# However, we keep helper functions for use by both the web app and the worker.
 
 @atexit.register
 def cleanup_servers():
 
-    for name, proc in ai_processes.items():
-        print(f"Terminating {name} AI server...")
+    for proc in list(ai_processes.values()):
+        print("Terminating AI server...")
         proc.terminate()
 
         try:
@@ -389,23 +415,9 @@ def cleanup_servers():
         except subprocess.TimeoutExpired:
             proc.kill()
 
-ai_queue = queue.Queue()
-ai_results = {}
-result_timestamps = {}
-active_user_tasks = {} # Tracks {user_id: task_id} for limiting concurrent requests
-queue_ids = []
-queue_lock = threading.Lock()
-
+# No-op placeholders for compatibility during transition
 def cleanup_old_results():
-    """Prevents memory leak by removing results older than 1 hour."""
-    now = datetime.now()
-    expired_keys = [
-        tid for tid, ts in result_timestamps.items() 
-        if now - ts > timedelta(minutes=15)
-    ]
-    for tid in expired_keys:
-        ai_results.pop(tid, None)
-        result_timestamps.pop(tid, None)
+    pass
 
 def get_public_snapshot():
     """Gathers enriched community metadata for AI context with social metrics."""
@@ -496,166 +508,199 @@ def get_platform_schema():
 ---------------------------
 """
 
-def ai_worker():
-    while True:
-        task = ai_queue.get()
-        if task is None: break
-        
-        task_id, user_prompt, user_id = task
-        try:
-            # Update status to Waking Up if not ready
-            if not ai_ready:
-                with queue_lock:
-                    ai_results[task_id] = {"status": "waking_up"}
-                initialize_ai_system()
-                # Wait for bootup - strict timeout to prevent "stuck" assistant
-                max_wait = 180 # 3 minutes total
-                start_wait = time.time()
-                while not ai_ready:
-                    if time.time() - start_wait > max_wait:
-                        raise Exception("AI Engine wakeup timed out (3 minute limit reached).")
-                    
-                    # Heartbeat check: ensure we didn't fail and stop booting
+def process_ai_task(task_id, payload_dict):
+    """
+    Core AI inference logic. Extracted for use by the standalone worker.
+    """
+    user_prompt = payload_dict.get('prompt', '')
+    user_id = payload_dict.get('user_id', 'unknown')
+    
+    try:
+        # Update status to Waking Up if not ready
+        if not ai_ready:
+            conn = get_db_connection()
+            conn.execute("UPDATE System_Tasks SET status = 'waking_up' WHERE id = ?", (task_id,))
+            conn.commit()
+            conn.close()
+            
+            initialize_ai_system()
+            # Wait for bootup - strict timeout to prevent "stuck" assistant
+            max_wait = 180 # 3 minutes total
+            start_wait = time.time()
+            while not ai_ready:
+                if time.time() - start_wait > max_wait:
+                    raise Exception("AI Engine wakeup timed out (3 minute limit reached).")
+                
+                # Heartbeat check: ensure we didn't fail and stop booting
+                if not ai_booting and not ai_ready:
+                    # Attempt one last re-initialization if something died
+                    initialize_ai_system()
+                    time.sleep(2)
                     if not ai_booting and not ai_ready:
-                        # Attempt one last re-initialization if something died
-                        initialize_ai_system()
-                        time.sleep(2)
-                        if not ai_booting and not ai_ready:
-                            raise Exception("AI Engine failed to initialize during wakeup.")
-                    time.sleep(1)
+                        raise Exception("AI Engine failed to initialize during wakeup.")
+                time.sleep(1)
 
-            reset_activity_timer()
+        reset_activity_timer()
+        
+        # PHASE 1: Thinking Pass (Determine if we need more data)
+        community_data = get_public_snapshot()
+        platform_schema = get_platform_schema()
+        
+        sys_msg = (
+            "You are the proglem Data-Aware Assistant for the 'proglem' ecosystem. "
+            "Context: This is a high-performance platform for hosting Godot WebGL games and interactive CVs. "
+            "Hardware Constraints: 16GB RAM (8GB limit for production), SQLite (WAL) backend. "
+            "Games: All games are Godot WebGL binaries hosted locally on our cloud. "
+            "You have access to a live SQLite database with these tables:\n"
+            f"{platform_schema}\n"
+            "You also have a snapshot of recent activity:\n"
+            f"{community_data}\n\n"
+            "STRICT INSTRUCTIONS:\n"
+            "1. NO EXTERNAL REDIRECTS: Do NOT suggest users play games on Itch.io or other websites. Every game mentioned in our database is playable directly here. "
+            "2. If the user asks for info NOT in the snapshot (e.g., specific game IDs, user records, or platform history), "
+            "you MUST respond with a SQL query wrapped in <sql>SELECT ...</sql> tags.\n"
+            "3. LINKING: Use Markdown for platform resources ONLY if you have a valid numerical ID. Replace the ID in these patterns:\n"
+            "   - Games: [Title](/games/123) (EXAMPLE: [My Godot Game](/games/1))\n"
+            "   - CV Profiles: [Title](/cv/45)\n"
+            "   - Chat Rooms: [Name](/chat?room_id=7)\n"
+            "   - Users: [Username](/u/alice)\n"
+            "4. GODOT/WEBGL: When users ask about games, assume they are talking about the Godot WebGL games on THIS platform. Never tell them to go to Itch.io. "
+            "5. IMPORTANT: NEVER use '?' or '{id}' or any placeholder in a link. If you don't have the ID, use <sql> to find it first.\n"
+            "6. NO HALLUCINATION: Never share raw file paths like '/play_mock/...' or internal S3 URLs. Only use the patterns in rule #3.\n"
+            "7. Be concise, technical, and directly answer the user."
+        )
+
+        def call_ai(msgs):
+            payload = {
+                "model": "local-model",
+                "messages": msgs,
+                "max_tokens": 512,
+                "temperature": 0.3,
+                "stream": False
+            }
+            server_url = f"http://127.0.0.1:{AI_CONFIG['port']}/v1/chat/completions"
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(server_url, data=data, headers={"Content-Type": "application/json", "Authorization": "Bearer local"})
+            with urllib.request.urlopen(req, timeout=300) as response: # nosec B310
+                return json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content']
+
+        # First Pass
+        initial_response = call_ai([
+            {"role": "system", "content": sys_msg},
+            {"role": "user", "content": user_prompt}
+        ])
+        
+        # Check for SQL tag
+        import re
+        sql_match = re.search(r'<sql>(.*?)</sql>', initial_response, re.DOTALL | re.IGNORECASE)
+        
+        if sql_match:
+            sql_query = sql_match.group(1).strip()
             
-            # PHASE 1: Thinking Pass (Determine if we need more data)
-            community_data = get_public_snapshot()
-            platform_schema = get_platform_schema()
+            conn = get_db_connection()
+            conn.execute("UPDATE System_Tasks SET status = 'generating', result = ? WHERE id = ?", (json.dumps({"answer": f"🔍 Searching database for: `{sql_query}`..."}), task_id))
+            conn.commit()
+            conn.close()
             
-            sys_msg = (
-                "You are the proglem Data-Aware Assistant. "
-                "You have access to a live SQLite database. "
-                f"{platform_schema}"
-                "You also have a snapshot of recent activity:\n"
-                f"{community_data}\n\n"
-                "STRICT INSTRUCTIONS:\n"
-                "1. If the user asks for info NOT in the snapshot (e.g., specific game IDs/details, user records, or platform history), "
-                "you MUST respond with a SQL query wrapped in <sql>SELECT ...</sql> tags.\n"
-                "2. LINKING: Use Markdown for platform resources ONLY if you have a valid numerical ID. Replace the ID in these patterns:\n"
-                "   - Games: [Title](/games/123)\n"
-                "   - CV Profiles: [Title](/cv/45)\n"
-                "   - Chat Rooms: [Name](/chat?room_id=7)\n"
-                "   - Users: [Username](/u/alice)\n"
-                "3. IMPORTANT: NEVER use '?' or '{id}' or any placeholder in a link. If you don't have the ID, use <sql> to find it first.\n"
-                "4. PERSONA: Do NOT give tutorials or examples of how to ask (e.g., don't say 'You might say something like...') unless the user specifically asks how you work.\n"
-                "5. NO HALLUCINATION: Never share raw file paths like '/play_mock/...' or internal S3 URLs. Only use the patterns in rule #2.\n"
-                "6. Be concise, technical, and directly answer the user."
+            query_results = execute_ai_read_query(sql_query)
+            
+            # Second Pass: Final Answer
+            final_sys_msg = (
+                "You are the proglem Data-Aware Assistant. Use these search results to answer the user.\n"
+                f"SEARCH RESULTS:\n{query_results}\n\n"
+                "INSTRUCTIONS:\n"
+                "1. Provide a direct, helpful answer based on the search results.\n"
+                "2. Use Markdown links for platform resources: [Title](/games/ID), [Title](/cv/ID), [Name](/chat?room_id=ID), [Username](/u/name).\n"
+                "3. Replace 'ID' with the actual numerical ID from the search results. NEVER use placeholders or '?' in links.\n"
+                "4. If no results were found, state that you couldn't find the resource and ask for clarification WITHOUT giving tutorial examples."
             )
-
-            def call_ai(msgs):
-                payload = {
-                    "model": "local-model",
-                    "messages": msgs,
-                    "max_tokens": 512,
-                    "temperature": 0.3,
-                    "stream": False
-                }
-                server_url = f"http://127.0.0.1:{AI_CONFIG['port']}/v1/chat/completions"
-                data = json.dumps(payload).encode('utf-8')
-                req = urllib.request.Request(server_url, data=data, headers={"Content-Type": "application/json", "Authorization": "Bearer local"})
-                with urllib.request.urlopen(req, timeout=300) as response: # nosec B310
-                    return json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content']
-
-            # First Pass
-            initial_response = call_ai([
-                {"role": "system", "content": sys_msg},
+            
+            conn = get_db_connection()
+            conn.execute("UPDATE System_Tasks SET status = 'generating', result = ? WHERE id = ?", (json.dumps({"answer": "Analysing data..."}), task_id))
+            conn.commit()
+            conn.close()
+            
+            full_answer = call_ai([
+                {"role": "system", "content": final_sys_msg},
                 {"role": "user", "content": user_prompt}
             ])
-            
-            # Check for SQL tag
-            import re
-            sql_match = re.search(r'<sql>(.*?)</sql>', initial_response, re.DOTALL | re.IGNORECASE)
-            
-            if sql_match:
-                sql_query = sql_match.group(1).strip()
-                with queue_lock:
-                    ai_results[task_id] = {"status": "generating", "answer": f"🔍 Searching database for: `{sql_query}`..."}
-                
-                query_results = execute_ai_read_query(sql_query)
-                
-                # Second Pass: Final Answer
-                final_sys_msg = (
-                    "You are the proglem Data-Aware Assistant. Use these search results to answer the user.\n"
-                    f"SEARCH RESULTS:\n{query_results}\n\n"
-                    "INSTRUCTIONS:\n"
-                    "1. Provide a direct, helpful answer based on the search results.\n"
-                    "2. Use Markdown links for platform resources: [Title](/games/ID), [Title](/cv/ID), [Name](/chat?room_id=ID), [Username](/u/name).\n"
-                    "3. Replace 'ID' with the actual numerical ID from the search results. NEVER use placeholders or '?' in links.\n"
-                    "4. If no results were found, state that you couldn't find the resource and ask for clarification WITHOUT giving tutorial examples."
-                )
-                
-                # Update status for the stream simulation
-                with queue_lock:
-                    ai_results[task_id] = {"status": "generating", "answer": "Analysing data..."}
-                
-                # Note: We simulate a stream for the UI by doing a non-stream call and then updating
-                full_answer = call_ai([
-                    {"role": "system", "content": final_sys_msg},
-                    {"role": "user", "content": user_prompt}
-                ])
-            else:
-                full_answer = initial_response
+        else:
+            full_answer = initial_response
 
-            with queue_lock:
-                ai_results[task_id] = {"status": "done", "answer": full_answer}
-            reset_activity_timer()
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            with queue_lock:
-                ai_results[task_id] = {"status": "error", "message": str(e)}
-        finally:
-            with queue_lock:
-                if task_id in queue_ids:
-                    queue_ids.remove(task_id)
-                # Release user from active tracking
-                for uid, tid in list(active_user_tasks.items()):
-                    if tid == task_id:
-                        active_user_tasks.pop(uid, None)
-                        break
-            ai_queue.task_done()
+        return {"status": "done", "answer": full_answer}
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        try:
+            conn = get_db_connection()
+            error_json = json.dumps({"answer": f"⚠️ AI Engine error: {str(e)}"})
+            conn.execute("UPDATE System_Tasks SET status = 'error', result = ? WHERE id = ?", (error_json, task_id))
+            conn.commit()
+            conn.close()
+        except Exception as db_err:
+            print(f"Failed to update task error state: {db_err}")
+            
+        return {"status": "error", "message": str(e)}
 
-threading.Thread(target=ai_worker, daemon=True).start()
+# Note: threading.Thread(target=ai_worker, daemon=True).start() removed.
+# This logic is now handled in bin/worker.py
 
 def submit_prompt(user_id, prompt):
-    cleanup_old_results() # Purge old memory
+    task_id = str(uuid.uuid4())
+    payload = json.dumps({"prompt": prompt, "user_id": user_id})
     
-    # Trigger boot if idle
-    if not ai_ready:
-        initialize_ai_system()
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
 
-    reset_activity_timer()
+        cursor.execute("""
+            UPDATE System_Tasks 
+            SET status = 'error', result = '{"answer": "Task timed out and was cleared."}' 
+            WHERE status IN ('pending', 'waking_up', 'thinking', 'generating') 
+            AND created_at < datetime('now', '-5 minutes')
+        """)
+        conn.commit()
 
-    with queue_lock:
-        # Check if user already has an active task
-        if user_id in active_user_tasks:
+        cursor.execute(
+            "SELECT id FROM System_Tasks WHERE user_id = ? AND status IN ('pending', 'waking_up', 'thinking', 'generating')", 
+            (user_id,)
+        )
+        if cursor.fetchone():
             return None, False
-            
-        task_id = str(uuid.uuid4())
-        active_user_tasks[user_id] = task_id
-        queue_ids.append(task_id)
-        position = len(queue_ids)
-    
-    ai_results[task_id] = {"status": "thinking"}
-    result_timestamps[task_id] = datetime.now()
-    ai_queue.put((task_id, prompt, user_id))
-    
-    return task_id, position > 1
+
+        cursor.execute(
+            "INSERT INTO System_Tasks (id, user_id, task_type, payload, status) VALUES (?, ?, 'ai_chat', ?, 'thinking')",
+            (task_id, user_id, payload)
+        )
+        conn.commit()
+        
+        # Calculate dynamic queue position
+        cursor.execute("SELECT COUNT(*) FROM System_Tasks WHERE status IN ('pending', 'thinking') AND created_at <= (SELECT created_at FROM System_Tasks WHERE id = ?)", (task_id,))
+        position = cursor.fetchone()[0]
+        
+        return task_id, position > 1
+    finally:
+        conn.close()
 
 def get_result(task_id):
-    res = ai_results.get(task_id, {"status": "not_found"})
-    if res['status'] == 'thinking':
-        with queue_lock:
-            try:
-                res['queue_pos'] = queue_ids.index(task_id) + 1
-            except ValueError:
-                res['queue_pos'] = 1
-    return res
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT status, result, created_at FROM System_Tasks WHERE id = ?", (task_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            return {"status": "not_found"}
+            
+        status = row['status']
+        result_data = json.loads(row['result']) if row['result'] else {}
+        
+        if status == 'thinking':
+            # Dynamic queue position calculation
+            cursor.execute("SELECT COUNT(*) FROM System_Tasks WHERE status IN ('pending', 'thinking') AND created_at <= ?", (row['created_at'],))
+            result_data['queue_pos'] = cursor.fetchone()[0]
+            
+        return {"status": status, **result_data}
+    finally:
+        conn.close()

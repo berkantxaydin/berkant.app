@@ -247,7 +247,13 @@
     "Starting AI Core...": "Starting AI Core...",
     "Processing batch": "Processing batch",
     "AI Core is initializing...": "AI Core is initializing...",
-    "All strings translated successfully! Refresh to see changes.": "All strings translated successfully! Refresh to see changes."
+    "All strings translated successfully! Refresh to see changes.": "All strings translated successfully! Refresh to see changes.",
+    "Multi-tag Search (e.g. Python, Godot, Linux) - Search by skills, title, summary, or location": "Multi-tag Search (e.g. Python, Godot, Linux) - Search by skills, title, summary, or location",
+    "Global / Remote": "Global / Remote",
+    "Location": "Location",
+    "e.g. Istanbul, Turkey": "e.g. Istanbul, Turkey",
+    "Save Changes": "Save Changes",
+    "Cancel": "Cancel"
   },
   "tr": {
     "Metrics": "Metrikler",
@@ -328,7 +334,7 @@
     "Calculating routing stats...": "Yönlendirme istatistikleri hesaplanıyor...",
     "Runtime Trace Logs": "Çalışma Zamanı İzleme Kayıtları",
     "Reading log stream...": "Günlük akışı okunuyor...",
-    "AI Assistant (Gemma 4)": "Yapay Zeka Asistanı (Gemma 4)",
+    "AI Assistant (Qwen 2.5 7B)": "Yapay Zeka Asistanı (Qwen 2.5 7B)",
     "Ask the local Assistant...": "Yerel Asistana Sor...",
     "Send": "Gönder",
     "AI is idle...": "Yapay zeka boşta...",

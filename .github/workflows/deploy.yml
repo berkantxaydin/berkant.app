@@ -3,6 +3,9 @@ name: Continuous Deployment
 on:
   push:
     branches: [ "main" ]
+    
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
@@ -19,7 +22,7 @@ jobs:
         powershell -ExecutionPolicy Bypass -File C:\Users\berka\Downloads\berkant.app\scripts\cleanup_runner.ps1
 
     - name: Native Git Checkout (Surgical)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: main
         clean: true

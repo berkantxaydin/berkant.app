@@ -1,0 +1,16 @@
+<article class="glass-panel" onclick="window.location.href='/cv/{{ cv.id }}'" 
+         style="cursor: pointer; display: flex; flex-direction: column; padding: 1.5rem 2rem; min-height: 220px; transition: transform 0.2s;">
+    <header style="margin-bottom: 0.8rem; border: 0; padding: 0 0 0 1.2rem; background: transparent;">
+        <h4 class="accent-text" style="margin-bottom:0; font-size: 1.25rem;">{{ cv.title | e }}</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
+            <small style="opacity: 0.6;">@{{ cv.username | e }}</small>
+            <small style="opacity: 0.8; font-style: italic;">📍 {{ cv.location | e or t('Global / Remote') }}</small>
+        </div>
+    </header>
+    <p style="font-size:0.95rem; flex-grow: 1; padding-left: 1.2rem; opacity: 0.9; line-height: 1.4;">
+        {{ cv.summary[:85] | e ~ '...' if cv.summary|length > 85 else cv.summary | e }}
+    </p>
+    <footer style="margin-top: 1.2rem; border: 0; padding: 0; background: transparent; text-align: left;">
+        <button class="outline" style="padding: 0.3rem 1rem; font-size: 0.8rem; border-radius: 4px;">{{ t('View Profile') }}</button>
+    </footer>
+</article>
