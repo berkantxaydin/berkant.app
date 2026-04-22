@@ -9,7 +9,8 @@ $ConfirmPreference = 'None'
 $ProgressPreference = 'SilentlyContinue'
 $ErrorActionPreference = "Continue"
 
-$ProjectDir = "C:\Users\berka\Downloads\berkant.app"
+# Auto-detect Project Directory (Portable)
+$ProjectDir = (Get-Item $PSScriptRoot).Parent.FullName
 $NginxDir = "$ProjectDir\nginx-1.30.0"
 
 Write-Output "--- Starting Platform Recovery & Startup ---"
@@ -57,30 +58,31 @@ if ($VenvBroken) {
     # Robust Python Discovery
     $GlobalPython = $null
     
-    # Try 1: Known Good Paths (Prioritized)
-    $knownPaths = @(
-        "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe",
-        "C:\Users\berka\AppData\Local\Programs\Python\Python311\python.exe",
-        "C:\Users\berka\AppData\Local\Programs\Python\Python314\python.exe",
-        "C:\Program Files\Python312\python.exe"
-    )
-    foreach ($path in $knownPaths) {
-        if (Test-Path $path -ErrorAction SilentlyContinue) {
-            $GlobalPython = $path
-            break
+    # Try 1: Dynamic Discovery (PATH & Launcher)
+    $GlobalPython = (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+    if (-not $GlobalPython) {
+        try { $GlobalPython = & py -3.12 -c "import sys; print(sys.executable)" 2>$null } catch { }
+    }
+
+    # Try 2: Common Global Paths
+    if (-not $GlobalPython) {
+        $commonPaths = @(
+            "$env:SystemDrive\Program Files\Python312\python.exe",
+            "$env:SystemDrive\Program Files\Python311\python.exe",
+            "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
+        )
+        foreach ($path in $commonPaths) {
+            if (Test-Path $path -ErrorAction SilentlyContinue) {
+                $GlobalPython = $path
+                break
+            }
         }
     }
 
-    # Try 2: py launcher
+    # Try 3: Local Lab Fallback (Specific to current environment)
     if (-not $GlobalPython) {
-        try {
-            $GlobalPython = & py -3.12 -c "import sys; print(sys.executable)" 2>$null
-        } catch { }
-    }
-
-    # Try 3: Get-Command (Last resort, might find MSYS2)
-    if (-not $GlobalPython) {
-        $GlobalPython = (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+        $labPath = "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe"
+        if (Test-Path $labPath -ErrorAction SilentlyContinue) { $GlobalPython = $labPath }
     }
 
     if (-not $GlobalPython -or -not (Test-Path $GlobalPython -ErrorAction SilentlyContinue)) {
@@ -99,11 +101,16 @@ if ($VenvBroken) {
         try {
             Remove-Item -Path "$ProjectDir\venv" -Recurse -Force -ErrorAction Stop
         } catch {
-            Write-Output "WARNING: Could not delete venv folder. Attempting to rename it..."
+            Write-Output "WARNING: Could not delete venv folder (Locked). Renaming to preserve state..."
             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
             Move-Item -Path "$ProjectDir\venv" -Destination "$ProjectDir\venv_old_$timestamp" -ErrorAction SilentlyContinue
         }
     }
+    
+    # Cleanup any very old venv_old folders (older than 1 hour)
+    Get-ChildItem -Path $ProjectDir -Filter "venv_old_*" -ErrorAction SilentlyContinue | 
+        Where-Object { $_.LastWriteTime -lt (Get-Date).AddHours(-1) } | 
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     
     & $GlobalPython -m venv "$ProjectDir\venv" --with-pip
     if ($LASTEXITCODE -ne 0) {
@@ -158,6 +165,20 @@ Write-Output "Starting Nginx..."
 $nginxCmd = "`"$NginxDir\nginx.exe`""
 $wmiProcess.Create($nginxCmd, $NginxDir, $startupConfig) | Out-Null
 
+# --- STEP 5: NETWORKING (Portable/Random Tunnel) ---
+if ($env:PORTABLE_MODE -eq "true") {
+    Write-Output "Portable Mode Detected: Initializing random Cloudflared tunnel..."
+    $cfPath = (Get-Command cloudflared.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+    if (-not $cfPath) { $cfPath = "$ProjectDir\bin\cloudflared.exe" }
+    
+    if (Test-Path $cfPath) {
+        Write-Output "Launching Cloudflared in a new window to show the random URL..."
+        Start-Process -FilePath $cfPath -ArgumentList "tunnel --url http://127.0.0.1" -WindowStyle Normal
+    } else {
+        Write-Output "WARNING: cloudflared.exe not found in PATH or bin/. External access will be disabled."
+    }
+}
+
 # --- STEP 5: VERIFY HEALTH ---
 Write-Output "Waiting for stability..."
 Start-Sleep -Seconds 5
@@ -175,8 +196,12 @@ try {
 
 if (Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" | Where-Object { $_.CommandLine -like "*worker.py*" }) { Write-Output "OK: Worker is [ACTIVE]" } else { Write-Output "FAILED: Worker did not start" }
 
-$cf = Get-Service cloudflared -ErrorAction SilentlyContinue
-if ($cf -and $cf.Status -eq "Running") { Write-Output "OK: Tunnel is [ACTIVE]" }
+if ($env:PORTABLE_MODE -eq "true") {
+    if (Get-Process cloudflared -ErrorAction SilentlyContinue) { Write-Output "OK: Random Tunnel is [RUNNING]" }
+} else {
+    $cf = Get-Service cloudflared -ErrorAction SilentlyContinue
+    if ($cf -and $cf.Status -eq "Running") { Write-Output "OK: Production Tunnel is [ACTIVE]" }
+}
 
 Write-Output "------------------------------------------------"
 Write-Output "DEPLOYMENT COMPLETE!"
