@@ -65,7 +65,7 @@
         <footer style="padding: 1rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05);">
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
-            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(); clearImagePreview();" 
+            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();" 
             enctype="multipart/form-data" style="margin-bottom: 0;">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
             <fieldset role="group" style="margin-bottom: 0;">
@@ -178,9 +178,24 @@
       if (btn) window.switchRoom(Number(btn.dataset.roomId));
     });
 
-    window.scrollToBottom = function () {
+    // --- SMART SCROLL LOGIC ---
+    let isUserAtBottom = true;
+
+    // Track if the user is at the bottom as they scroll
+    const messagesContainer = document.getElementById('chat-messages');
+    if (messagesContainer) {
+      messagesContainer.addEventListener('scroll', () => {
+        // If they are within 150px of the bottom, consider them "at the bottom"
+        isUserAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
+      });
+    }
+
+    window.scrollToBottom = function (force = false) {
       const el = document.getElementById('chat-messages');
-      if (el) el.scrollTop = el.scrollHeight;
+      // Only scroll if forced (sending a message) OR if they are currently at the bottom
+      if (el && (force || isUserAtBottom)) {
+        el.scrollTop = el.scrollHeight;
+      }
     };
 
     // Real-time Time Formatting
@@ -194,9 +209,10 @@
       });
     };
 
+    // HTMX Updates
     document.body.addEventListener('htmx:afterSettle', () => {
       window.formatTimes();
-      window.scrollToBottom();
+      window.scrollToBottom(); // Notice we don't pass 'true' here, so it relies on isUserAtBottom
     });
 
     // Smart Visibility Polling
@@ -399,29 +415,31 @@
       /* Slides it in */
     }
 
-    /* Adjust Channel Panel for Mobile Drawer */
+    /* Fixed Channel Panel for Mobile Drawer */
     .channel-panel {
-      padding: 0;
-      border-radius: 12px;
-      background: rgba(18, 12, 26, 0.6);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      margin: 0 auto 1rem auto;
-      display: table;
-      overflow: hidden;
+      padding: 1rem 0;
+      background: transparent; /* Let the sidebar provide the background */
+      border: none;
+      box-shadow: none;
+      margin: 0;
+      display: block; /* Removed display: table */
+      width: 100%;
     }
 
+    /* Bring back the header for mobile so it looks like a proper menu */
     .channel-header {
-      display: none;
+      display: flex; 
+      padding: 0 1rem 1rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 1rem;
     }
 
+    /* Changed from Grid to standard vertical list for cleaner mobile UX */
     .channel-list.mobile-grid-force {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      display: flex;
+      flex-direction: column;
       gap: 0.5rem;
-      padding: 0.75rem;
+      padding: 0 1rem;
       margin: 0;
       list-style: none;
     }
@@ -431,26 +449,25 @@
       width: 100%;
     }
 
+    /* Adjusted tab buttons to look native */
     .jam-tab-btn {
       width: 100%;
-      height: 2.8rem;
-      padding: 0 0.5rem;
+      height: 3rem;
+      padding: 0 1rem;
       border-radius: 8px;
-      font-size: 0.8rem;
-      text-align: center;
+      font-size: 1rem; /* Slightly larger for mobile touch targets */
+      text-align: left;
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
       display: flex;
       align-items: center;
-      justify-content: center;
-      white-space: normal;
-      line-height: 1.1;
+      justify-content: flex-start; /* Align text left instead of center */
+      white-space: nowrap;
     }
 
     .jam-tab-btn.active {
       background: var(--pico-primary);
       color: white;
-      border-color: var(--pico-primary);
       box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
     }
 
@@ -486,10 +503,12 @@
     }
   }
 
-  /* Scrollbar styling */
+  /* =========================================
+     Scrollbar Styling (Floating Effect)
+     ========================================= */
   #chat-messages::-webkit-scrollbar,
   .chat-sidebar::-webkit-scrollbar {
-    width: 6px;
+    width: 16px; /* Wider to accommodate transparent borders */
   }
 
   #chat-messages::-webkit-scrollbar-track,
@@ -499,13 +518,18 @@
 
   #chat-messages::-webkit-scrollbar-thumb,
   .chat-sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.15);
+    /* Creates an invisible barrier around the thumb */
+    border: 5px solid transparent; 
+    background-clip: padding-box;
+    border-radius: 12px;
   }
 
   #chat-messages::-webkit-scrollbar-thumb:hover,
   .chat-sidebar::-webkit-scrollbar-thumb:hover {
-    background: var(--pico-primary);
+    background-color: var(--pico-primary);
+    border: 5px solid transparent;
+    background-clip: padding-box;
   }
 </style>
 {% endblock %}
