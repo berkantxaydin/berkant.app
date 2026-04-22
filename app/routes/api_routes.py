@@ -18,7 +18,7 @@ from app.utils.system_utils import get_system_metrics
 from app.utils.response_helpers import json_response, htmx_response
 import app.utils.render_helpers as render_helpers
 import app.services.translation_service as translation_service
-from app.utils.image_utils import save_image_as_base64
+from app.utils.image_utils import save_image_as_base64, optimize_base64_image
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -186,7 +186,7 @@ def submit_game():
         data.get('description', ''), 
         data['game_url'], 
         jam_id,
-        icon_url=data.get('icon_url'),
+        icon_url=optimize_base64_image(data.get('icon_url')),
         github_url=data.get('github_url')
     )
     

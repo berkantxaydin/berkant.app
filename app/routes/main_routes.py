@@ -120,7 +120,15 @@ def games_list():
 @main_bp.route('/play_mock/<path:filename>')
 def serve_local_mock_upload(filename):
     """Serves user-uploaded WebGL files locally with mandatory isolation headers."""
-    response = make_response(send_from_directory(os.path.join(current_app.root_path, 'static', 'mock_s3'), filename))
+    # Security: Prevent path traversal and bot probes
+    if '..' in filename or filename.startswith('/') or filename.startswith('\\'):
+        abort(404)
+        
+    mock_dir = os.path.join(current_app.root_path, 'static', 'mock_s3')
+    if not os.path.exists(os.path.join(mock_dir, filename)):
+        abort(404)
+
+    response = make_response(send_from_directory(mock_dir, filename))
     response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
     response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
     if filename.endswith('.wasm'):

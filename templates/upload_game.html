@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ t("Submit Game Jam Entry - proglem") }}{% endblock %}
-{% block meta_description %}{{ t("Upload your Godot WebGL zip export safely to the proglem Game Jam. The browser extracts and deploys it directly to cloud storage.") }}{% endblock %}
+{% block meta_description %}{{ t("Upload your Godot WebGL zip export safely to the proglem Game Jam. The browser
+extracts and deploys it directly to cloud storage.") }}{% endblock %}
 {% block content %}
 <!-- Dynamically import JSZip to run Extraction on the Client Browser instead of the Server -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -8,14 +9,16 @@
 <section>
   <hgroup>
     <h2 class="accent-text">{{ t("Submit Game Jam Entry") }}</h2>
-    <p>{{ t("Upload your") }} <strong>Godot WebGL `.zip`</strong> {{ t("file safely. The browser will natively extract and optimize it for S3 without touching local bandwidth.") }}</p>
+    <p>{{ t("Upload your") }} <strong>Godot WebGL `.zip`</strong> {{ t("file safely. The browser will natively extract
+      and optimize it for S3 without touching local bandwidth.") }}</p>
   </hgroup>
 
   <article class="glass-panel">
     <form id="uploadForm" onsubmit="event.preventDefault(); handleUpload();">
       {% if jam_id %}
       <input type="hidden" id="jamId" value="{{ jam_id }}">
-      <div class="glass-panel text-center" style="padding: 1rem; margin-bottom: 2rem; background: rgba(168, 85, 247, 0.1); border-color: var(--pico-primary);">
+      <div class="glass-panel text-center"
+        style="padding: 1rem; margin-bottom: 2rem; background: rgba(168, 85, 247, 0.1); border-color: var(--pico-primary);">
         <strong style="color: var(--pico-primary);">🏆 {{ t("Submitting Official Entry to Active Game Jam") }}</strong>
       </div>
       {% endif %}
@@ -26,18 +29,20 @@
       <label>{{ t("GitHub Source URL (Optional)") }}
         <input type="url" id="githubUrl" name="github_url" placeholder="https://github.com/user/repo">
       </label>
-      
+
       <label>{{ t("Description (Optional)") }}
         <textarea id="gameDesc" name="description"></textarea>
       </label>
 
-      <label>{{ t("Game Icon (.png)") }}
+      <label>{{ t("Game Icon") }}
         <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
-          <div id="iconPreview" style="width: 60px; height: 60px; border-radius: 12px; background: rgba(168,85,247,0.1); border: 2px dashed rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <div id="iconPreview"
+            style="width: 60px; height: 60px; border-radius: 12px; background: rgba(168,85,247,0.1); border: 2px dashed rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
             <span id="iconPlaceholder">🖼️</span>
           </div>
           <div style="flex-grow: 1;">
-            <input type="file" id="gameIcon" accept=".png" style="margin-bottom: 0;" onchange="uploadIcon()">
+            <input type="file" id="gameIcon" accept=".png,.jpg,.jpeg,.webp" style="margin-bottom: 0;"
+              onchange="uploadIcon()">
             <input type="hidden" id="iconUrl">
             <small id="iconStatus" style="display: block; margin-top: 0.3rem;"></small>
           </div>
@@ -48,7 +53,7 @@
         <input type="file" id="gameFiles" accept=".zip" required>
         <small>{{ t("Just like Itch.io, upload the compressed zip and we will auto-map it for the Cloud.") }}</small>
       </label>
-      
+
       <progress id="uploadProgress" value="0" max="100" hidden></progress>
       <small id="uploadStatus"></small>
 
@@ -58,7 +63,7 @@
 </section>
 
 <script>
-async function handleUpload() {
+  async function handleUpload() {
     const fileInput = document.getElementById('gameFiles');
     const title = document.getElementById('gameTitle').value;
     const desc = document.getElementById('gameDesc').value;
@@ -72,150 +77,177 @@ async function handleUpload() {
     btn.disabled = true;
     btn.setAttribute("aria-busy", "true");
     progress.hidden = false;
-    
+
     const uiError = (msg) => {
-        status.innerHTML = `<mark>{{ t("Error:") }} ${msg}</mark>`;
-        btn.disabled = false;
-        btn.setAttribute("aria-busy", "false");
+      status.innerHTML = `<mark>{{ t("Error:") }} ${msg}</mark>`;
+      btn.disabled = false;
+      btn.setAttribute("aria-busy", "false");
     };
 
     if (!zipFile.name.endsWith('.zip')) {
-        uiError("{{ t('You must provide a valid .zip export.') }}");
-        return;
+      uiError("{{ t('You must provide a valid .zip export.') }}");
+      return;
     }
 
     try {
-        status.innerText = "{{ t('Extracting ZIP payload locally in Browser memory...') }}";
-        const zip = await JSZip.loadAsync(zipFile);
-        
-        // Filter out folders and gather flat files
-        const extractedFiles = [];
-        zip.forEach((relativePath, zipEntry) => {
-            if (!zipEntry.dir && !relativePath.includes("__MACOSX")) {
-                extractedFiles.push(zipEntry);
-            }
+      status.innerText = "{{ t('Extracting ZIP payload locally in Browser memory...') }}";
+      const zip = await JSZip.loadAsync(zipFile);
+
+      // Filter out folders and gather flat files
+      const extractedFiles = [];
+      zip.forEach((relativePath, zipEntry) => {
+        if (!zipEntry.dir && !relativePath.includes("__MACOSX")) {
+          extractedFiles.push(zipEntry);
+        }
+      });
+
+      if (extractedFiles.length === 0) throw new Error("{{ t('The .zip archive is completely empty.') }}");
+
+      const clusterId = crypto.randomUUID();
+      let rootHtmlUrlContext = null;
+      let mockFinalUrl = null;
+      let completedUploads = 0;
+
+      for (const entry of extractedFiles) {
+        // Strip out wrapping folders if the Godot user zipped the folder itself
+        const pureFileName = entry.name.split('/').pop();
+
+        status.innerText = `{{ t("Decompressing & Streaming") }} ${pureFileName} {{ t("to Cloud Node...") }}`;
+
+        // Generate Native Blob into RAM natively inside Chrome
+        const fileBlob = await entry.async('blob');
+        const rawFile = new File([fileBlob], pureFileName, { type: "application/octet-stream" });
+
+        let cType = "application/octet-stream";
+        if (pureFileName.endsWith('.wasm')) cType = "application/wasm";
+        else if (pureFileName.endsWith('.js')) cType = "application/javascript";
+        else if (pureFileName.endsWith('.html')) cType = "text/html";
+
+        const resp = await fetch(`/api/jam/get_upload_url?filename=${clusterId}/${encodeURIComponent(pureFileName)}&content_type=${encodeURIComponent(cType)}`, {
+          headers: { 'unique_upload_key': 'my-secret-jam-key' }
         });
 
-        if (extractedFiles.length === 0) throw new Error("{{ t('The .zip archive is completely empty.') }}");
+        if (!resp.ok) throw new Error("AWS Pre-sign fault tracking: " + pureFileName);
+        const s3Data = await resp.json();
 
-        const clusterId = crypto.randomUUID();
-        let rootHtmlUrlContext = null;
-        let mockFinalUrl = null;
-        let completedUploads = 0;
-
-        for (const entry of extractedFiles) {
-            // Strip out wrapping folders if the Godot user zipped the folder itself
-            const pureFileName = entry.name.split('/').pop();
-            
-            status.innerText = `{{ t("Decompressing & Streaming") }} ${pureFileName} {{ t("to Cloud Node...") }}`;
-            
-            // Generate Native Blob into RAM natively inside Chrome
-            const fileBlob = await entry.async('blob');
-            const rawFile = new File([fileBlob], pureFileName, { type: "application/octet-stream" });
-
-            let cType = "application/octet-stream";
-            if (pureFileName.endsWith('.wasm')) cType = "application/wasm";
-            else if (pureFileName.endsWith('.js')) cType = "application/javascript";
-            else if (pureFileName.endsWith('.html')) cType = "text/html";
-
-            const resp = await fetch(`/api/jam/get_upload_url?filename=${clusterId}/${encodeURIComponent(pureFileName)}&content_type=${encodeURIComponent(cType)}`, {
-                headers: {'unique_upload_key': 'my-secret-jam-key'}
-            });
-            
-            if (!resp.ok) throw new Error("AWS Pre-sign fault tracking: " + pureFileName);
-            const s3Data = await resp.json();
-
-            // Handle Mock Dev Environment
-            let targetUrl = s3Data.url;
-            let isMock = false;
-            if (targetUrl.includes("mock-endpoint")) {
-                targetUrl = "/api/jam/mock_upload";
-                isMock = true;
-            }
-
-            // Execute Live S3 Partitions targeting the pureFileName to group them all in one flat folder
-            const formData = new FormData();
-            Object.entries(s3Data.fields).forEach(([k, v]) => formData.append(k, v));
-            formData.append('file', rawFile);
-
-            await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', targetUrl, true);
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        if (pureFileName.endsWith('.html') && !rootHtmlUrlContext) {
-                            rootHtmlUrlContext = true;
-                            // If running locally, route through the COOP/COEP proxy. Otherwise direct S3 path.
-                            mockFinalUrl = isMock ? `/play_mock/${s3Data.fields.key}` : `${s3Data.url}/${s3Data.fields.key}`;
-                        }
-                        resolve();
-                    } else reject(new Error("Upload fault on " + pureFileName));
-                };
-                xhr.onerror = () => reject(new Error("CORS/DNS breakdown on " + pureFileName));
-                xhr.send(formData);
-            });
-
-            completedUploads++;
-            progress.value = Math.round((completedUploads / extractedFiles.length) * 100);
+        // Handle Mock Dev Environment
+        let targetUrl = s3Data.url;
+        let isMock = false;
+        if (targetUrl.includes("mock-endpoint")) {
+          targetUrl = "/api/jam/mock_upload";
+          isMock = true;
         }
 
-        if (!rootHtmlUrlContext) throw new Error("{{ t('Failed to detect an index.html file inside your ZIP! Godot WebGL exports MUST contain an HTML document.') }}");
+        // Execute Live S3 Partitions targeting the pureFileName to group them all in one flat folder
+        const formData = new FormData();
+        Object.entries(s3Data.fields).forEach(([k, v]) => formData.append(k, v));
+        formData.append('file', rawFile);
 
-        status.innerText = "{{ t('All binaries securely extracted and deployed. Synchronizing Database Arrays...') }}";
-        
-        const saveResp = await fetch('/api/jam/submit', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                title: title,
-                description: desc,
-                game_url: mockFinalUrl,
-                icon_url: document.getElementById('iconUrl').value || null,
-                github_url: document.getElementById('githubUrl').value || null,
-                jam_id: document.getElementById('jamId') ? document.getElementById('jamId').value : null
-            })
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', targetUrl, true);
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              if (pureFileName.endsWith('.html') && !rootHtmlUrlContext) {
+                rootHtmlUrlContext = true;
+                // If running locally, route through the COOP/COEP proxy. Otherwise direct S3 path.
+                mockFinalUrl = isMock ? `/play_mock/${s3Data.fields.key}` : `${s3Data.url}/${s3Data.fields.key}`;
+              }
+              resolve();
+            } else reject(new Error("Upload fault on " + pureFileName));
+          };
+          xhr.onerror = () => reject(new Error("CORS/DNS breakdown on " + pureFileName));
+          xhr.send(formData);
         });
 
-        if (saveResp.ok) {
-            status.innerHTML = `<strong class="accent-text">{{ t("Game Infrastructure Compiled Successfully! Validation queued.") }}</strong>`;
-            btn.setAttribute("aria-busy", "false");
-            btn.innerText = "{{ t('Deployment Verified') }}";
-            setTimeout(() => window.location.href = '/dashboard', 1500);
-        } else throw new Error("{{ t('Server rejected routing bindings.') }}");
+        completedUploads++;
+        progress.value = Math.round((completedUploads / extractedFiles.length) * 100);
+      }
+
+      if (!rootHtmlUrlContext) throw new Error("{{ t('Failed to detect an index.html file inside your ZIP! Godot WebGL exports MUST contain an HTML document.') }}");
+
+      status.innerText = "{{ t('All binaries securely extracted and deployed. Synchronizing Database Arrays...') }}";
+
+      const saveResp = await fetch('/api/jam/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title,
+          description: desc,
+          game_url: mockFinalUrl,
+          icon_url: document.getElementById('iconUrl').value || null,
+          github_url: document.getElementById('githubUrl').value || null,
+          jam_id: document.getElementById('jamId') ? document.getElementById('jamId').value : null
+        })
+      });
+
+      if (saveResp.ok) {
+        status.innerHTML = `<strong class="accent-text">{{ t("Game Infrastructure Compiled Successfully! Validation queued.") }}</strong>`;
+        btn.setAttribute("aria-busy", "false");
+        btn.innerText = "{{ t('Deployment Verified') }}";
+        setTimeout(() => window.location.href = '/dashboard', 1500);
+      } else throw new Error("{{ t('Server rejected routing bindings.') }}");
 
     } catch (e) {
-        uiError(e.message);
+      uiError(e.message);
     }
-}
+  }
 
-async function uploadIcon() {
+  async function uploadIcon() {
     const fileInput = document.getElementById('gameIcon');
     const status = document.getElementById('iconStatus');
     const preview = document.getElementById('iconPreview');
     const hiddenInput = document.getElementById('iconUrl');
-    
+
     if (fileInput.files.length === 0) return;
     const file = fileInput.files[0];
-    
-    if (!file.name.toLowerCase().endsWith('.png')) {
-        alert("{{ t('Please upload a .png file for the icon.') }}");
-        fileInput.value = '';
-        return;
+
+    const allowed = ['.png', '.jpg', '.jpeg', '.webp'];
+    const ext = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+    if (!allowed.includes('.' + ext)) {
+      alert("{{ t('Please upload a valid image file (PNG, JPG, WebP).') }}");
+      fileInput.value = '';
+      return;
     }
 
     try {
-        status.innerText = "{{ t('Processing icon...') }}";
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64 = e.target.result;
-            hiddenInput.value = base64;
-            preview.innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover;">`;
-            status.innerHTML = `<span style="color:var(--pico-ins-color);">✓ {{ t('Icon ready') }}</span>`;
-        };
-        reader.readAsDataURL(file);
+      status.innerText = "{{ t('Optimizing icon...') }}";
+
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const MAX_DIM = 1024;
+      let width = bitmap.width;
+      let height = bitmap.height;
+
+      if (width > height) {
+        if (width > MAX_DIM) {
+          height *= MAX_DIM / width;
+          width = MAX_DIM;
+        }
+      } else {
+        if (height > MAX_DIM) {
+          width *= MAX_DIM / height;
+          height = MAX_DIM;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(bitmap, 0, 0, width, height);
+
+      // Export as WebP Base64 at 90% quality (Higher fidelity)
+      const optimizedBase64 = canvas.toDataURL('image/webp', 0.9);
+
+      hiddenInput.value = optimizedBase64;
+      preview.innerHTML = `<img src="${optimizedBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+      status.innerHTML = `<span style="color:var(--pico-ins-color);">✓ {{ t('Icon ready') }}</span>`;
+
     } catch (e) {
-        status.innerText = "Error: " + e.message;
+      status.innerText = "Error: " + e.message;
+      console.error(e);
     }
-}
+  }
 </script>
 {% endblock %}

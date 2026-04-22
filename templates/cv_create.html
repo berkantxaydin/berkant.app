@@ -36,13 +36,13 @@
       </label>
 
       <!-- Profile Photo -->
-      <label>{{ t("Profile Photo (.png)") }}
+      <label>{{ t("Profile Photo") }}
         <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
           <div id="photoPreview" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(168,85,247,0.1); border: 2px dashed rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
             <span id="photoPlaceholder">👤</span>
           </div>
           <div style="flex-grow: 1;">
-            <input type="file" name="photo_file" accept=".png" style="margin-bottom: 0;" onchange="previewPhoto(this)">
+            <input type="file" name="photo_file" accept=".png,.jpg,.jpeg,.webp" style="margin-bottom: 0;" onchange="previewPhoto(this)">
             <small style="display: block; margin-top: 0.3rem;">{{ t("Will be stored on server") }}</small>
           </div>
         </div>
