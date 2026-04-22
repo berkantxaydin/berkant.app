@@ -32,7 +32,7 @@ Write-Output "Checking Python environment..."
 $PythonExe = "$ProjectDir\venv\Scripts\python.exe"
 $VenvBroken = $false
 
-if (-not (Test-Path $PythonExe)) {
+if (-not (Test-Path $PythonExe -ErrorAction SilentlyContinue)) {
     Write-Output "WARNING: Virtual environment missing."
     $VenvBroken = $true
 } else {
@@ -47,11 +47,34 @@ if (-not (Test-Path $PythonExe)) {
 
 if ($VenvBroken) {
     Write-Output "Self-healing: Recreating virtual environment..."
-    $GlobalPython = "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe"
-    if (-not (Test-Path $GlobalPython)) {
-        Write-Output "ERROR: Global Python not found at $GlobalPython. Cannot proceed."
+    
+    # Robust Python Discovery
+    $GlobalPython = $null
+    
+    # Try 1: py launcher (recommended)
+    try {
+        $GlobalPython = & py -3.12 -c "import sys; print(sys.executable)" 2>$null
+    } catch { }
+
+    # Try 2: Get-Command
+    if (-not $GlobalPython) {
+        $GlobalPython = (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+    }
+
+    # Try 3: Fallback Hardcoded (with permission safety)
+    if (-not $GlobalPython -or -not (Test-Path $GlobalPython -ErrorAction SilentlyContinue)) {
+        $fallback = "C:\Users\berka\AppData\Local\Programs\Python\Python312\python.exe"
+        if (Test-Path $fallback -ErrorAction SilentlyContinue) {
+            $GlobalPython = $fallback
+        }
+    }
+
+    if (-not $GlobalPython -or -not (Test-Path $GlobalPython -ErrorAction SilentlyContinue)) {
+        Write-Output "ERROR: No suitable Global Python found for self-healing."
         exit 1
     }
+    
+    Write-Output "Using source Python: $GlobalPython"
     
     if (Test-Path "$ProjectDir\venv") {
         Remove-Item -Path "$ProjectDir\venv" -Recurse -Force -ErrorAction SilentlyContinue
