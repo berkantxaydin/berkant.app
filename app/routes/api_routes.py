@@ -332,13 +332,18 @@ def post_chat_message():
     except (ValueError, TypeError):
         room_id = 1
 
-    if not content:
-        raise ValueError(t('Message cannot be empty'))
+    if not content and not request.files.get('image'):
+        raise ValueError(t('Message or image is required'))
+    
+    image_url = None
+    image_file = request.files.get('image')
+    if image_file and image_file.filename != '':
+        image_url = save_image_as_base64(image_file)
 
     room = chat_repo.get_room_by_id(room_id)
     if not room or (not room['is_enabled'] and not session.get('is_admin')):
         raise PermissionError(t('This room is currently disabled.'))
-    chat_repo.add_message(uid, room_id, content)
+    chat_repo.add_message(uid, room_id, content, image_url=image_url)
 
     # Re-render messages for the room
     messages = chat_repo.get_messages(room_id, limit=60)

@@ -216,6 +216,7 @@ def init_db() -> None:
             )
         ''')
         ensure_column(cursor, "Chat_Messages", "room_id", "INTEGER NOT NULL DEFAULT 1")
+        ensure_column(cursor, "Chat_Messages", "image_url", "TEXT")
 
         # 5. ASYNCHRONOUS SYSTEM TASKS (Worker Queue)
         safe_execute(cursor, '''
