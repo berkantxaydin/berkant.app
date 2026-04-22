@@ -65,7 +65,7 @@
         <footer style="padding: 1rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05);">
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
-            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(); clearImagePreview();" 
+            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();" 
             enctype="multipart/form-data" style="margin-bottom: 0;">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
             <fieldset role="group" style="margin-bottom: 0;">
@@ -178,9 +178,24 @@
       if (btn) window.switchRoom(Number(btn.dataset.roomId));
     });
 
-    window.scrollToBottom = function () {
+    // --- SMART SCROLL LOGIC ---
+    let isUserAtBottom = true;
+
+    // Track if the user is at the bottom as they scroll
+    const messagesContainer = document.getElementById('chat-messages');
+    if (messagesContainer) {
+      messagesContainer.addEventListener('scroll', () => {
+        // If they are within 150px of the bottom, consider them "at the bottom"
+        isUserAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
+      });
+    }
+
+    window.scrollToBottom = function (force = false) {
       const el = document.getElementById('chat-messages');
-      if (el) el.scrollTop = el.scrollHeight;
+      // Only scroll if forced (sending a message) OR if they are currently at the bottom
+      if (el && (force || isUserAtBottom)) {
+        el.scrollTop = el.scrollHeight;
+      }
     };
 
     // Real-time Time Formatting
@@ -194,9 +209,10 @@
       });
     };
 
+    // HTMX Updates
     document.body.addEventListener('htmx:afterSettle', () => {
       window.formatTimes();
-      window.scrollToBottom();
+      window.scrollToBottom(); // Notice we don't pass 'true' here, so it relies on isUserAtBottom
     });
 
     // Smart Visibility Polling
