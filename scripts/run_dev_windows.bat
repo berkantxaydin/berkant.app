@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0.."
 echo Starting proglem on Windows...
 
 IF NOT EXIST venv (

@@ -98,13 +98,13 @@ python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
 # Place your .gguf model in ./models/
-.\run_dev_windows.bat
+.\scripts\run_dev_windows.bat
 ```
 
 ### Linux / macOS
 ```bash
-chmod +x run_dev_linux.sh
-./run_dev_linux.sh
+chmod +x scripts/run_dev_linux.sh
+./scripts/run_dev_linux.sh
 ```
 
 ### Environment variables (`.env`)
