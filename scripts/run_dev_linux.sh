@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")/.."
 echo "🚀 Starting proglem on Linux..."
 
 if [ ! -d "venv" ]; then
