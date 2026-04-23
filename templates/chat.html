@@ -242,6 +242,7 @@
   :root {
     --chat-sidebar-width: 350px;
     --chat-header-height: 110px;
+    /* Default desktop size */
   }
 
   /* 1. STRICT CONTAINER LAYOUT */
@@ -251,7 +252,6 @@
     gap: 1.5rem;
     margin-top: 1rem;
     height: calc(100dvh - 160px);
-    /* Strictly binds height to viewport */
     min-height: 500px;
   }
 
@@ -336,7 +336,7 @@
     margin-left: 0.5rem;
   }
 
-  /* 3. MAIN CHAT BOX (FLEX COLUMN) */
+  /* 3. MAIN CHAT BOX */
   .chat-main {
     height: 100%;
     min-width: 0;
@@ -346,21 +346,18 @@
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
-    /* Forces it to perfectly fit .chat-layout */
     padding: 0 !important;
     margin: 0 !important;
     background: #120c1a;
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     overflow: hidden;
-    /* Clips anything outside the box */
   }
 
-  /* 4. HEADER: EXACTLY 110px TALL, NO GAPS */
+  /* 4. HEADER */
   .chat-header {
     height: var(--chat-header-height) !important;
     flex: 0 0 var(--chat-header-height) !important;
-    /* Never shrinks */
     padding: 0 !important;
     margin: 0 !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -374,25 +371,20 @@
     width: 100%;
     height: 100%;
     gap: 0 !important;
-    /* REMOVED GAP: Fixes the column emptiness issue */
   }
 
-  /* THE HAMBURGER SQUARE */
   .hamburger-btn {
     display: none;
     box-sizing: border-box;
     flex: 0 0 var(--chat-header-height) !important;
-    /* EXACT 110px Block */
     width: var(--chat-header-height) !important;
     height: var(--chat-header-height) !important;
     background: rgba(255, 255, 255, 0.08) !important;
     border: none !important;
     border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 0 !important;
-    /* Sharp corners for a perfect block */
     color: white;
-    font-size: 1.5rem !important;
-    /* REDUCED SIZE FOR MOBILE */
+    font-size: 2rem !important;
     padding: 0 !important;
     margin: 0 !important;
     cursor: pointer;
@@ -400,17 +392,14 @@
     justify-content: center;
   }
 
-  /* TITLE CENTERING */
   .header-info {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    /* PERFECT VERTICAL CENTERING */
     height: 100%;
     flex: 1;
     min-width: 0;
     padding-left: 1.5rem;
-    /* Replaces the gap */
     padding-right: 1.5rem;
   }
 
@@ -422,20 +411,18 @@
     white-space: nowrap;
   }
 
-  /* 5. MESSAGES CONTAINER (THE OVERFLOW FIX) */
+  /* 5. MESSAGES CONTAINER */
   .messages-container {
     flex: 1 1 0px !important;
-    /* CRITICAL: 0px basis forces browser to calculate exact remaining space */
     overflow-y: auto !important;
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
   }
 
-  /* 6. FOOTER: LOCKED AT THE BOTTOM */
+  /* 6. FOOTER */
   .chat-footer {
     flex: 0 0 auto !important;
-    /* Never squashes, never grows */
     padding: 1.25rem 1.5rem !important;
     background: #1a1425 !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -446,9 +433,16 @@
     margin-bottom: 0;
   }
 
+  /* FIXED: Footer Buttons Styling */
   .footer-btn {
-    width: 50px;
+    width: 65px !important;
+    /* Slightly wider to prevent squashing */
     padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    /* Better icon sizing */
   }
 
   .image-preview-bar {
@@ -476,10 +470,20 @@
 
   /* 7. MOBILE OVERRIDES */
   @media (max-width: 992px) {
+    :root {
+      /* FIXED: Drop header and hamburger size to 75px on mobile */
+      --chat-header-height: 75px;
+    }
+
+    .hamburger-btn {
+      display: flex !important;
+      font-size: 1.5rem !important;
+      /* Shrink icon slightly for mobile */
+    }
+
     .chat-layout {
       grid-template-columns: 1fr;
       height: calc(100dvh - 100px);
-      /* Taller on mobile */
       max-height: none;
     }
 
@@ -507,11 +511,6 @@
       padding: 1.5rem 1rem;
     }
 
-    .hamburger-btn {
-      display: flex !important;
-    }
-
-    /* Reveal mobile menu */
     .close-btn {
       display: flex;
     }
