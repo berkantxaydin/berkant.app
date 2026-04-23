@@ -17,14 +17,14 @@
   <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
   <div class="chat-container">
-    <aside id="chat-sidebar" class="chat-sidebar">
+    <!-- Desktop Sidebar (Hidden on Mobile) -->
+    <aside id="chat-sidebar" class="chat-sidebar desktop-only">
       <article class="glass-panel channel-panel">
-        <header class="channel-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <header class="channel-header">
           <strong>{{ t("Channels") }}</strong>
-          <button id="close-sidebar-btn" class="close-btn" aria-label="Close">✕</button>
         </header>
-        <nav id="room-tab-bar" class="channel-nav">
-          <ul class="channel-list mobile-grid-force">
+        <nav class="channel-nav">
+          <ul class="channel-list">
             {% for room in rooms %}
             <li class="channel-item">
               <button id="room-tab-{{ room.id }}" class="sidebar-nav-btn {{ 'active' if loop.first else '' }}"
@@ -39,11 +39,34 @@
       </article>
     </aside>
 
+    <!-- Mobile Drawer Sidebar (Hidden on Desktop) -->
+    <aside id="mobile-sidebar" class="mobile-sidebar">
+      <div class="mobile-drawer-content">
+        <header class="mobile-drawer-header">
+          <strong>{{ t("Channels") }}</strong>
+          <button id="close-sidebar-btn" class="close-btn" aria-label="Close">✕</button>
+        </header>
+        <nav class="mobile-channel-nav">
+          <ul class="mobile-channel-list">
+            {% for room in rooms %}
+            <li class="mobile-channel-item">
+              <button id="mobile-room-tab-{{ room.id }}" class="mobile-nav-btn {{ 'active' if loop.first else '' }}"
+                data-room-id="{{ room.id }}" title="# {{ room.name }}">
+                <div class="mobile-btn-left"># {{ room.name }}</div>
+                {% if not room.is_enabled %}<div class="mobile-btn-right">({{ t("off") }})</div>{% endif %}
+              </button>
+            </li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
     <div class="chat-main">
       <article class="glass-panel chat-box">
         <header class="chat-header">
           <div style="display: flex; align-items: center; gap: 15px; min-width: 0; position: relative; z-index: 10;">
-            <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Menu"></button>
+            <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Menu">☰</button>
             <div style="min-width: 0;">
               <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
               <small id="active-room-desc"
@@ -134,9 +157,11 @@
 
     window.switchRoom = function (roomId) {
       // Toggle Tab Active State
-      document.querySelectorAll('.sidebar-nav-btn').forEach(b => b.classList.remove('active'));
-      const btn = document.getElementById('room-tab-' + roomId);
-      if (btn) btn.classList.add('active');
+      document.querySelectorAll('.sidebar-nav-btn, .mobile-nav-btn').forEach(b => b.classList.remove('active'));
+      const desktopBtn = document.getElementById('room-tab-' + roomId);
+      const mobileBtn = document.getElementById('mobile-room-tab-' + roomId);
+      if (desktopBtn) desktopBtn.classList.add('active');
+      if (mobileBtn) mobileBtn.classList.add('active');
 
       // Update State Tracking
       const activeRoomInput = document.getElementById('active-room-id');
@@ -172,7 +197,7 @@
     };
 
     // Event Delegation for Performance
-    document.getElementById('room-tab-bar')?.addEventListener('click', e => {
+    document.addEventListener('click', e => {
       const btn = e.target.closest('[data-room-id]');
       if (btn) window.switchRoom(Number(btn.dataset.roomId));
     });
@@ -286,24 +311,22 @@
   }
 
   .channel-panel {
-    padding: 1rem;
+    padding: 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
   }
 
   .channel-header {
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
   }
 
   .channel-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
+    list-style: none;
     padding: 0;
     margin: 0;
-    list-style: none;
   }
 
   /* Smart Text Truncation and Alignment Applied Here */
@@ -398,27 +421,22 @@
 
     /* Show Mobile Buttons */
     .hamburger-btn {
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 0;
       color: white;
-      font-size: 2rem; 
-      width: 55px;
-      height: 55px;
+      font-size: 1.8rem;
+      width: 50px;
+      height: 50px;
       padding: 0;
       margin-right: 1.25rem;
       cursor: pointer;
-      line-height: 0 !important; 
+      line-height: 1;
       position: relative;
       z-index: 20;
-    }
-    
-    .hamburger-btn::before {
-      content: "☰";
-      position: relative;
-      top: 4px; /* Explicit vertical nudge to align with text */
     }
 
     .close-btn {
@@ -431,29 +449,71 @@
       cursor: pointer;
     }
 
-    /* Convert Sidebar into Sliding Drawer */
-    .chat-sidebar {
+    /* Mobile Sidebar Specific Styling */
+    .mobile-sidebar {
       position: fixed;
       top: 0;
       left: 0;
-      width: 280px;
-      max-width: 85vw;
+      width: 300px;
       height: 100vh;
-      background: rgba(18, 12, 26, 0.98);
-      /* Deep dark background */
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: #120c1a;
       z-index: 1000;
-      padding: 0;
       transform: translateX(-100%);
-      /* Hides it off-screen */
-      transition: transform 0.3s ease-in-out;
+      transition: transform 0.3s ease;
       overflow-y: auto;
+      box-shadow: 10px 0 30px rgba(0,0,0,0.5);
     }
 
-    .chat-sidebar.open {
+    .mobile-sidebar.open {
       transform: translateX(0);
-      /* Slides it in */
+    }
+
+    .mobile-drawer-header {
+      padding: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .mobile-channel-list {
+      padding: 1.5rem;
+      list-style: none;
+      margin: 0;
+    }
+
+    .mobile-nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 1.25rem 1.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid transparent;
+      border-radius: 12px;
+      color: white;
+      margin-bottom: 0.8rem;
+      font-size: 1.1rem;
+    }
+
+    .mobile-nav-btn.active {
+      background: var(--pico-primary);
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+    }
+
+    .mobile-btn-left {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+    }
+
+    .mobile-btn-right {
+      opacity: 0.6;
+      font-size: 0.9rem;
+      margin-left: 0.5rem;
     }
 
     /* Fixed Channel Panel for Mobile Drawer */
