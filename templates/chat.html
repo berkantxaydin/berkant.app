@@ -232,7 +232,7 @@
   :root {
     --chat-sidebar-width: 280px;
     --chat-side-padding: 1.5rem;
-    --chat-header-height: 70px;
+    --chat-header-height: 80px;
   }
 
   .chat-layout {
@@ -240,8 +240,8 @@
     grid-template-columns: var(--chat-sidebar-width) 1fr;
     gap: 1.5rem;
     margin-top: 1rem;
-    height: 700px;
-    max-height: 80vh;
+    height: 750px;
+    max-height: 85vh;
   }
 
   /* Sidebar */
@@ -323,7 +323,7 @@
     display: flex;
     flex-direction: column;
     padding: 0;
-    background: rgba(0, 0, 0, 0.1);
+    background: #120c1a; /* Solid background to prevent overlap transparency issues */
     border: 1px solid rgba(255, 255, 255, 0.05);
     overflow: hidden;
     border-radius: 12px;
@@ -331,14 +331,15 @@
 
   .chat-header {
     height: var(--chat-header-height);
-    padding: 0 var(--chat-side-padding);
-    display: flex;
-    align-items: center;
+    padding: 0 var(--chat-side-padding) !important;
+    display: flex !important;
+    align-items: center !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.4); 
     flex-shrink: 0;
     position: relative;
     z-index: 10;
+    box-sizing: border-box;
   }
 
   .header-left {
@@ -366,10 +367,11 @@
 
   .chat-footer {
     padding: 1.25rem var(--chat-side-padding);
-    background: rgba(0, 0, 0, 0.15);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: #1a1425; /* Solid opaque background */
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     z-index: 10;
+    flex-shrink: 0;
   }
 
   .chat-form-el { margin-bottom: 0; }
@@ -394,9 +396,11 @@
     color: white;
     font-size: 1.5rem;
     padding: 0;
+    margin: 0;
     cursor: pointer;
     align-items: center;
     justify-content: center;
+    line-height: 0;
   }
 
   .close-btn { display: none; background: transparent; border: 0; color: white; font-size: 1.5rem; cursor: pointer; }
@@ -408,13 +412,14 @@
       position: fixed;
       top: 0;
       left: 0;
-      width: 300px;
+      width: 320px; /* Slightly wider */
       max-width: 85vw;
       height: 100vh;
-      background: #120c1a;
+      background: #0d0912;
       transform: translateX(-100%);
-      transition: transform 0.3s ease;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       padding: 0;
+      box-shadow: 15px 0 50px rgba(0,0,0,0.8);
     }
     .chat-sidebar.open { transform: translateX(0); }
     .sidebar-panel { border-radius: 0; border: 0; }
