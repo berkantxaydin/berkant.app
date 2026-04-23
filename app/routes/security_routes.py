@@ -39,3 +39,9 @@ def bot_sink(p=None):
     """
     time.sleep(random.uniform(0.05, 0.2))
     return "<html><body><!-- System Node: 104.2 --><!-- Auth: Rejected --></body></html>", 200
+
+@security_bp.route('/security.txt')
+@security_bp.route('/.well-known/security.txt')
+def security_txt():
+    """Serves the security.txt file from the static folder."""
+    return current_app.send_static_file('.well-known/security.txt')
