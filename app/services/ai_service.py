@@ -280,8 +280,7 @@ def start_llama_server() -> Optional[subprocess.Popen]:
             "--port", str(AI_CONFIG['port']), 
             "--host", "127.0.0.1", 
             "-c", str(AI_CONFIG['context']),
-            "-t", str(AI_CONFIG['threads']),
-            "--flash-attn", "off"
+            "-t", str(AI_CONFIG['threads'])
         ]
         
         # If use_gpu is False, we force CPU by setting gpu layers to 0
@@ -295,8 +294,7 @@ def start_llama_server() -> Optional[subprocess.Popen]:
             "--port", str(AI_CONFIG['port']), 
             "--n_ctx", str(AI_CONFIG['context']), 
             "--host", "127.0.0.1",
-            "--threads", str(AI_CONFIG['threads']),
-            "--flash-attn", "off"
+            "--threads", str(AI_CONFIG['threads'])
         ]
         if not AI_CONFIG.get('use_gpu', True):
             cmd += ["--n_gpu_layers", "0"]
