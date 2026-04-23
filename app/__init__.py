@@ -85,7 +85,7 @@ def create_app() -> Flask:
             duration_ms = int((time.time() - g.start_time) * 1000)
             
             # Exclude noise from analytics
-            exclude_paths = ['/static/', '/health', '/favicon.ico', '/robots.txt']
+            exclude_paths = ['/static/', '/health', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/.env']
             if not any(request.path.startswith(p) for p in exclude_paths):
                 try:
                     analytics_repo.log_request(
