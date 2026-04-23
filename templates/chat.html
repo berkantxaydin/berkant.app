@@ -19,11 +19,11 @@
 
   <div class="chat-layout">
     <aside id="chat-sidebar" class="chat-sidebar">
-      <article class="glass-panel sidebar-panel">
-        <header class="sidebar-header">
+      <div class="glass-panel sidebar-panel">
+        <div class="sidebar-header">
           <strong>{{ t("Channels") }}</strong>
           <button id="close-sidebar-btn" class="close-btn" aria-label="Close">✕</button>
-        </header>
+        </div>
         <nav class="sidebar-nav">
           <ul class="channel-list">
             {% for room in rooms %}
@@ -39,12 +39,12 @@
             {% endfor %}
           </ul>
         </nav>
-      </article>
+      </div>
     </aside>
 
     <main class="chat-main">
-      <article class="glass-panel chat-box">
-        <header class="chat-header">
+      <div class="glass-panel chat-box">
+        <div class="chat-header">
           <div class="header-left">
             <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Menu">☰</button>
             <div class="header-info">
@@ -54,7 +54,7 @@
                 }}</small>
             </div>
           </div>
-        </header>
+        </div>
 
         <div id="chat-messages" hx-get="/api/chat/messages?room_id={{ rooms[0].id }}"
           hx-trigger="load, every 3s[document.visibilityState === 'visible']" hx-ext="morph" hx-swap="morph:innerHTML"
@@ -64,7 +64,7 @@
           </div>
         </div>
 
-        <footer class="chat-footer">
+        <div class="chat-footer">
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
             hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();"
@@ -88,8 +88,8 @@
             <a href="/login">{{ t("Sign in") }}</a> {{ t("to participate.") }}
           </p>
           {% endif %}
-        </footer>
-      </article>
+        </div>
+      </div>
     </main>
   </div>
   {% endif %}
@@ -241,25 +241,21 @@
 
   :root {
     --chat-sidebar-width: 350px;
-    /* Force 350px width globally */
-    --chat-side-padding: 1.5rem;
     --chat-header-height: 110px;
-    /* Force strict 110px height */
   }
 
-  /* Structural Anchoring */
+  /* 1. STRICT CONTAINER LAYOUT */
   .chat-layout {
     display: grid;
     grid-template-columns: var(--chat-sidebar-width) 1fr;
     gap: 1.5rem;
     margin-top: 1rem;
-    height: calc(100vh - 200px);
-    /* Strict height bound */
+    height: calc(100dvh - 160px);
+    /* Strictly binds height to viewport */
     min-height: 500px;
-    max-height: 85vh;
   }
 
-  /* Sidebar */
+  /* 2. SIDEBAR STYLING */
   .chat-sidebar {
     height: 100%;
     z-index: 1000;
@@ -273,8 +269,6 @@
     display: flex;
     flex-direction: column;
     border-radius: 12px;
-    margin: 0 !important;
-    /* Defeat Pico.css defaults */
   }
 
   .sidebar-header {
@@ -292,7 +286,6 @@
     overflow-y: auto;
   }
 
-  /* Space Usage Fix: Channels */
   .channel-list {
     list-style: none;
     padding: 0;
@@ -303,18 +296,12 @@
     width: 100%;
   }
 
-  .channel-item {
-    width: 100%;
-  }
-
   .channel-btn {
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    /* Fill horizontal space */
     box-sizing: border-box;
-    /* Prevent padding from breaking width */
     padding: 0.8rem 1.25rem;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid transparent;
@@ -349,7 +336,7 @@
     margin-left: 0.5rem;
   }
 
-  /* Main Chat Box - Strict Flex Setup */
+  /* 3. MAIN CHAT BOX (FLEX COLUMN) */
   .chat-main {
     height: 100%;
     min-width: 0;
@@ -359,53 +346,72 @@
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
-    /* Forces it to fit the layout parent */
+    /* Forces it to perfectly fit .chat-layout */
     padding: 0 !important;
-    /* Defeat Pico.css article padding */
     margin: 0 !important;
-    /* Defeat Pico.css article margin */
     background: #120c1a;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    overflow: hidden;
     border-radius: 12px;
+    overflow: hidden;
+    /* Clips anything outside the box */
   }
 
-  /* Header Fixes */
+  /* 4. HEADER: EXACTLY 110px TALL, NO GAPS */
   .chat-header {
     height: var(--chat-header-height) !important;
+    flex: 0 0 var(--chat-header-height) !important;
+    /* Never shrinks */
     padding: 0 !important;
     margin: 0 !important;
-    /* Defeat Pico.css header margin */
-    display: flex !important;
-    align-items: center !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.4);
-    flex-shrink: 0;
-    /* Prevents squashing */
-    z-index: 10;
     box-sizing: border-box;
   }
 
   .header-left {
     display: flex;
     align-items: center;
-    /* Aligns hamburger and info */
-    gap: 1.5rem;
-    min-width: 0;
-    height: 100%;
     width: 100%;
+    height: 100%;
+    gap: 0 !important;
+    /* REMOVED GAP: Fixes the column emptiness issue */
   }
 
-  /* Visual Centering Fix for Title */
+  /* THE HAMBURGER SQUARE */
+  .hamburger-btn {
+    display: none;
+    box-sizing: border-box;
+    flex: 0 0 var(--chat-header-height) !important;
+    /* EXACT 110px Block */
+    width: var(--chat-header-height) !important;
+    height: var(--chat-header-height) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 0 !important;
+    /* Sharp corners for a perfect block */
+    color: white;
+    font-size: 1.5rem !important;
+    /* REDUCED SIZE FOR MOBILE */
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* TITLE CENTERING */
   .header-info {
-    min-width: 0;
-    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
     /* PERFECT VERTICAL CENTERING */
     height: 100%;
-    padding-right: var(--chat-side-padding);
+    flex: 1;
+    min-width: 0;
+    padding-left: 1.5rem;
+    /* Replaces the gap */
+    padding-right: 1.5rem;
   }
 
   .truncate-text {
@@ -416,25 +422,24 @@
     white-space: nowrap;
   }
 
-  /* Messages - Flex 1 keeps it pushing the footer down */
+  /* 5. MESSAGES CONTAINER (THE OVERFLOW FIX) */
   .messages-container {
-    flex: 1 !important;
+    flex: 1 1 0px !important;
+    /* CRITICAL: 0px basis forces browser to calculate exact remaining space */
     overflow-y: auto !important;
-    min-height: 0 !important;
-    /* CRITICAL: prevents flex child from blowing out parent */
     padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Footer Fixed Positioning */
+  /* 6. FOOTER: LOCKED AT THE BOTTOM */
   .chat-footer {
+    flex: 0 0 auto !important;
+    /* Never squashes, never grows */
+    padding: 1.25rem 1.5rem !important;
     background: #1a1425 !important;
-    padding: 1.25rem var(--chat-side-padding) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    flex-shrink: 0 !important;
-    /* NEVER SQUASHED */
     margin: 0 !important;
-    /* Defeat Pico.css footer margins */
-    z-index: 20;
   }
 
   .chat-form-el {
@@ -460,28 +465,6 @@
     width: auto;
   }
 
-  /* Hamburger Menu Block Fixes */
-  .hamburger-btn {
-    display: none;
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    width: var(--chat-header-height) !important;
-    /* EXACTLY 110px */
-    height: var(--chat-header-height) !important;
-    /* EXACTLY 110px */
-    color: white;
-    font-size: 2rem;
-    padding: 0 !important;
-    margin: 0 !important;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border-radius: 0;
-    /* Square edges */
-  }
-
   .close-btn {
     display: none;
     background: transparent;
@@ -491,12 +474,12 @@
     cursor: pointer;
   }
 
-  /* Mobile Overrides */
+  /* 7. MOBILE OVERRIDES */
   @media (max-width: 992px) {
     .chat-layout {
       grid-template-columns: 1fr;
-      height: calc(100dvh - 120px);
-      /* Maximize mobile screen use */
+      height: calc(100dvh - 100px);
+      /* Taller on mobile */
       max-height: none;
     }
 
@@ -505,7 +488,6 @@
       top: 0;
       left: 0;
       width: 350px;
-      /* Wider drawer preserved */
       max-width: 90vw;
       height: 100vh;
       background: #0d0912;
@@ -525,11 +507,11 @@
       padding: 1.5rem 1rem;
     }
 
-    /* Reveal the hamburger and ensure it doesn't get squashed */
     .hamburger-btn {
       display: flex !important;
     }
 
+    /* Reveal mobile menu */
     .close-btn {
       display: flex;
     }
@@ -557,13 +539,9 @@
       padding: 1.25rem 1rem;
       border-radius: 12px;
     }
-
-    .header-info {
-      padding-right: 1rem;
-    }
   }
 
-  /* Chat Bubbles */
+  /* Chat Bubbles & Images */
   .chat-bubble {
     max-width: 85%;
   }
