@@ -446,7 +446,6 @@ def is_ai_ready():
 
 def is_ai_booting():
     """Checks if AI is currently booting, synced via shared boot file."""
-    global ai_booting
     if ai_booting:
         return True
     
