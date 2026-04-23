@@ -1,6 +1,6 @@
 import base64
 import io
-from PIL import Image
+from PIL import Image, ImageOps
 from typing import Optional, Tuple
 
 def optimize_base64_image(base64_str: str, max_size: Tuple[int, int] = (1024, 1024)) -> Optional[str]:
@@ -39,6 +39,9 @@ def save_image_as_base64(file_obj, max_size: Tuple[int, int] = (1024, 1024)) -> 
 def _process_image_to_webp(file_source, max_size: Tuple[int, int]) -> Optional[str]:
     """Internal helper to process image with best practices."""
     img = Image.open(file_source)
+    
+    # Handle EXIF orientation (fixes rotated mobile uploads)
+    img = ImageOps.exif_transpose(img)
     
     # Preserve transparency if present
     if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):

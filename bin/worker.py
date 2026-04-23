@@ -108,9 +108,29 @@ def run_worker_loop():
                 try: conn.close()
                 except Exception: pass
 
+def cleanup_stale_tasks():
+    """Resets tasks that were left in intermediate states from a previous crashed session."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Reset any tasks that are stuck in 'generating', 'waking_up', or 'thinking'
+        cursor.execute("""
+            UPDATE System_Tasks 
+            SET status = 'error', result = '{"answer": "Worker was restarted, task interrupted."}', updated_at = CURRENT_TIMESTAMP
+            WHERE status IN ('generating', 'waking_up', 'thinking')
+        """)
+        count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        if count > 0:
+            print(f"[*] Cleanup: Reset {count} stale tasks from previous session.")
+    except Exception as e:
+        print(f"[!] Cleanup failed: {e}")
+
 if __name__ == '__main__':
     from app.services import ai_service
     ai_service.cleanup_orphans()
+    cleanup_stale_tasks()
     
     if not acquire_lock():
         sys.exit(1)

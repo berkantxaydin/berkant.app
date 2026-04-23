@@ -23,10 +23,14 @@
         {{ t("Password") }}
         <input type="password" name="password" required>
       </label>
-      <label>
         <input type="checkbox" name="remember">
         {{ t("Remember me") }}
       </label>
+
+      {% if turnstile_site_key %}
+      <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" style="margin-bottom: 1rem;"></div>
+      {% endif %}
+
       <button type="submit" class="contrast">{{ t("Sign In") }}</button>
     </form>
     
