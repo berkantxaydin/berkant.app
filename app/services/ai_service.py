@@ -21,6 +21,7 @@ logger = logging.getLogger('flask.app')
 # Global Paths & Configuration
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 PID_FILE = os.path.join(BASE_DIR, 'logs', '.ai_pid')
+BOOT_FILE = os.path.join(BASE_DIR, 'logs', '.ai_booting')
 RESTART_COOLDOWN = 10
 IDLE_TIMEOUT = 7 * 60
 
@@ -238,6 +239,10 @@ def terminate_ai_server() -> None:
     cleanup_orphans()
     time.sleep(1)
     
+    if os.path.exists(BOOT_FILE):
+        try: os.remove(BOOT_FILE)
+        except Exception: pass
+
     ai_processes.clear()
     ai_ready = ai_booting = False
     log_ai_event('SHUTDOWN', 'INFO', 'AI Engine unloaded from RAM.')
@@ -324,6 +329,10 @@ def background_initialization() -> None:
     global ai_ready, ai_booting
     ai_booting = True
     try:
+        # Register booting state in shared file
+        with open(BOOT_FILE, 'w') as f:
+            f.write(str(os.getpid()))
+        
         url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
         
         # Cross-process check: if port is already active, verify health.
@@ -333,7 +342,6 @@ def background_initialization() -> None:
                     if response.status == 200:
                         ai_ready = True
                         ai_booting = False
-                        log_ai_event('HEALTH', 'INFO', "AI Engine detected as already running.")
                         return
             except Exception:
                 log_ai_event('PORT_CONFLICT', 'WARNING', f"Port {AI_CONFIG['port']} is in use but unresponsive. Attempting to reclaim...")
@@ -400,13 +408,19 @@ def background_initialization() -> None:
     except Exception as e:
         ai_booting = False
         log_ai_event('ERROR', 'ERROR', f"AI launch failed unexpectedly: {str(e)}")
+    finally:
+        # Always clear the shared booting flag when thread finishes
+        ai_booting = False
+        if os.path.exists(BOOT_FILE):
+            try: os.remove(BOOT_FILE)
+            except Exception: pass
 
 def initialize_ai_system():
     """Initializes the background thread for AI boot if not already starting."""
     global ai_boot_thread, ai_booting
     
     with ai_init_lock:
-        if ai_booting or ai_ready:
+        if is_ai_booting() or is_ai_ready():
             return
         ai_booting = True
         
@@ -417,22 +431,40 @@ def initialize_ai_system():
 def is_ai_ready():
     """Checks if the AI engine is ready. Verifies the port to sync state across processes."""
     global ai_ready
-    if ai_ready:
-        return True
     
-    # Ping the local server to verify status
+    # Always ping the local server to verify status for cross-process sync
     try:
         url = f"http://127.0.0.1:{AI_CONFIG['port']}/health"
-        with urllib.request.urlopen(url, timeout=0.5) as response: # nosec B310
+        with urllib.request.urlopen(url, timeout=0.8) as response: # nosec B310
             if response.status == 200:
                 ai_ready = True
                 return True
     except Exception:
-        pass
+        ai_ready = False # Sync memory back to False if port is closed
+        
     return False
 
 def is_ai_booting():
-    return ai_booting
+    """Checks if AI is currently booting, synced via shared boot file."""
+    global ai_booting
+    if ai_booting:
+        return True
+    
+    if os.path.exists(BOOT_FILE):
+        try:
+            with open(BOOT_FILE, 'r') as f:
+                pid = int(f.read().strip())
+                if psutil.pid_exists(pid):
+                    # Double check it's not a zombie or unrelated process
+                    proc = psutil.Process(pid)
+                    if proc.is_running() and any(x in proc.name().lower() for x in ['python', 'worker', 'waitress']):
+                        return True
+            # File is stale
+            os.remove(BOOT_FILE)
+        except Exception:
+            pass
+            
+    return False
 
 def reset_activity_timer():
     global last_activity_time

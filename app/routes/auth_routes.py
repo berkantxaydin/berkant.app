@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from app.repositories.user_repository import UserRepository
+from app.utils.security import verify_turnstile
 from app.i18n import t
 
 auth_bp = Blueprint('auth', __name__)
@@ -36,6 +37,11 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        # Turnstile Verification
+        turnstile_token = request.form.get('cf-turnstile-response')
+        if not verify_turnstile(turnstile_token):
+            return render_template('login.html', error=t("Security challenge failed. Please try again."))
+
         user = user_repo.get_by_username(username)
         
         if user and check_password_hash(user.password_hash, password):
@@ -62,6 +68,12 @@ def register():
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
+        
+        # Turnstile Verification
+        turnstile_token = request.form.get('cf-turnstile-response')
+        if not verify_turnstile(turnstile_token):
+            return render_template('register.html', error=t("Security challenge failed. Please try again."))
+
         admin_code = request.form.get('admin_code', '')
         
         if not username or not email or not password:

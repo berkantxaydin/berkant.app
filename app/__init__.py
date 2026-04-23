@@ -19,6 +19,8 @@ def create_app() -> Flask:
                 static_folder=os.path.join(base_dir, 'static'))
     
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-unsafe-dev-key')
+    app.config['TURNSTILE_SITE_KEY'] = os.environ.get('TURNSTILE_SITE_KEY')
+    app.config['TURNSTILE_SECRET_KEY'] = os.environ.get('TURNSTILE_SECRET_KEY')
     
     if app.config['SECRET_KEY'] == 'default-unsafe-dev-key':
         app.logger.warning("SECURITY ALERT: Using default SECRET_KEY.")
@@ -47,7 +49,11 @@ def create_app() -> Flask:
     
     @app.context_processor
     def inject_t():
-        return dict(t=t, current_lang=session.get('lang', 'en'))
+        return dict(
+            t=t, 
+            current_lang=session.get('lang', 'en'),
+            turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY')
+        )
 
     # Custom Jinja Filters
     def yt_embed_filter(url: str) -> str:
