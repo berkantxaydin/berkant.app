@@ -33,6 +33,11 @@
           <input type="password" name="admin_code" placeholder=">.<">
         </label>
       </details>
+
+      {% if turnstile_site_key %}
+      <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" style="margin-top: 1rem; margin-bottom: 1rem;"></div>
+      {% endif %}
+
       <button type="submit">{{ t("Create Account") }}</button>
     </form>
   </article>
