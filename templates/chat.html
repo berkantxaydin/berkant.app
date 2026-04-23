@@ -14,23 +14,27 @@
   <p class="text-center" style="color: grey; margin-top: 4rem;">{{ t("No chat rooms are currently active.") }}</p>
   {% else %}
 
+  <!-- Mobile Sidebar Overlay -->
   <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-  <div class="chat-container">
-    <!-- Desktop Sidebar (Hidden on Mobile) -->
-    <aside id="chat-sidebar" class="chat-sidebar desktop-only">
-      <article class="glass-panel channel-panel">
-        <header class="channel-header">
+  <div class="chat-layout">
+    <!-- Single Sidebar System -->
+    <aside id="chat-sidebar" class="chat-sidebar">
+      <article class="glass-panel sidebar-panel">
+        <header class="sidebar-header">
           <strong>{{ t("Channels") }}</strong>
+          <button id="close-sidebar-btn" class="close-btn" aria-label="Close">✕</button>
         </header>
-        <nav class="channel-nav">
+        <nav class="sidebar-nav">
           <ul class="channel-list">
             {% for room in rooms %}
             <li class="channel-item">
-              <button id="room-tab-{{ room.id }}" class="sidebar-nav-btn {{ 'active' if loop.first else '' }}"
+              <button id="room-tab-{{ room.id }}" class="channel-btn {{ 'active' if loop.first else '' }}"
                 data-room-id="{{ room.id }}" title="# {{ room.name }}">
-                <span class="btn-name-wrapper"># {{ room.name }}</span>
-                {% if not room.is_enabled %}<small class="btn-status-label">({{ t("off") }})</small>{% endif %}
+                <span class="channel-name"># {{ room.name }}</span>
+                {% if not room.is_enabled %}
+                <small class="channel-status">({{ t("off") }})</small>
+                {% endif %}
               </button>
             </li>
             {% endfor %}
@@ -39,105 +43,79 @@
       </article>
     </aside>
 
-    <!-- Mobile Drawer Sidebar (Hidden on Desktop) -->
-    <aside id="mobile-sidebar" class="mobile-sidebar">
-      <div class="mobile-drawer-content">
-        <header class="mobile-drawer-header">
-          <strong>{{ t("Channels") }}</strong>
-          <button id="close-sidebar-btn" class="close-btn" aria-label="Close">✕</button>
-        </header>
-        <nav class="mobile-channel-nav">
-          <ul class="mobile-channel-list">
-            {% for room in rooms %}
-            <li class="mobile-channel-item">
-              <button id="mobile-room-tab-{{ room.id }}" class="mobile-nav-btn {{ 'active' if loop.first else '' }}"
-                data-room-id="{{ room.id }}" title="# {{ room.name }}">
-                <div class="mobile-btn-left"># {{ room.name }}</div>
-                {% if not room.is_enabled %}<div class="mobile-btn-right">({{ t("off") }})</div>{% endif %}
-              </button>
-            </li>
-            {% endfor %}
-          </ul>
-        </nav>
-      </div>
-    </aside>
-
-    <div class="chat-main">
+    <!-- Main Chat Area -->
+    <main class="chat-main">
       <article class="glass-panel chat-box">
         <header class="chat-header">
-          <div style="display: flex; align-items: center; gap: 15px; min-width: 0; position: relative; z-index: 10;">
+          <div class="header-left">
             <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Menu">☰</button>
-            <div style="min-width: 0;">
+            <div class="header-info">
               <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
-              <small id="active-room-desc"
-                style="display: block; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{
-                rooms[0].description }}</small>
+              <small id="active-room-desc" class="truncate-text">{{ rooms[0].description }}</small>
             </div>
           </div>
         </header>
 
         <div id="chat-messages" hx-get="/api/chat/messages?room_id={{ rooms[0].id }}"
           hx-trigger="load, every 3s[document.visibilityState === 'visible']" hx-ext="morph" hx-swap="morph:innerHTML"
-          style="flex-grow: 1; overflow-y: auto; padding: 1.25rem; scroll-behavior: smooth;">
+          class="messages-container">
           <div style="display:flex; justify-content:center; padding:2rem;">
             <span aria-busy="true">{{ t("Connecting to secure tunnel...") }}</span>
           </div>
         </div>
 
-        <footer style="padding: 1.25rem 1.75rem; background: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05); position: relative; z-index: 10;">
+        <footer class="chat-footer">
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
             hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();" 
-            enctype="multipart/form-data" style="margin-bottom: 0; position: relative; z-index: 10;">
+            enctype="multipart/form-data" class="chat-form-el">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
-            <fieldset role="group" style="margin-bottom: 0;">
-              <button type="button" class="outline" id="camera-btn" style="width: 50px; padding: 0;" title="{{ t('Upload Image') }}">📷</button>
+            <fieldset role="group">
+              <button type="button" class="outline footer-btn" id="camera-btn" title="{{ t('Upload Image') }}">📷</button>
               <input type="file" id="chat-image-input" name="image" accept="image/*" style="display: none;">
               <input type="text" id="chat-input" name="content" autocomplete="off"
                 placeholder="{{ t('Message') }} #{{ rooms[0].name }}..." maxlength="500">
-              <button type="submit" aria-label="{{ t('Send Message') }}" style="width: 60px;">↵</button>
+              <button type="submit" class="footer-btn" aria-label="{{ t('Send Message') }}">↵</button>
             </fieldset>
-            <div id="image-preview-container" style="display: none; margin-top: 0.5rem; align-items: center; gap: 0.5rem;">
-                <small id="image-preview-name" style="color: var(--pico-primary);"></small>
-                <button type="button" class="outline secondary" onclick="clearImagePreview()" style="padding: 0 5px; font-size: 0.7rem; border: 0;">✕</button>
+            <div id="image-preview-container" class="image-preview-bar">
+                <small id="image-preview-name"></small>
+                <button type="button" class="outline secondary mini-close" onclick="clearImagePreview()">✕</button>
             </div>
           </form>
           {% else %}
-          <p class="text-center" style="margin: 0; color: #64748b;">
+          <p class="auth-prompt">
             <a href="/login">{{ t("Sign in") }}</a> {{ t("to participate.") }}
           </p>
           {% endif %}
         </footer>
       </article>
-    </div>
+    </main>
   </div>
   {% endif %}
 </section>
 
+<!-- State & Data -->
 {% if rooms %}
 <input type="hidden" id="active-room-id" value="{{ rooms[0].id }}">
+<script id="chat-rooms-data" type="application/json">{{ rooms | tojson }}</script>
 {% endif %}
 
 <!-- Lightbox Modal -->
 <dialog id="chat-lightbox" onclick="if(event.target==this) this.close()">
-  <article style="max-width: 90vw; padding: 0; background: transparent; box-shadow: none;">
-    <header style="background: rgba(0,0,0,0.5); border: 0; padding: 0.5rem 1rem; display: flex; justify-content: flex-end;">
+  <article class="lightbox-content">
+    <header>
       <a href="#close" aria-label="Close" class="close" onclick="event.preventDefault(); document.getElementById('chat-lightbox').close()"></a>
     </header>
-    <img id="lightbox-img" src="" style="width: 100%; height: auto; display: block; border-radius: 8px;">
+    <img id="lightbox-img" src="">
   </article>
 </dialog>
-
-<script id="chat-rooms-data" type="application/json">
-  {{ rooms | tojson }}
-</script>
 
 <script>
   (function () {
     const chatRoomsDataElement = document.getElementById('chat-rooms-data');
     const chatRooms = chatRoomsDataElement ? JSON.parse(chatRoomsDataElement.textContent) : [];
 
-    // --- MOBILE MENU LOGIC ---
+    // --- Sidebar Logic ---
     const sidebar = document.getElementById('chat-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const menuBtn = document.getElementById('mobile-menu-btn');
@@ -147,27 +125,21 @@
       if (!sidebar) return;
       const isOpen = typeof forceState === 'boolean' ? forceState : !sidebar.classList.contains('open');
       sidebar.classList.toggle('open', isOpen);
-      overlay.classList.toggle('open', isOpen);
+      overlay?.classList.toggle('open', isOpen);
     };
 
     if (menuBtn) menuBtn.addEventListener('click', () => toggleMenu(true));
     if (closeBtn) closeBtn.addEventListener('click', () => toggleMenu(false));
     if (overlay) overlay.addEventListener('click', () => toggleMenu(false));
-    // -------------------------
 
     window.switchRoom = function (roomId) {
-      // Toggle Tab Active State
-      document.querySelectorAll('.sidebar-nav-btn, .mobile-nav-btn').forEach(b => b.classList.remove('active'));
-      const desktopBtn = document.getElementById('room-tab-' + roomId);
-      const mobileBtn = document.getElementById('mobile-room-tab-' + roomId);
-      if (desktopBtn) desktopBtn.classList.add('active');
-      if (mobileBtn) mobileBtn.classList.add('active');
+      document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('room-tab-' + roomId);
+      if (btn) btn.classList.add('active');
 
-      // Update State Tracking
       const activeRoomInput = document.getElementById('active-room-id');
       if (activeRoomInput) activeRoomInput.value = roomId;
 
-      // Swap Messenger Target
       const msgEl = document.getElementById('chat-messages');
       if (msgEl) {
         msgEl.setAttribute('hx-get', '/api/chat/messages?room_id=' + roomId);
@@ -176,53 +148,41 @@
         htmx.trigger(msgEl, 'load');
       }
 
-      // Sync Form Context
       const roomObj = chatRooms.find(r => r.id === roomId);
-      const input = document.getElementById('chat-input');
-      const roomInput = document.getElementById('chat-room-id-input');
-      const nameLabel = document.getElementById('active-room-name');
-      const descLabel = document.getElementById('active-room-desc');
-
       if (roomObj) {
+        const input = document.getElementById('chat-input');
+        const roomInput = document.getElementById('chat-room-id-input');
+        const nameLabel = document.getElementById('active-room-name');
+        const descLabel = document.getElementById('active-room-desc');
+
         if (input) input.placeholder = '{{ t("Message") }} #' + roomObj.name + '...';
         if (roomInput) roomInput.value = roomId;
         if (nameLabel) nameLabel.innerText = '# ' + roomObj.name;
         if (descLabel) descLabel.innerText = roomObj.description || '';
       }
 
-      // Auto-close mobile menu when a channel is clicked
-      if (window.innerWidth <= 992) {
-        toggleMenu(false);
-      }
+      if (window.innerWidth <= 992) toggleMenu(false);
     };
 
-    // Event Delegation for Performance
     document.addEventListener('click', e => {
       const btn = e.target.closest('[data-room-id]');
       if (btn) window.switchRoom(Number(btn.dataset.roomId));
     });
 
-    // --- SMART SCROLL LOGIC ---
+    // --- Scroll Logic ---
     let isUserAtBottom = true;
-
-    // Track if the user is at the bottom as they scroll
     const messagesContainer = document.getElementById('chat-messages');
     if (messagesContainer) {
       messagesContainer.addEventListener('scroll', () => {
-        // If they are within 150px of the bottom, consider them "at the bottom"
         isUserAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
       });
     }
 
     window.scrollToBottom = function (force = false) {
       const el = document.getElementById('chat-messages');
-      // Only scroll if forced (sending a message) OR if they are currently at the bottom
-      if (el && (force || isUserAtBottom)) {
-        el.scrollTop = el.scrollHeight;
-      }
+      if (el && (force || isUserAtBottom)) el.scrollTop = el.scrollHeight;
     };
 
-    // Real-time Time Formatting
     window.formatTimes = function () {
       document.querySelectorAll('.chat-time:not([data-fmt])').forEach(el => {
         try {
@@ -233,420 +193,255 @@
       });
     };
 
-    // HTMX Updates
     document.body.addEventListener('htmx:afterSettle', () => {
       window.formatTimes();
-      window.scrollToBottom(); // Notice we don't pass 'true' here, so it relies on isUserAtBottom
+      window.scrollToBottom();
     });
 
-    // Smart Visibility Polling
-    document.addEventListener('visibilitychange', () => {
-      const messagesEl = document.getElementById('chat-messages');
-      if (document.visibilityState === 'visible' && messagesEl) {
-        htmx.trigger(messagesEl, 'load');
-      }
-    });
-
-    // --- IMAGE UPLOAD & LIGHTBOX ---
-    const cameraBtn = document.getElementById('camera-btn');
+    // --- Image Logic ---
     const imageInput = document.getElementById('chat-image-input');
     const previewContainer = document.getElementById('image-preview-container');
     const previewName = document.getElementById('image-preview-name');
 
-    if (cameraBtn) {
-        cameraBtn.addEventListener('click', () => imageInput.click());
-    }
+    document.getElementById('camera-btn')?.addEventListener('click', () => imageInput.click());
 
-    if (imageInput) {
-        imageInput.addEventListener('change', () => {
-            if (imageInput.files && imageInput.files[0]) {
-                previewName.innerText = imageInput.files[0].name;
-                previewContainer.style.display = 'flex';
-                document.getElementById('chat-input').removeAttribute('required');
-            }
-        });
-    }
+    imageInput?.addEventListener('change', () => {
+      if (imageInput.files?.[0]) {
+        previewName.innerText = imageInput.files[0].name;
+        previewContainer.style.display = 'flex';
+        document.getElementById('chat-input').removeAttribute('required');
+      }
+    });
 
     window.clearImagePreview = function() {
-        if (imageInput) imageInput.value = '';
-        if (previewContainer) previewContainer.style.display = 'none';
-        document.getElementById('chat-input').setAttribute('required', 'required');
+      if (imageInput) imageInput.value = '';
+      if (previewContainer) previewContainer.style.display = 'none';
+      document.getElementById('chat-input').setAttribute('required', 'required');
     };
 
     window.openLightbox = function(src) {
-        const dialog = document.getElementById('chat-lightbox');
-        const img = document.getElementById('lightbox-img');
-        if (dialog && img) {
-            img.src = src;
-            dialog.showModal();
-        }
+      const img = document.getElementById('lightbox-img');
+      if (img) { img.src = src; document.getElementById('chat-lightbox').showModal(); }
     };
   })();
 </script>
 
 <style>
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  :root {
+    --chat-sidebar-width: 280px;
+    --chat-side-padding: 1.5rem;
+    --chat-header-height: 70px;
   }
 
-  /* Desktop Chat Grid Layout */
-  .chat-container {
+  .chat-layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: var(--chat-sidebar-width) 1fr;
     gap: 1.5rem;
-    align-items: start;
+    margin-top: 1rem;
+    height: 700px;
+    max-height: 80vh;
   }
 
+  /* Sidebar */
   .chat-sidebar {
-    position: sticky;
-    top: 1rem;
+    height: 100%;
+    z-index: 1000;
   }
 
-  .channel-panel {
+  .sidebar-panel {
+    height: 100%;
     padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
     border-radius: 12px;
   }
 
-  .channel-header {
-    margin-bottom: 1rem;
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
   }
 
   .channel-list {
     list-style: none;
     padding: 0;
     margin: 0;
-  }
-
-  /* Smart Text Truncation and Alignment Applied Here */
-  /* Robust Sidebar Button Styling */
-  .sidebar-nav-btn {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    text-align: left;
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
-    gap: 0.8rem;
-    border-radius: 8px;
-    margin: 0;
-    min-height: 4rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid transparent;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .sidebar-nav-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .btn-name-wrapper {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
-    display: block;
-  }
-
-  .btn-status-label {
-    opacity: 0.6;
-    flex-shrink: 0;
-    font-size: 0.85rem;
-  }
-
-  .sidebar-nav-btn.active {
-    background-color: var(--pico-primary) !important;
-    color: white !important;
-    border-color: var(--pico-primary) !important;
-    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-  }
-
-  .chat-box {
     display: flex;
     flex-direction: column;
-    height: 700px;
-    max-height: 80vh;
-    padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    gap: 0.5rem;
   }
 
-  .chat-header {
-    padding: 1.25rem 1.75rem;
-    margin-bottom: 0;
+  .channel-btn {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
+    padding: 0.8rem 1.25rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    text-align: left;
+    min-height: 3.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .channel-btn:hover { background: rgba(255, 255, 255, 0.08); }
+  
+  .channel-btn.active {
+    background: var(--pico-primary) !important;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+  }
+
+  .channel-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .channel-status {
+    opacity: 0.6;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+  }
+
+  /* Main Chat */
+  .chat-main { height: 100%; min-width: 0; }
+  
+  .chat-box {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    border-radius: 12px;
+  }
+
+  .chat-header {
+    height: var(--chat-header-height);
+    padding: 0 var(--chat-side-padding);
+    display: flex;
+    align-items: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
     position: relative;
     z-index: 10;
   }
 
-  /* Hide Mobile-Specific UI Elements on Desktop */
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .header-info { min-width: 0; }
+
+  .truncate-text {
+    display: block;
+    color: #475569;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+
+  .chat-footer {
+    padding: 1.25rem var(--chat-side-padding);
+    background: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    z-index: 10;
+  }
+
+  .chat-form-el { margin-bottom: 0; }
+  .footer-btn { width: 50px; padding: 0 !important; }
+  
+  .image-preview-bar {
+    display: none;
+    margin-top: 0.5rem;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .mini-close { padding: 0 5px; font-size: 0.7rem; border: 0; width: auto; }
+
+  /* Mobile Overrides */
   .hamburger-btn {
     display: none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    width: 45px;
+    height: 45px;
+    color: white;
+    font-size: 1.5rem;
+    padding: 0;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
   }
 
-  .close-btn {
-    display: none;
-  }
+  .close-btn { display: none; background: transparent; border: 0; color: white; font-size: 1.5rem; cursor: pointer; }
 
-  .sidebar-overlay {
-    display: none;
-  }
-
-  /* Mobile Hamburger Drawer Adjustments */
   @media (max-width: 992px) {
-    .chat-container {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    /* Show Mobile Buttons */
-    .hamburger-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 0;
-      color: white;
-      font-size: 1.8rem;
-      width: 50px;
-      height: 50px;
-      padding: 0;
-      margin-right: 1.25rem;
-      cursor: pointer;
-      line-height: 1;
-      position: relative;
-      z-index: 20;
-    }
-
-    .close-btn {
-      display: block;
-      background: transparent;
-      border: none;
-      color: white;
-      font-size: 1.2rem;
-      padding: 0;
-      cursor: pointer;
-    }
-
-    /* Mobile Sidebar Specific Styling */
-    .mobile-sidebar {
+    .chat-layout { grid-template-columns: 1fr; height: 600px; max-height: calc(100dvh - 250px); }
+    
+    .chat-sidebar {
       position: fixed;
       top: 0;
       left: 0;
       width: 300px;
+      max-width: 85vw;
       height: 100vh;
       background: #120c1a;
-      z-index: 1000;
       transform: translateX(-100%);
       transition: transform 0.3s ease;
-      overflow-y: auto;
-      box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+      padding: 0;
     }
+    .chat-sidebar.open { transform: translateX(0); }
+    .sidebar-panel { border-radius: 0; border: 0; }
+    .hamburger-btn, .close-btn { display: flex; }
 
-    .mobile-sidebar.open {
-      transform: translateX(0);
-    }
-
-    .mobile-drawer-header {
-      padding: 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .mobile-channel-list {
-      padding: 1.5rem;
-      list-style: none;
-      margin: 0;
-    }
-
-    .mobile-nav-btn {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      padding: 1.25rem 1.75rem;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid transparent;
-      border-radius: 12px;
-      color: white;
-      margin-bottom: 0.8rem;
-      font-size: 1.1rem;
-    }
-
-    .mobile-nav-btn.active {
-      background: var(--pico-primary);
-      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
-    }
-
-    .mobile-btn-left {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
-      min-width: 0;
-      text-align: left;
-    }
-
-    .mobile-btn-right {
-      opacity: 0.6;
-      font-size: 0.9rem;
-      margin-left: 0.5rem;
-    }
-
-    /* Fixed Channel Panel for Mobile Drawer */
-    .channel-panel {
-      padding: 1rem 0;
-      background: transparent; /* Let the sidebar provide the background */
-      border: none;
-      box-shadow: none;
-      margin: 0;
-      display: block; /* Removed display: table */
-      width: 100%;
-    }
-
-    /* Bring back the header for mobile so it looks like a proper menu */
-    .channel-header {
-      display: flex; 
-      padding: 0 1rem 1rem 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      margin-bottom: 1rem;
-    }
-
-    /* Changed from Grid to standard vertical list for cleaner mobile UX */
-    .channel-list.mobile-grid-force {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      padding: 1.5rem;
-      margin: 0;
-      list-style: none;
-    }
-
-    .channel-item {
-      display: block;
-      width: 100%;
-    }
-
-    /* Adjusted tab buttons to look native */
-    /* Simplified Mobile Sidebar Overrides */
-    .sidebar-nav-btn {
-      padding: 1.25rem 1.75rem; /* Even larger on mobile */
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
-    }
- 
-    .sidebar-nav-btn.active {
-      background: var(--pico-primary);
-      color: white;
-      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
-    }
-
-    /* Dark Overlay */
     .sidebar-overlay {
-      display: block;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.6);
-      z-index: 999;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease-in-out;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.6); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
     }
+    .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
 
-    .sidebar-overlay.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .chat-box {
-      height: 600px;
-      max-height: calc(100dvh - 220px);
-      border-radius: 12px;
-    }
-
-    .chat-header {
-      padding: 0.75rem 1.75rem;
-      background: rgba(0, 0, 0, 0.2);
-    }
+    .channel-btn { min-height: 4rem; padding: 1.25rem 1.75rem; border-radius: 12px; }
   }
 
-  /* =========================================
-     Scrollbar Styling (Floating Effect)
-     ========================================= */
-  #chat-messages::-webkit-scrollbar,
-  .chat-sidebar::-webkit-scrollbar {
-    width: 16px; /* Wider to accommodate transparent borders */
-  }
-
-  #chat-messages::-webkit-scrollbar-track,
-  .chat-sidebar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  #chat-messages::-webkit-scrollbar-thumb,
-  .chat-sidebar::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.15);
-    /* Creates an invisible barrier around the thumb */
-    border: 5px solid transparent; 
-    background-clip: padding-box;
-    border-radius: 12px;
-  }
-
-  #chat-messages::-webkit-scrollbar-thumb:hover,
-  .chat-sidebar::-webkit-scrollbar-thumb:hover {
-    background-color: var(--pico-primary);
-    border: 5px solid transparent;
-    background-clip: padding-box;
-  }
-
-  .chat-bubble {
-    max-width: 85%;
-  }
-
-  /* Chat Image Constraints */
+  /* Chat Bubbles */
+  .chat-bubble { max-width: 85%; }
   .chat-image-attachment img {
-    max-width: 100%;
-    max-height: 450px;
-    object-fit: contain;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 100%; max-height: 450px; object-fit: contain; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
   }
 
   @media (min-width: 993px) {
-    .chat-image-attachment img {
-      max-width: 500px;
-      border-radius: 12px;
-    }
-    
-    .chat-bubble {
-        max-width: 95% !important; /* Fill almost entire width on desktop */
-    }
+    .chat-bubble { max-width: 95% !important; }
+    .chat-image-attachment img { max-width: 500px; border-radius: 12px; }
   }
+
+  /* Lightbox */
+  .lightbox-content { max-width: 90vw; padding: 0; background: transparent; box-shadow: none; }
+  .lightbox-content img { width: 100%; height: auto; border-radius: 8px; }
 </style>
 {% endblock %}
