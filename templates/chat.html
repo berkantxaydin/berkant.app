@@ -24,7 +24,7 @@
           <strong>{{ t("Channels") }}</strong>
           <button id="close-sidebar-btn" class="close-btn" aria-label="Close">✕</button>
         </div>
-        <nav class="sidebar-nav">
+        <div class="sidebar-nav-container">
           <ul class="channel-list">
             {% for room in rooms %}
             <li class="channel-item">
@@ -38,7 +38,7 @@
             </li>
             {% endfor %}
           </ul>
-        </nav>
+        </div>
       </div>
     </aside>
 
@@ -281,9 +281,11 @@
     flex-shrink: 0;
   }
 
-  .sidebar-nav {
+  .sidebar-nav-container {
     flex: 1;
     overflow-y: auto;
+    width: 100% !important;
+    display: block !important;
   }
 
   .channel-list {
@@ -324,6 +326,7 @@
     margin: 0 !important;
     padding: 0 !important;
     list-style: none !important;
+    flex: 0 0 auto !important;
   }
 
   .channel-btn.active {
@@ -501,8 +504,8 @@
       position: fixed;
       top: 0;
       left: 0;
-      width: 260px;
-      max-width: 80vw;
+      width: 300px; /* Wider for better fit */
+      max-width: 85vw;
       height: 100vh;
       background: #0d0912;
       transform: translateX(-100%);
