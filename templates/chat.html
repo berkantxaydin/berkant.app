@@ -230,9 +230,9 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
   :root {
-    --chat-sidebar-width: 280px;
+    --chat-sidebar-width: 320px;
     --chat-side-padding: 1.5rem;
-    --chat-header-height: 80px;
+    --chat-header-height: 110px;
   }
 
   .chat-layout {
@@ -319,19 +319,20 @@
   .chat-main { height: 100%; min-width: 0; }
   
   .chat-box {
-    height: 100%;
+    flex: 1;
     display: flex;
     flex-direction: column;
     padding: 0;
-    background: #120c1a; /* Solid background to prevent overlap transparency issues */
+    background: #120c1a;
     border: 1px solid rgba(255, 255, 255, 0.05);
     overflow: hidden;
     border-radius: 12px;
+    min-height: 0;
   }
 
   .chat-header {
     height: var(--chat-header-height);
-    padding: 0 var(--chat-side-padding) !important;
+    padding: 0 !important; /* Remove padding to allow buttons to fill height */
     display: flex !important;
     align-items: center !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -345,11 +346,17 @@
   .header-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
     min-width: 0;
+    height: 100%;
+    width: 100%;
   }
 
-  .header-info { min-width: 0; }
+  .header-info { 
+    min-width: 0; 
+    flex: 1;
+    padding-right: var(--chat-side-padding);
+  }
 
   .truncate-text {
     display: block;
@@ -363,6 +370,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 1.5rem;
+    min-height: 0; /* Ensure it stays within flex bounds */
   }
 
   .chat-footer {
@@ -388,32 +396,37 @@
   /* Mobile Overrides */
   .hamburger-btn {
     display: none;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 4px;
-    width: 45px;
-    height: 45px;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    border-right: 1px solid rgba(255,255,255,0.1);
+    width: 80px;
+    height: 100%; /* Fill header height */
     color: white;
-    font-size: 1.5rem;
+    font-size: 2rem;
     padding: 0;
     margin: 0;
     cursor: pointer;
     align-items: center;
     justify-content: center;
     line-height: 0;
+    flex-shrink: 0;
   }
 
   .close-btn { display: none; background: transparent; border: 0; color: white; font-size: 1.5rem; cursor: pointer; }
 
   @media (max-width: 992px) {
-    .chat-layout { grid-template-columns: 1fr; height: 600px; max-height: calc(100dvh - 250px); }
+    .chat-layout { 
+      grid-template-columns: 1fr; 
+      height: calc(100dvh - 180px); /* Fill screen better on mobile */
+      max-height: none;
+    }
     
     .chat-sidebar {
       position: fixed;
       top: 0;
       left: 0;
-      width: 320px; /* Slightly wider */
-      max-width: 85vw;
+      width: 350px; /* Wider drawer */
+      max-width: 90vw;
       height: 100vh;
       background: #0d0912;
       transform: translateX(-100%);
