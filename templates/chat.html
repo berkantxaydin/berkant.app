@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block title %}{{ t("Chat Rooms - proglem") }}{% endblock %}
-{% block meta_description %}{{ t("Join live community chat rooms tied to Game Jams and general discussion on proglem.") }}{% endblock %}
+{% block meta_description %}{{ t("Join live community chat rooms tied to Game Jams and general discussion on proglem.")
+}}{% endblock %}
 
 {% block content %}
 <section class="container" style="animation: fadeIn 0.5s ease-out;">
@@ -14,11 +15,9 @@
   <p class="text-center" style="color: grey; margin-top: 4rem;">{{ t("No chat rooms are currently active.") }}</p>
   {% else %}
 
-  <!-- Mobile Sidebar Overlay -->
   <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
   <div class="chat-layout">
-    <!-- Single Sidebar System -->
     <aside id="chat-sidebar" class="chat-sidebar">
       <article class="glass-panel sidebar-panel">
         <header class="sidebar-header">
@@ -43,15 +42,16 @@
       </article>
     </aside>
 
-    <!-- Main Chat Area -->
     <main class="chat-main">
       <article class="glass-panel chat-box">
         <header class="chat-header">
           <div class="header-left">
             <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Menu">☰</button>
             <div class="header-info">
-              <strong id="active-room-name" style="color: var(--pico-primary);"># {{ rooms[0].name }}</strong>
-              <small id="active-room-desc" class="truncate-text">{{ rooms[0].description }}</small>
+              <strong id="active-room-name" style="color: var(--pico-primary); line-height: 1.2;"># {{ rooms[0].name
+                }}</strong>
+              <small id="active-room-desc" class="truncate-text" style="line-height: 1.2;">{{ rooms[0].description
+                }}</small>
             </div>
           </div>
         </header>
@@ -67,19 +67,20 @@
         <footer class="chat-footer">
           {% if session.get('user_id') %}
           <form id="chat-form" hx-post="/api/chat/messages" hx-target="#chat-messages" hx-ext="morph"
-            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();" 
+            hx-swap="morph:innerHTML" hx-on::after-request="this.reset(); scrollToBottom(true); clearImagePreview();"
             enctype="multipart/form-data" class="chat-form-el">
             <input type="hidden" name="room_id" id="chat-room-id-input" value="{{ rooms[0].id }}">
             <fieldset role="group">
-              <button type="button" class="outline footer-btn" id="camera-btn" title="{{ t('Upload Image') }}">📷</button>
+              <button type="button" class="outline footer-btn" id="camera-btn"
+                title="{{ t('Upload Image') }}">📷</button>
               <input type="file" id="chat-image-input" name="image" accept="image/*" style="display: none;">
               <input type="text" id="chat-input" name="content" autocomplete="off"
                 placeholder="{{ t('Message') }} #{{ rooms[0].name }}..." maxlength="500">
               <button type="submit" class="footer-btn" aria-label="{{ t('Send Message') }}">↵</button>
             </fieldset>
             <div id="image-preview-container" class="image-preview-bar">
-                <small id="image-preview-name"></small>
-                <button type="button" class="outline secondary mini-close" onclick="clearImagePreview()">✕</button>
+              <small id="image-preview-name"></small>
+              <button type="button" class="outline secondary mini-close" onclick="clearImagePreview()">✕</button>
             </div>
           </form>
           {% else %}
@@ -94,17 +95,16 @@
   {% endif %}
 </section>
 
-<!-- State & Data -->
 {% if rooms %}
 <input type="hidden" id="active-room-id" value="{{ rooms[0].id }}">
 <script id="chat-rooms-data" type="application/json">{{ rooms | tojson }}</script>
 {% endif %}
 
-<!-- Lightbox Modal -->
 <dialog id="chat-lightbox" onclick="if(event.target==this) this.close()">
   <article class="lightbox-content">
     <header>
-      <a href="#close" aria-label="Close" class="close" onclick="event.preventDefault(); document.getElementById('chat-lightbox').close()"></a>
+      <a href="#close" aria-label="Close" class="close"
+        onclick="event.preventDefault(); document.getElementById('chat-lightbox').close()"></a>
     </header>
     <img id="lightbox-img" src="">
   </article>
@@ -213,13 +213,13 @@
       }
     });
 
-    window.clearImagePreview = function() {
+    window.clearImagePreview = function () {
       if (imageInput) imageInput.value = '';
       if (previewContainer) previewContainer.style.display = 'none';
       document.getElementById('chat-input').setAttribute('required', 'required');
     };
 
-    window.openLightbox = function(src) {
+    window.openLightbox = function (src) {
       const img = document.getElementById('lightbox-img');
       if (img) { img.src = src; document.getElementById('chat-lightbox').showModal(); }
     };
@@ -227,20 +227,35 @@
 </script>
 
 <style>
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
 
-  :root {
-    --chat-sidebar-width: 320px;
-    --chat-side-padding: 1.5rem;
-    --chat-header-height: 110px;
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
+  :root {
+    --chat-sidebar-width: 350px;
+    /* Force 350px width globally */
+    --chat-side-padding: 1.5rem;
+    --chat-header-height: 110px;
+    /* Force strict 110px height */
+  }
+
+  /* Structural Anchoring */
   .chat-layout {
     display: grid;
     grid-template-columns: var(--chat-sidebar-width) 1fr;
     gap: 1.5rem;
     margin-top: 1rem;
-    height: 750px;
+    height: calc(100vh - 200px);
+    /* Strict height bound */
+    min-height: 500px;
     max-height: 85vh;
   }
 
@@ -258,6 +273,8 @@
     display: flex;
     flex-direction: column;
     border-radius: 12px;
+    margin: 0 !important;
+    /* Defeat Pico.css defaults */
   }
 
   .sidebar-header {
@@ -267,8 +284,15 @@
     padding-bottom: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     margin-bottom: 1rem;
+    flex-shrink: 0;
   }
 
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* Space Usage Fix: Channels */
   .channel-list {
     list-style: none;
     padding: 0;
@@ -276,6 +300,11 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    width: 100%;
+  }
+
+  .channel-item {
+    width: 100%;
   }
 
   .channel-btn {
@@ -283,6 +312,9 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    /* Fill horizontal space */
+    box-sizing: border-box;
+    /* Prevent padding from breaking width */
     padding: 0.8rem 1.25rem;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid transparent;
@@ -294,8 +326,10 @@
     transition: all 0.2s ease;
   }
 
-  .channel-btn:hover { background: rgba(255, 255, 255, 0.08); }
-  
+  .channel-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
   .channel-btn.active {
     background: var(--pico-primary) !important;
     box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
@@ -315,30 +349,39 @@
     margin-left: 0.5rem;
   }
 
-  /* Main Chat */
-  .chat-main { height: 100%; min-width: 0; }
-  
+  /* Main Chat Box - Strict Flex Setup */
+  .chat-main {
+    height: 100%;
+    min-width: 0;
+  }
+
   .chat-box {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    /* Forces it to fit the layout parent */
+    padding: 0 !important;
+    /* Defeat Pico.css article padding */
+    margin: 0 !important;
+    /* Defeat Pico.css article margin */
     background: #120c1a;
     border: 1px solid rgba(255, 255, 255, 0.05);
     overflow: hidden;
     border-radius: 12px;
-    min-height: 0;
   }
 
+  /* Header Fixes */
   .chat-header {
-    height: var(--chat-header-height);
-    padding: 0 !important; /* Remove padding to allow buttons to fill height */
+    height: var(--chat-header-height) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    /* Defeat Pico.css header margin */
     display: flex !important;
     align-items: center !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.4); 
+    background: rgba(0, 0, 0, 0.4);
     flex-shrink: 0;
-    position: relative;
+    /* Prevents squashing */
     z-index: 10;
     box-sizing: border-box;
   }
@@ -346,15 +389,22 @@
   .header-left {
     display: flex;
     align-items: center;
+    /* Aligns hamburger and info */
     gap: 1.5rem;
     min-width: 0;
     height: 100%;
     width: 100%;
   }
 
-  .header-info { 
-    min-width: 0; 
+  /* Visual Centering Fix for Title */
+  .header-info {
+    min-width: 0;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* PERFECT VERTICAL CENTERING */
+    height: 100%;
     padding-right: var(--chat-side-padding);
   }
 
@@ -366,100 +416,189 @@
     white-space: nowrap;
   }
 
+  /* Messages - Flex 1 keeps it pushing the footer down */
   .messages-container {
-    flex: 1;
-    overflow-y: auto;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+    /* CRITICAL: prevents flex child from blowing out parent */
     padding: 1.5rem;
-    min-height: 0; /* Ensure it stays within flex bounds */
   }
 
+  /* Footer Fixed Positioning */
   .chat-footer {
-    padding: 1.25rem var(--chat-side-padding);
-    background: #1a1425; /* Solid opaque background */
+    background: #1a1425 !important;
+    padding: 1.25rem var(--chat-side-padding) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    position: relative;
-    z-index: 10;
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
+    /* NEVER SQUASHED */
+    margin: 0 !important;
+    /* Defeat Pico.css footer margins */
+    z-index: 20;
   }
 
-  .chat-form-el { margin-bottom: 0; }
-  .footer-btn { width: 50px; padding: 0 !important; }
-  
+  .chat-form-el {
+    margin-bottom: 0;
+  }
+
+  .footer-btn {
+    width: 50px;
+    padding: 0 !important;
+  }
+
   .image-preview-bar {
     display: none;
     margin-top: 0.5rem;
     align-items: center;
     gap: 0.5rem;
   }
-  .mini-close { padding: 0 5px; font-size: 0.7rem; border: 0; width: auto; }
 
-  /* Mobile Overrides */
+  .mini-close {
+    padding: 0 5px;
+    font-size: 0.7rem;
+    border: 0;
+    width: auto;
+  }
+
+  /* Hamburger Menu Block Fixes */
   .hamburger-btn {
     display: none;
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
     border: none;
-    border-right: 1px solid rgba(255,255,255,0.1);
-    width: 80px;
-    height: 100%; /* Fill header height */
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    width: var(--chat-header-height) !important;
+    /* EXACTLY 110px */
+    height: var(--chat-header-height) !important;
+    /* EXACTLY 110px */
     color: white;
     font-size: 2rem;
-    padding: 0;
-    margin: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    line-height: 0;
     flex-shrink: 0;
+    border-radius: 0;
+    /* Square edges */
   }
 
-  .close-btn { display: none; background: transparent; border: 0; color: white; font-size: 1.5rem; cursor: pointer; }
+  .close-btn {
+    display: none;
+    background: transparent;
+    border: 0;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
 
+  /* Mobile Overrides */
   @media (max-width: 992px) {
-    .chat-layout { 
-      grid-template-columns: 1fr; 
-      height: calc(100dvh - 180px); /* Fill screen better on mobile */
+    .chat-layout {
+      grid-template-columns: 1fr;
+      height: calc(100dvh - 120px);
+      /* Maximize mobile screen use */
       max-height: none;
     }
-    
+
     .chat-sidebar {
       position: fixed;
       top: 0;
       left: 0;
-      width: 350px; /* Wider drawer */
+      width: 350px;
+      /* Wider drawer preserved */
       max-width: 90vw;
       height: 100vh;
       background: #0d0912;
       transform: translateX(-100%);
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       padding: 0;
-      box-shadow: 15px 0 50px rgba(0,0,0,0.8);
+      box-shadow: 15px 0 50px rgba(0, 0, 0, 0.8);
     }
-    .chat-sidebar.open { transform: translateX(0); }
-    .sidebar-panel { border-radius: 0; border: 0; }
-    .hamburger-btn, .close-btn { display: flex; }
+
+    .chat-sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-panel {
+      border-radius: 0;
+      border: 0;
+      padding: 1.5rem 1rem;
+    }
+
+    /* Reveal the hamburger and ensure it doesn't get squashed */
+    .hamburger-btn {
+      display: flex !important;
+    }
+
+    .close-btn {
+      display: flex;
+    }
 
     .sidebar-overlay {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.6); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
     }
-    .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
 
-    .channel-btn { min-height: 4rem; padding: 1.25rem 1.75rem; border-radius: 12px; }
+    .sidebar-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .channel-btn {
+      min-height: 4rem;
+      padding: 1.25rem 1rem;
+      border-radius: 12px;
+    }
+
+    .header-info {
+      padding-right: 1rem;
+    }
   }
 
   /* Chat Bubbles */
-  .chat-bubble { max-width: 85%; }
+  .chat-bubble {
+    max-width: 85%;
+  }
+
   .chat-image-attachment img {
-    max-width: 100%; max-height: 450px; object-fit: contain; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+    max-width: 100%;
+    max-height: 450px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   @media (min-width: 993px) {
-    .chat-bubble { max-width: 95% !important; }
-    .chat-image-attachment img { max-width: 500px; border-radius: 12px; }
+    .chat-bubble {
+      max-width: 95% !important;
+    }
+
+    .chat-image-attachment img {
+      max-width: 500px;
+      border-radius: 12px;
+    }
   }
 
   /* Lightbox */
-  .lightbox-content { max-width: 90vw; padding: 0; background: transparent; box-shadow: none; }
-  .lightbox-content img { width: 100%; height: auto; border-radius: 8px; }
+  .lightbox-content {
+    max-width: 90vw;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .lightbox-content img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
 </style>
 {% endblock %}
