@@ -240,8 +240,8 @@
   }
 
   :root {
-    --chat-sidebar-width: 280px;
-    --chat-header-height: 110px;
+    --chat-header-height: 60px;
+    --chat-sidebar-width: 250px;
     /* Default desktop size */
   }
 
@@ -249,8 +249,8 @@
   .chat-layout {
     display: grid;
     grid-template-columns: var(--chat-sidebar-width) 1fr;
-    gap: 1.5rem;
-    margin-top: 1rem;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
     height: calc(100dvh - 160px);
     min-height: 500px;
   }
@@ -298,11 +298,11 @@
 
   .channel-btn {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     width: 100%;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
     box-sizing: border-box;
-    padding: 0.6rem 1rem;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid transparent;
     border-radius: 8px;
@@ -315,6 +315,13 @@
 
   .channel-btn:hover {
     background: rgba(255, 255, 255, 0.08);
+  }
+
+  .channel-item {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
   }
 
   .channel-btn.active {
@@ -379,6 +386,7 @@
     flex: 0 0 var(--chat-header-height) !important;
     width: var(--chat-header-height) !important;
     height: var(--chat-header-height) !important;
+    font-size: 1.5rem;
     background: rgba(255, 255, 255, 0.08) !important;
     border: none !important;
     border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -399,8 +407,8 @@
     height: 100%;
     flex: 1;
     min-width: 0;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
   .truncate-text {
